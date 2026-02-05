@@ -1,0 +1,81 @@
+import type { ComboOffer } from "../types";
+import { unsplash, FALLBACK_PRODUCT } from "./constants";
+
+const combos: ComboOffer[] = [
+  {
+    id: "1",
+    slug: "cat-food-combo",
+    title: "Cat Food Combo",
+    description: "Whiskas Ocean Fish 1.2kg + Golden Cat Litter 5L — Best value for cat parents.",
+    image: unsplash.combo1 || FALLBACK_PRODUCT,
+    price: 799,
+    comparePrice: 930,
+    productIds: ["5", "9"],
+    href: "/shop?category=cat-food",
+    cta: "View Deal",
+  },
+  {
+    id: "2",
+    slug: "dog-starter-pack",
+    title: "Dog Starter Pack",
+    description: "Premium Dog Food 10kg + Chicken Treats 200g + Portable Water Bottle.",
+    image: unsplash.combo2 || FALLBACK_PRODUCT,
+    price: 3690,
+    comparePrice: 3990,
+    productIds: ["1", "3", "12"],
+    href: "/shop?category=dog-food",
+    cta: "View Deal",
+  },
+  {
+    id: "3",
+    slug: "litter-accessories-bundle",
+    title: "Litter & Accessories Bundle",
+    description: "Bentonite Litter 10L + Litter Tray + Cat Harness & Leash Set.",
+    image: unsplash.litter1 || FALLBACK_PRODUCT,
+    price: 1490,
+    comparePrice: 1620,
+    productIds: ["10", "11"],
+    href: "/category/litter-accessories",
+    cta: "View Deal",
+  },
+  {
+    id: "4",
+    slug: "grooming-kit",
+    title: "Grooming Kit",
+    description: "Himalaya Shampoo 200ml + Grooming Brush Set. Complete care for dogs & cats.",
+    image: unsplash.grooming1 || FALLBACK_PRODUCT,
+    price: 770,
+    comparePrice: 850,
+    productIds: ["13", "16"],
+    href: "/category/health-medicine",
+    cta: "View Deal",
+  },
+  {
+    id: "5",
+    slug: "toys-bundle",
+    title: "Toys Bundle",
+    description: "Cat Scratching Post + Plush Squeaky Dog Toy Set. Fun for both cats and dogs.",
+    image: unsplash.toys1 || FALLBACK_PRODUCT,
+    price: 1090,
+    comparePrice: 1200,
+    productIds: ["17", "18"],
+    href: "/category/toys-scratchers",
+    cta: "View Deal",
+  },
+  {
+    id: "6",
+    slug: "best-seller-mix",
+    title: "Best Seller Mix",
+    description: "Whiskas 1.2kg + Bentonite Litter 10L + Cat Harness Set. Top picks together.",
+    image: unsplash.catFood1 || FALLBACK_PRODUCT,
+    price: 1580,
+    comparePrice: 1720,
+    productIds: ["5", "10", "11"],
+    href: "/shop",
+    cta: "View Deal",
+  },
+];
+
+export async function getComboOffers(): Promise<ComboOffer[]> {
+  return combos;
+}

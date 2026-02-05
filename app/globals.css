@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand – from logo: cyan fill + dark indigo contrast */
+  --brand: #00bcd4;
+  --brand-foreground: #ffffff;
+  --brand-muted: #e0f7fa;
+  --brand-accent: #0097a7;
+  --brand-dark: #1a237e;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  /* Legacy aliases for compatibility */
+  --primary: var(--brand);
+  --secondary: var(--brand-accent);
+  --accent: var(--brand); /* accent = brand (no orange) */
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+/* Utility: brand-aware primary color (Tailwind can reference via theme) */
+@layer utilities {
+  .text-brand { color: var(--brand); }
+  .text-brand-dark { color: var(--brand-dark); }
+  .bg-brand { background-color: var(--brand); }
+  .bg-brand-muted { background-color: var(--brand-muted); }
+  .border-brand { border-color: var(--brand); }
+}
