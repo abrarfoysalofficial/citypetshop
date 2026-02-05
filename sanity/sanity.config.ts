@@ -3,8 +3,8 @@ import { structureTool } from "sanity/structure";
 import { visionTool } from "@sanity/vision";
 import { schemaTypes } from "./schemas";
 
-const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!;
-const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET ?? "production";
+const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID?.trim() || "build-time-placeholder";
+const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET?.trim() ?? "production";
 
 export default defineConfig({
   name: "city-plus-pet-shop",

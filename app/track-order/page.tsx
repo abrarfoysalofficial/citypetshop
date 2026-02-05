@@ -166,7 +166,7 @@ export default function TrackOrderPage() {
       {orders.length > 0 && requiresOtp && (
         <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <h3 className="font-semibold text-amber-900">Verify your phone to see full details</h3>
-          <p className="mt-1 text-sm text-amber-800">We'll send a one-time code to your number. Name and address are hidden until verified.</p>
+          <p className="mt-1 text-sm text-amber-800">We&apos;ll send a one-time code to your number. Name and address are hidden until verified.</p>
           {otpStep === "idle" && (
             <button
               type="button"
