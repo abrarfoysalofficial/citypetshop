@@ -19,7 +19,7 @@ This doc explains what was changed to fix Vercel deployment and how to keep buil
 
 ### 3. Sanity Studio and env safety
 
-- Studio route is **`/studio`** (single optional catch-all `app/studio/[[...tool]]/page.tsx`). No Studio under `/admin` to avoid route conflicts.
+- Studio routes: **`/studio`** (`app/studio/[[...tool]]/page.tsx`) and **`/admin/studio`** (`app/admin/studio/[[...tool]]/page.tsx`). Both use the same schemas (products, categories, etc.); admin panel remains at `/admin/*` with no conflict.
 - **sanity/env.ts** and **sanity/sanity.config.ts** use fallbacks instead of `assertValue()` so the build does not crash when `NEXT_PUBLIC_SANITY_*` are missing at build time.
 
 ### 4. Deterministic builds

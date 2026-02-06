@@ -115,7 +115,8 @@ export async function GET(request: NextRequest) {
     .eq("product_id", productId)
     .eq("status", "approved");
 
-  const reviews = (data || []).map((r) => ({
+  type ReviewRow = { id: string; order_id: string; rating: number; comment: string | null; created_at?: string };
+  const reviews = (data || []).map((r: ReviewRow) => ({
     id: r.id,
     orderId: r.order_id,
     rating: r.rating,

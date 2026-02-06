@@ -60,11 +60,11 @@ export async function GET(request: NextRequest) {
         id: o.id,
         total: o.total,
         createdAt: o.created_at,
-        items: (items || []).map((i) => ({
-          productId: (i as { product_id: string }).product_id,
-          name: (i as { product_name: string }).product_name,
-          qty: (i as { quantity: number }).quantity,
-          price: (i as { unit_price: number }).unit_price,
+        items: (items || []).map((i: { product_id: string; product_name: string; quantity: number; unit_price: number }) => ({
+          productId: i.product_id,
+          name: i.product_name,
+          qty: i.quantity,
+          price: i.unit_price,
         })),
       };
     })

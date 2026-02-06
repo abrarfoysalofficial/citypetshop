@@ -41,14 +41,16 @@ export async function GET(request: NextRequest) {
   const { data: countRows } = await countQ;
   const byName: Record<string, number> = {};
   const lastReceived: Record<string, string> = {};
-  (countRows || []).forEach((r) => {
-    const row = r as { event_name: string; created_at: string };
+  type CountRow = { event_name: string; created_at: string };
+  (countRows || []).forEach((r: CountRow) => {
+    const row = r;
     byName[row.event_name] = (byName[row.event_name] || 0) + 1;
     if (!lastReceived[row.event_name] || row.created_at > lastReceived[row.event_name]) lastReceived[row.event_name] = row.created_at;
   });
   const eventsData = data || [];
-  eventsData.forEach((e) => {
-    const ev = e as { event_name: string; created_at: string };
+  type EventRow = { event_name: string; created_at: string };
+  eventsData.forEach((e: EventRow) => {
+    const ev = e;
     if (!lastReceived[ev.event_name] || ev.created_at > lastReceived[ev.event_name]) lastReceived[ev.event_name] = ev.created_at;
   });
 
