@@ -16,7 +16,7 @@ import type {
   DemoInvoice,
   DemoReturn,
 } from "./types";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { DATA_SOURCE, AUTH_MODE } from "@/src/config/runtime";
 
 export async function getProducts(): Promise<Product[]> {
   if (DATA_SOURCE === "local") {
@@ -88,7 +88,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  if (DATA_SOURCE === "local") {
+  if (DATA_SOURCE === "local" || DATA_SOURCE === "sanity") {
     const { getBlogPosts: getLocal } = await import("./local/blog");
     return getLocal();
   }
@@ -97,7 +97,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
-  if (DATA_SOURCE === "local") {
+  if (DATA_SOURCE === "local" || DATA_SOURCE === "sanity") {
     const { getBlogPostBySlug: getLocal } = await import("./local/blog");
     return getLocal(slug);
   }
@@ -157,107 +157,106 @@ export async function getClearanceProducts(limit = 8): Promise<Product[]> {
   return getSupabase(limit);
 }
 
-// Admin demo data (DATA_SOURCE=local only; supabase stubs return empty when DATA_SOURCE=supabase)
+// Admin / user data: use AUTH_MODE (Supabase vs demo). Orders = Supabase when configured, else local.
 export async function getAdminDashboard(): Promise<DemoDashboard> {
-  if (DATA_SOURCE === "local") {
-    const { getAdminDashboard: getLocal } = await import("./local/adminDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getAdminDashboard: getSupabase } = await import("./supabase/adminDemo");
+    return getSupabase();
   }
-  const { getAdminDashboard: getSupabase } = await import("./supabase/adminDemo");
-  return getSupabase();
+  const { getAdminDashboard: getLocal } = await import("./local/adminDemo");
+  return getLocal();
 }
 
 export async function getAdminOrders(): Promise<DemoOrder[]> {
-  if (DATA_SOURCE === "local") {
-    const { getAdminOrders: getLocal } = await import("./local/adminDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getAdminOrders: getSupabase } = await import("./supabase/adminDemo");
+    return getSupabase();
   }
-  const { getAdminOrders: getSupabase } = await import("./supabase/adminDemo");
-  return getSupabase();
+  const { getAdminOrders: getLocal } = await import("./local/adminDemo");
+  return getLocal();
 }
 
 export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
-  if (DATA_SOURCE === "local") {
-    const { getAdminOrderById: getLocal } = await import("./local/adminDemo");
-    return getLocal(id);
+  if (AUTH_MODE === "supabase") {
+    const { getAdminOrderById: getSupabase } = await import("./supabase/adminDemo");
+    return getSupabase(id);
   }
-  const { getAdminOrderById: getSupabase } = await import("./supabase/adminDemo");
-  return getSupabase(id);
+  const { getAdminOrderById: getLocal } = await import("./local/adminDemo");
+  return getLocal(id);
 }
 
 export async function getAdminCustomers(): Promise<DemoCustomer[]> {
-  if (DATA_SOURCE === "local") {
-    const { getAdminCustomers: getLocal } = await import("./local/adminDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getAdminCustomers: getSupabase } = await import("./supabase/adminDemo");
+    return getSupabase();
   }
-  const { getAdminCustomers: getSupabase } = await import("./supabase/adminDemo");
-  return getSupabase();
+  const { getAdminCustomers: getLocal } = await import("./local/adminDemo");
+  return getLocal();
 }
 
 export async function getAdminVouchers(): Promise<DemoVoucher[]> {
-  if (DATA_SOURCE === "local") {
-    const { getAdminVouchers: getLocal } = await import("./local/adminDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getAdminVouchers: getSupabase } = await import("./supabase/adminDemo");
+    return getSupabase();
   }
-  const { getAdminVouchers: getSupabase } = await import("./supabase/adminDemo");
-  return getSupabase();
+  const { getAdminVouchers: getLocal } = await import("./local/adminDemo");
+  return getLocal();
 }
 
 export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
-  if (DATA_SOURCE === "local") {
-    const { getAdminAuditLogs: getLocal } = await import("./local/adminDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getAdminAuditLogs: getSupabase } = await import("./supabase/adminDemo");
+    return getSupabase();
   }
-  const { getAdminAuditLogs: getSupabase } = await import("./supabase/adminDemo");
-  return getSupabase();
+  const { getAdminAuditLogs: getLocal } = await import("./local/adminDemo");
+  return getLocal();
 }
 
-// User account demo data
 export async function getUserAccountOverview(): Promise<{
   profile: DemoUserProfile;
   recentOrders: DemoOrder[];
   orderCount: number;
 }> {
-  if (DATA_SOURCE === "local") {
-    const { getUserAccountOverview: getLocal } = await import("./local/userDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getUserAccountOverview: getSupabase } = await import("./supabase/userDemo");
+    return getSupabase();
   }
-  const { getUserAccountOverview: getSupabase } = await import("./supabase/userDemo");
-  return getSupabase();
+  const { getUserAccountOverview: getLocal } = await import("./local/userDemo");
+  return getLocal();
 }
 
 export async function getUserOrders(): Promise<DemoOrder[]> {
-  if (DATA_SOURCE === "local") {
-    const { getUserOrders: getLocal } = await import("./local/userDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getUserOrders: getSupabase } = await import("./supabase/userDemo");
+    return getSupabase();
   }
-  const { getUserOrders: getSupabase } = await import("./supabase/userDemo");
-  return getSupabase();
+  const { getUserOrders: getLocal } = await import("./local/userDemo");
+  return getLocal();
 }
 
 export async function getUserOrderById(id: string): Promise<DemoOrder | null> {
-  if (DATA_SOURCE === "local") {
-    const { getUserOrderById: getLocal } = await import("./local/userDemo");
-    return getLocal(id);
+  if (AUTH_MODE === "supabase") {
+    const { getUserOrderById: getSupabase } = await import("./supabase/userDemo");
+    return getSupabase(id);
   }
-  const { getUserOrderById: getSupabase } = await import("./supabase/userDemo");
-  return getSupabase(id);
+  const { getUserOrderById: getLocal } = await import("./local/userDemo");
+  return getLocal(id);
 }
 
 export async function getUserInvoices(): Promise<DemoInvoice[]> {
-  if (DATA_SOURCE === "local") {
-    const { getUserInvoices: getLocal } = await import("./local/userDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getUserInvoices: getSupabase } = await import("./supabase/userDemo");
+    return getSupabase();
   }
-  const { getUserInvoices: getSupabase } = await import("./supabase/userDemo");
-  return getSupabase();
+  const { getUserInvoices: getLocal } = await import("./local/userDemo");
+  return getLocal();
 }
 
 export async function getUserReturns(): Promise<DemoReturn[]> {
-  if (DATA_SOURCE === "local") {
-    const { getUserReturns: getLocal } = await import("./local/userDemo");
-    return getLocal();
+  if (AUTH_MODE === "supabase") {
+    const { getUserReturns: getSupabase } = await import("./supabase/userDemo");
+    return getSupabase();
   }
-  const { getUserReturns: getSupabase } = await import("./supabase/userDemo");
-  return getSupabase();
+  const { getUserReturns: getLocal } = await import("./local/userDemo");
+  return getLocal();
 }
