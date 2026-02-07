@@ -36,7 +36,7 @@ export async function getAdminDashboard(): Promise<DemoDashboard> {
   const supabase = await createClient();
   const { data: orders } = await supabase.from("orders").select("id, total").limit(500);
   const totalOrders = orders?.length ?? 0;
-  const sales = orders?.reduce((s: number, o: { total?: number | null }) => s + Number(o?.total ?? 0), 0) ?? 0;
+  const sales = orders?.reduce((s: number, o: any) => s + Number(o?.total ?? 0), 0) ?? 0;
   return {
     summary: {
       sales: `৳${Math.round(sales)}`,

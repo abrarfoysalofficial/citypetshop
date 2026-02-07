@@ -56,7 +56,8 @@ export async function getUserAccountOverview(): Promise<{
     .eq("user_id", user?.id ?? "")
     .order("created_at", { ascending: false })
     .limit(10);
-  const orders = (rows ?? []).map((r: OrderRow) => rowToDemoOrder(r as OrderRow));
+  const rowList = (rows ?? []) as OrderRow[];
+  const orders = rowList.map((r: OrderRow) => rowToDemoOrder(r));
   const { count } = await supabase
     .from("orders")
     .select("id", { count: "exact", head: true })
@@ -81,7 +82,8 @@ export async function getUserOrders(): Promise<DemoOrder[]> {
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
-  return (rows ?? []).map((r: OrderRow) => rowToDemoOrder(r as OrderRow));
+  const rowList = (rows ?? []) as OrderRow[];
+  return rowList.map((r: OrderRow) => rowToDemoOrder(r));
 }
 
 export async function getUserOrderById(id: string): Promise<DemoOrder | null> {

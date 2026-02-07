@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-const AUTH_MODE =
-  (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ??
-  (process.env.NODE_ENV === "production" ? "supabase" : "demo");
+import { createClient } from "@/lib/supabase/client";
+import { AUTH_MODE } from "@/src/config/runtime";
+import { isSupabaseConfigured } from "@/src/config/env";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -41,7 +40,29 @@ export default function AdminLoginPage() {
         return;
       }
     }
-    setError("Sign in with your admin account. Configure Supabase Auth for production.");
+    // Supabase mode: sign in with email/password
+    if (!isSupabaseConfigured()) {
+      setError("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment, or use demo mode (NEXT_PUBLIC_AUTH_MODE=demo).");
+      setLoading(false);
+      return;
+    }
+    try {
+      const supabase = createClient();
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setError(authError.message || "Invalid email or password.");
+        setLoading(false);
+        return;
+      }
+      if (authData?.session) {
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+      setError("Sign in failed. Try again.");
+    } catch {
+      setError("Sign in failed. Try again.");
+    }
     setLoading(false);
   };
 
