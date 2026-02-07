@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { getBlogPostBySlug, getBlogPosts } from "@/src/data/provider";
+import { isSupabaseConfigured } from "@/src/config/env";
 import SafeImage from "@/components/media/SafeImage";
 
 export async function generateStaticParams() {
-  const posts = await getBlogPosts();
-  return posts.map((p) => ({ slug: p.slug }));
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const posts = await getBlogPosts();
+    return posts.map((p) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({

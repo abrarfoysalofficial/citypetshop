@@ -14,8 +14,12 @@ export async function GET(request: NextRequest) {
   if (ids.length === 0) {
     return Response.json({ products: [] });
   }
-  const all = await getProducts();
-  const set = new Set(ids);
-  const products = all.filter((p) => set.has(p.id));
-  return Response.json({ products });
+  try {
+    const all = await getProducts();
+    const set = new Set(ids);
+    const products = all.filter((p) => set.has(p.id));
+    return Response.json({ products });
+  } catch {
+    return Response.json({ products: [] });
+  }
 }
