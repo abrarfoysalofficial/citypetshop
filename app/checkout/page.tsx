@@ -57,7 +57,7 @@ export default function CheckoutPage() {
     fetch("/api/checkout/settings").then((r) => r.json()).then(setDeliverySettings).catch(() => {});
   }, []);
 
-  const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const subtotal = items.reduce((s: number, i) => s + i.price * i.quantity, 0);
   const { deliveryCharge, discountAmount, total } = calculateCheckout(
     subtotal,
     zone,
@@ -111,9 +111,43 @@ export default function CheckoutPage() {
     if (!data.acceptTerms) return;
     setPlacing(true);
     const orderTotal = subtotal + deliveryCharge - voucherDiscount;
-    captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: `ORD-${Date.now()}`, value: orderTotal, content_ids: items.map((i) => i.id) } });
-    setPlaced(true);
-    clearCart();
+    const orderPayload = {
+      customerName: data.name?.trim() ?? "",
+      email: data.email?.trim() || "",
+      phone: data.phone?.trim() || undefined,
+      total: orderTotal,
+      items: items.map((i) => ({
+        productId: i.id,
+        name: i.name,
+        qty: i.quantity,
+        price: i.price,
+      })),
+      shippingAddress: [data.address ?? "", data.district ?? "", data.city ?? ""].filter(Boolean).join(", "),
+      paymentMethod: data.paymentMethod ?? "cod",
+    };
+    try {
+      const res = await fetch("/api/checkout/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && (json as { orderId?: string }).orderId) {
+        captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: (json as { orderId: string }).orderId, value: orderTotal, content_ids: items.map((i) => i.id) } });
+        setPlaced(true);
+        clearCart();
+      } else if (res.status === 501 || res.status === 503) {
+        captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: `ORD-${Date.now()}`, value: orderTotal, content_ids: items.map((i) => i.id) } });
+        setPlaced(true);
+        clearCart();
+      } else {
+        setPlacing(false);
+        return;
+      }
+    } catch {
+      setPlacing(false);
+      return;
+    }
     setPlacing(false);
   };
 

@@ -143,7 +143,7 @@ export function AdminDashboardClient({ initialData }: AdminDashboardClientProps)
         type OrderRow = { id?: string; total?: number; status?: string; created_at?: string };
         const list = (Array.isArray(orders) ? orders : []) as OrderRow[];
         if (list.length > 0) {
-          const totalSales = list.reduce((s, o) => s + Number(o.total ?? 0), 0);
+          const totalSales = list.reduce((s: number, o: OrderRow) => s + Number(o.total ?? 0), 0);
           const returned = list.filter((o) => o.status === "returned").length;
           setSummary({
             sales: `৳${totalSales.toLocaleString("en-BD")}`,

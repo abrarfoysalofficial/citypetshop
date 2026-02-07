@@ -46,7 +46,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const variations = product.variations ?? [];
+  const variations = useMemo(() => product.variations ?? [], [product.variations]);
   const defaultVariation = useMemo(
     () =>
       product.defaultVariationId

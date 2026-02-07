@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 type EventRow = {
   id: string;
@@ -37,7 +37,7 @@ export default function AdminAnalyticsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const fetchEvents = () => {
+  const fetchEvents = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (fromDate) params.set("from", fromDate);
@@ -52,13 +52,13 @@ export default function AdminAnalyticsPage() {
         setDiagnostics(d.diagnostics || { pixelConfigured: false, capiConfigured: false, warnings: [] });
       })
       .finally(() => setLoading(false));
-  };
+  }, [eventFilter, fromDate, toDate]);
 
   useEffect(() => {
     fetchEvents();
     const interval = setInterval(fetchEvents, 30000);
     return () => clearInterval(interval);
-  }, [eventFilter, fromDate, toDate]);
+  }, [fetchEvents]);
 
   const [debugExpanded, setDebugExpanded] = useState<string | null>(null);
 

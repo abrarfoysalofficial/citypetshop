@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const AUTH_MODE =
-  (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ??
-  (process.env.NODE_ENV === "production" ? "supabase" : "demo");
+import { AUTH_MODE } from "@/src/config/runtime";
 
 const DEMO_ADMIN = { email: "admin@cityplus.local", password: "Admin@12345" };
 const DEMO_USER = { email: "user@cityplus.local", password: "User@12345" };

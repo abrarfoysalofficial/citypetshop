@@ -9,6 +9,9 @@ import { revalidateTag } from "next/cache";
 export async function POST(request: NextRequest) {
   try {
     const secret = request.nextUrl.searchParams.get("secret");
+    if (process.env.NODE_ENV === "production" && !process.env.SANITY_REVALIDATE_SECRET) {
+      return Response.json({ error: "Revalidate not configured" }, { status: 401 });
+    }
     if (process.env.SANITY_REVALIDATE_SECRET && secret !== process.env.SANITY_REVALIDATE_SECRET) {
       return Response.json({ error: "Invalid secret" }, { status: 401 });
     }

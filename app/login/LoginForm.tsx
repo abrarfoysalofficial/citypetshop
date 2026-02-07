@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
+import { AUTH_MODE } from "@/src/config/runtime";
+import { getSiteUrl } from "@/src/config/env";
 
-const AUTH_MODE =
-  (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ??
-  (process.env.NODE_ENV === "production" ? "supabase" : "demo");
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? (typeof window !== "undefined" ? window.location.origin : "");
+const SITE_URL = getSiteUrl() || (typeof window !== "undefined" ? window.location.origin : "");
 
 type AuthProviders = { google: boolean; facebook: boolean; phone: boolean };
 

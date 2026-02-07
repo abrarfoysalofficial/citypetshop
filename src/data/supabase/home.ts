@@ -1,8 +1,8 @@
 import type { HomeSection } from "../types";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { isSupabaseConfigured } from "@/src/config/env";
 
 export async function getHomeData(): Promise<HomeSection> {
-  if (DATA_SOURCE !== "supabase") {
+  if (!isSupabaseConfigured()) {
     return {
       heroSlides: [],
       featuredCategories: [],

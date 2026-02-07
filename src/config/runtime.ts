@@ -1,15 +1,39 @@
 /**
  * Runtime config: data source and auth mode.
- * - NEXT_PUBLIC_DATA_SOURCE=local | supabase | sanity (default: supabase in prod, local in dev)
- * - NEXT_PUBLIC_AUTH_MODE=demo | supabase (default: supabase in prod, demo in dev)
- * Production: use Supabase by default; demo only when explicitly set via env.
+ * Supports new 3-source model with backward compatibility:
+ * - NEXT_PUBLIC_PRODUCTS_SOURCE (sanity | local | auto) or legacy NEXT_PUBLIC_DATA_SOURCE
+ * - NEXT_PUBLIC_AUTH_SOURCE (supabase | demo | auto) or legacy NEXT_PUBLIC_AUTH_MODE
+ * - NEXT_PUBLIC_ENABLE_FALLBACKS (true | false)
+ * Exports DATA_SOURCE and AUTH_MODE so existing code keeps working.
  */
-export const DATA_SOURCE =
-  (process.env.NEXT_PUBLIC_DATA_SOURCE as "local" | "supabase" | "sanity") ??
-  (process.env.NODE_ENV === "production" ? "supabase" : "local");
+import {
+  getResolvedProductsSource,
+  getResolvedAuthSource,
+  getSiteUrl,
+  isSanityConfigured,
+  isSupabaseConfigured,
+  getEnableFallbacks,
+} from "./env";
 
-export const AUTH_MODE =
-  (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ??
-  (process.env.NODE_ENV === "production" ? "supabase" : "demo");
+export { getSiteUrl, isSanityConfigured, isSupabaseConfigured, getEnableFallbacks } from "./env";
+export type { ProductsSource, AuthSource } from "./env";
+
+/** Resolved products source for data layer: "sanity" | "local". */
+export const PRODUCTS_SOURCE_RESOLVED = getResolvedProductsSource();
+
+/** Resolved auth source: "supabase" | "demo". */
+export const AUTH_SOURCE_RESOLVED = getResolvedAuthSource();
+
+/**
+ * Legacy: DATA_SOURCE for products/content. "supabase" is mapped to "local" (products come from Sanity or local).
+ * So: "sanity" | "local" only.
+ */
+export const DATA_SOURCE: "local" | "sanity" =
+  PRODUCTS_SOURCE_RESOLVED === "sanity" ? "sanity" : "local";
+
+/**
+ * Legacy: AUTH_MODE for auth. Same as AUTH_SOURCE_RESOLVED.
+ */
+export const AUTH_MODE: "demo" | "supabase" = getResolvedAuthSource();
 
 export const IS_DEMO_MODE = AUTH_MODE === "demo";

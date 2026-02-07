@@ -1,5 +1,7 @@
 # Step-by-step guide – City Plus Pet Shop (for beginners)
 
+**Canonical guide:** See **STEP_BY_STEP_GUIDE.md** in the project root for the full setup (3-source architecture, env, Supabase, Sanity, Vercel, troubleshooting, verification).
+
 Use this guide to run the project on your computer and then put it live on the internet. Do the steps in order.
 
 ---
@@ -51,10 +53,11 @@ Wait until it finishes. You may see some warnings (e.g. “EBADENGINE”); you c
 3. Open `**.env.local**` in a text editor and set at least these (you can leave the rest for later):
   ```env
    NEXT_PUBLIC_SITE_URL=http://localhost:3000
-   NEXT_PUBLIC_DATA_SOURCE=local
-   NEXT_PUBLIC_AUTH_MODE=demo
+   NEXT_PUBLIC_PRODUCTS_SOURCE=local
+   NEXT_PUBLIC_AUTH_SOURCE=demo
    NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS=true
   ```
+   (You can use legacy `NEXT_PUBLIC_DATA_SOURCE` and `NEXT_PUBLIC_AUTH_MODE` instead; they are still supported.)  
    Save the file.
 
 ---
@@ -135,13 +138,13 @@ To stop the server: press **Ctrl+C** in the terminal.
   | Name                      | Value (example)                                                                          |
   | ------------------------- | ---------------------------------------------------------------------------------------- |
   | `NEXT_PUBLIC_SITE_URL`    | `https://your-app.vercel.app` (replace with your real Vercel URL or custom domain later) |
-  | `NEXT_PUBLIC_DATA_SOURCE` | `local` or `sanity` (use `sanity` when you have Sanity set up)                           |
-  | `NEXT_PUBLIC_AUTH_MODE`   | `demo` or `supabase` (use `supabase` when you have Supabase auth set up)                 |
+  | `NEXT_PUBLIC_PRODUCTS_SOURCE` | `local`, `sanity`, or `auto` (products source)                                           |
+  | `NEXT_PUBLIC_AUTH_SOURCE`    | `demo`, `supabase`, or `auto` (auth and orders source)                                   |
 
    For a first deploy you can use:
   - `NEXT_PUBLIC_SITE_URL` = your Vercel URL (e.g. `https://city-plus-pet-shop.vercel.app`)
-  - `NEXT_PUBLIC_DATA_SOURCE` = `local`
-  - `NEXT_PUBLIC_AUTH_MODE` = `demo`
+  - `NEXT_PUBLIC_PRODUCTS_SOURCE` = `local`
+  - `NEXT_PUBLIC_AUTH_SOURCE` = `demo`
    **Do not** set `NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS=true` in production if you don’t want to show demo logins.
 3. If you use **Supabase** later, add:
   - `NEXT_PUBLIC_SUPABASE_URL`
@@ -174,8 +177,71 @@ Full list: see **docs/PROD_ENV_SETUP.md**.
 
 ## Part 3: Optional – Sanity and Supabase
 
-- **Sanity (content/CMS):** See **docs/DEPLOY_VERCEL.md** → “Sanity setup”. You create a project on sanity.io, then add `NEXT_PUBLIC_SANITY_PROJECT_ID` and `NEXT_PUBLIC_SANITY_DATASET` in Vercel and set `NEXT_PUBLIC_DATA_SOURCE=sanity` when ready.
-- **Supabase (auth/orders):** See **docs/DEPLOY_VERCEL.md** → “Supabase setup”. You create a project on supabase.com, run the SQL in **supabase/migrations/** (see **docs/SUPABASE_MIGRATIONS.md**), then add the Supabase URL and anon key in Vercel and set `NEXT_PUBLIC_AUTH_MODE=supabase` when ready.
+- **Sanity (content/CMS):** See **docs/DEPLOY_VERCEL.md** → “Sanity setup”. You create a project on sanity.io, then add `NEXT_PUBLIC_SANITY_PROJECT_ID` and `NEXT_PUBLIC_SANITY_DATASET` and set `NEXT_PUBLIC_PRODUCTS_SOURCE=sanity` (or `auto`) when ready.
+- **Supabase (auth + orders):** Follow the steps below for full setup and verification.
+
+---
+
+## Part 4: Supabase setup (auth and orders persistence)
+
+Use this when you want real login and orders stored in Supabase.
+
+### Step 4.1: Create a Supabase project
+
+1. Go to **[https://supabase.com/dashboard](https://supabase.com/dashboard)** and sign in.
+2. Click **New project** → choose organization, name (e.g. “city-plus-pet-shop”), database password, region. Create the project.
+3. In **Project Settings** → **API**: copy **Project URL** and **anon public** key.
+
+### Step 4.2: Run migrations
+
+1. Install Supabase CLI (optional): `npm install -g supabase` or use the SQL Editor in the dashboard.
+2. In the Supabase dashboard, open **SQL Editor**.
+3. Run the migrations in order (copy-paste and run each file):
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/002_order_status_voucher_redemptions_delivery.sql`
+   - … through **009_orders_rls_checkout.sql** (this one adds RLS so users see only their orders and admins see all).
+4. If you use the Supabase CLI from the project folder instead:  
+   `supabase link --project-ref YOUR_PROJECT_REF`  
+   then  
+   `supabase db push`
+
+### Step 4.3: Add an admin user (so admin can see all orders)
+
+1. In Supabase: **Authentication** → **Users** → invite or create a user (e.g. your email).
+2. Copy that user’s **UUID** (e.g. from the Users table).
+3. In **SQL Editor** run (replace `YOUR_USER_UUID` with the real UUID):
+   ```sql
+   INSERT INTO team_members (user_id, email, role, full_name, is_active)
+   VALUES ('YOUR_USER_UUID', 'your-admin@example.com', 'admin', 'Admin', true)
+   ON CONFLICT (user_id) DO UPDATE SET role = 'admin', is_active = true;
+   ```
+4. Log in to your app with that user; admin orders list will then show all orders (RLS allows it).
+
+### Step 4.4: Environment variables
+
+In **.env.local** (and in Vercel for production):
+
+```env
+NEXT_PUBLIC_AUTH_SOURCE=supabase
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+```
+
+Do **not** put the database password or service role key in `NEXT_PUBLIC_*` (never expose them in the browser).
+
+### Step 4.5: Verification checklist (Supabase orders)
+
+After setup, verify:
+
+| Step | What to do | Expected |
+|------|------------|----------|
+| 1 | Open **Admin → Data & Status** (`/admin/status`) | Supabase shows “Configured”; resolved sources show **auth: supabase**, **orders: supabase**. |
+| 2 | Place an order (cart → checkout → submit) | Success message; no crash. |
+| 3 | Open **Admin → Orders** (logged in as admin from Step 4.3) | The new order appears in the list. |
+| 4 | Open **Account → Orders** (logged in as the customer) | The customer sees their own order. |
+| 5 | Run `npm run build` | Build completes without errors (no env required for build). |
+
+If orders do not appear: ensure migrations 001 and 009 were run, and that your admin user is in `team_members` with `role = 'admin'`. Check browser network tab for `/api/checkout/order` (should return 200 and `{ orderId: "..." }`).
 
 ---
 
@@ -183,7 +249,7 @@ Full list: see **docs/PROD_ENV_SETUP.md**.
 
 - Node.js installed, `node -v` and `npm -v` work
 - In project folder: `npm install` done
-- `.env.local` created from `.env.local.example` and at least `NEXT_PUBLIC_SITE_URL`, `DATA_SOURCE`, `AUTH_MODE` set
+- `.env.local` created from `.env.local.example` and at least `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_PRODUCTS_SOURCE`, `NEXT_PUBLIC_AUTH_SOURCE` set
 - `npm run dev` runs and [http://localhost:3000](http://localhost:3000) works
 - `npm run build` finishes without errors
 - Code pushed to GitHub

@@ -93,7 +93,7 @@ export default function TrackOrderPage() {
       pollIntervalRef.current = null;
       sub?.unsubscribe?.();
     };
-  }, [source, selectedOrderId, query, fetchTrack, orders.length, requiresOtp, otpToken]);
+  }, [source, selectedOrderId, query, fetchTrack, orders, requiresOtp, otpToken]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

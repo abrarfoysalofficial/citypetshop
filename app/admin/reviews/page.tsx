@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { isSupabaseConfigured } from "@/src/config/env";
 import AdminReviewsClient from "./AdminReviewsClient";
 
 export default async function AdminReviewsPage() {
   let reviews: { id: string; product_id: string; order_id: string; rating: number; comment: string; status: string; created_at: string }[] = [];
 
-  if (DATA_SOURCE === "supabase" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  if (isSupabaseConfigured()) {
     const supabase = await createClient();
     const { data } = await supabase
       .from("product_reviews")

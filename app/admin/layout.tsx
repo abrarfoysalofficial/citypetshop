@@ -22,6 +22,7 @@ import {
   Sliders,
   LogOut,
   LayoutList,
+  Activity,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const AUTH_MODE = (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ?? 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/studio", label: "Content (Sanity CMS)", icon: LayoutList },
+  { href: "/admin/status", label: "Data & Status", icon: Activity },
   { href: "/admin/settings", label: "Site Settings", icon: Settings },
   { href: "/admin/theme", label: "Theme", icon: Settings },
   { href: "/admin/advanced-settings", label: "Advanced Settings", icon: Sliders },

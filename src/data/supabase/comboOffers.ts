@@ -1,7 +1,7 @@
 import type { ComboOffer } from "../types";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { isSupabaseConfigured } from "@/src/config/env";
 
 export async function getComboOffers(): Promise<ComboOffer[]> {
-  if (DATA_SOURCE !== "supabase") return [];
+  if (!isSupabaseConfigured()) return [];
   return [];
 }

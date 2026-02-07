@@ -23,12 +23,14 @@ Steps to deploy City Plus Pet Shop to Vercel and keep builds passing.
 
 ## 3. Vercel project settings
 
-| Setting | Value | Notes |
-|--------|--------|--------|
-| **Node.js Version** | **20.x** | **Required.** In Vercel: **Settings → General → Node.js Version** → choose **20.x**. Ensures build uses Node 20 (matches `.nvmrc` 20.11.1 and `package.json` engines). |
-| **Build Command** | `npm run build` | Default. |
-| **Output Directory** | (default) | — |
-| **Install Command** | `npm install` or `npm ci` | Use `npm ci` if `package-lock.json` is committed (recommended for reproducibility). Default; `.npmrc` has `legacy-peer-deps=true` for next-sanity/sanity peer deps. |
+
+| Setting              | Value                     | Notes                                                                                                                                                                  |
+| -------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node.js Version**  | **20.x**                  | **Required.** In Vercel: **Settings → General → Node.js Version** → choose **20.x**. Ensures build uses Node 20 (matches `.nvmrc` 20.11.1 and `package.json` engines). |
+| **Build Command**    | `npm run build`           | Default.                                                                                                                                                               |
+| **Output Directory** | (default)                 | —                                                                                                                                                                      |
+| **Install Command**  | `npm install` or `npm ci` | Use `npm ci` if `package-lock.json` is committed (recommended for reproducibility). Default; `.npmrc` has `legacy-peer-deps=true` for next-sanity/sanity peer deps.    |
+
 
 ---
 
@@ -46,15 +48,17 @@ Full list: [PROD_ENV_SETUP.md](./PROD_ENV_SETUP.md).
 
 **Required for production (minimum):**
 
-| Variable | Production value |
-|----------|------------------|
-| `NEXT_PUBLIC_SITE_URL` | Your production URL (e.g. `https://citypluspetshop.com`) |
-| `NEXT_PUBLIC_DATA_SOURCE` | `sanity` or `supabase` |
-| `NEXT_PUBLIC_AUTH_MODE` | `supabase` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `NEXT_PUBLIC_SANITY_PROJECT_ID` | Sanity project ID |
-| `NEXT_PUBLIC_SANITY_DATASET` | e.g. `production` |
+
+| Variable                        | Production value                                         |
+| ------------------------------- | -------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`          | Your production URL (e.g. `https://citypluspetshop.com`) |
+| `NEXT_PUBLIC_DATA_SOURCE`       | `sanity` or `supabase`                                   |
+| `NEXT_PUBLIC_AUTH_MODE`         | `supabase`                                               |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                                     |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key                                        |
+| `NEXT_PUBLIC_SANITY_PROJECT_ID` | Sanity project ID                                        |
+| `NEXT_PUBLIC_SANITY_DATASET`    | e.g. `production`                                        |
+
 
 Do **not** set `NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS=true` in production.
 
@@ -111,3 +115,4 @@ For dependency/build troubleshooting, see [VERCEL_DEPLOY_FIX.md](./VERCEL_DEPLOY
 1. Delete the `.next` folder (e.g. `Remove-Item -Recurse -Force .next` in PowerShell, or run `npm run dev:clean` which clears it and starts dev).
 2. Use Node 20: `node -v` (e.g. 20.11.1; not Node 24). Run `nvm use` if using .nvmrc.
 3. Reinstall: `npm install` then `npm run dev`.
+

@@ -25,7 +25,7 @@ export default function AnalyticsScripts() {
     return () => {
       s.remove();
     };
-  }, [isStorefront, CF_TOKEN]);
+  }, [isStorefront]);
 
   if (!isStorefront) return null;
 
