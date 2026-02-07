@@ -93,6 +93,7 @@ export default function TrackOrderPage() {
       pollIntervalRef.current = null;
       sub?.unsubscribe?.();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- orders, fetchTrack, query, otpToken included; full deps intentional
   }, [source, selectedOrderId, query, fetchTrack, orders, requiresOtp, otpToken]);
 
   const handleSubmit = (e: React.FormEvent) => {

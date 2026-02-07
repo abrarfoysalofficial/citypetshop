@@ -58,6 +58,7 @@ export default function AdminAnalyticsPage() {
     fetchEvents();
     const interval = setInterval(fetchEvents, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchEvents is stable (useCallback deps: eventFilter, fromDate, toDate)
   }, [fetchEvents]);
 
   const [debugExpanded, setDebugExpanded] = useState<string | null>(null);

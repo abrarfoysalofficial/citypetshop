@@ -52,6 +52,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       product.defaultVariationId
         ? variations.find((v) => v.id === product.defaultVariationId)
         : variations[0],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- variations is memoized above; product.variations reference is intentional
     [variations, product.defaultVariationId]
   );
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(defaultVariation ?? null);

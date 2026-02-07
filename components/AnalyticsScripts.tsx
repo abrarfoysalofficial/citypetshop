@@ -25,7 +25,7 @@ export default function AnalyticsScripts() {
     return () => {
       s.remove();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- CF_ENABLED and CF_TOKEN are module-level constants
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only isStorefront is a valid dep; CF_ENABLED and CF_TOKEN are module-level constants
   }, [isStorefront]);
 
   if (!isStorefront) return null;
