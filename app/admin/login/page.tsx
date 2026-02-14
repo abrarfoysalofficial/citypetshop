@@ -14,6 +14,10 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Debug: Log configuration status
+  console.log("Supabase configured:", isSupabaseConfigured());
+  console.log("AUTH_MODE:", AUTH_MODE);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
