@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, Minus, Plus, GitCompare, Star, Check, X, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useCompare } from "@/context/CompareContext";
 import { getProductRichContent } from "@/lib/content";
@@ -16,7 +17,7 @@ import { captureEvent } from "@/lib/analytics";
 import { PRODUCT_PLACEHOLDER } from "@/components/media/SafeImage";
 import type { Product, ProductVariation } from "@/src/data/types";
 import type { Product as CartProduct } from "@/lib/types";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
 
@@ -30,6 +31,143 @@ function toCartProduct(p: Product): CartProduct {
     image: p.images?.[0] ?? p.image ?? PRODUCT_PLACEHOLDER,
     inStock: p.inStock,
   };
+}
+
+function resolveImageUrl(url: string): string {
+  if (url.startsWith("http")) return url;
+  const base = SITE_URL.endsWith("/") ? SITE_URL.slice(0, -1) : SITE_URL;
+  return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
+}
+
+const MAGNIFIER_SIZE = 120;
+const MAGNIFIER_ZOOM = 2.2;
+
+interface ProductImageGalleryProps {
+  mainImage: string;
+  images: string[] | undefined;
+  selectedImageIndex: number;
+  productName: string;
+  onSelectImage: (index: number) => void;
+  onOpenZoom: () => void;
+}
+
+function ProductImageGallery({
+  mainImage,
+  images,
+  selectedImageIndex,
+  productName,
+  onSelectImage,
+  onOpenZoom,
+}: ProductImageGalleryProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setMousePos({ x, y });
+    },
+    []
+  );
+
+  const handleMouseEnter = useCallback(() => setIsHovering(true), []);
+  const handleMouseLeave = useCallback(() => {
+    setIsHovering(false);
+    setMousePos(null);
+  }, []);
+
+  const imageList = images && images.length > 1 ? images : [mainImage];
+  const resolvedMainUrl = resolveImageUrl(mainImage);
+
+  return (
+    <div className="space-y-4">
+      <div
+        ref={containerRef}
+        className="relative aspect-square cursor-zoom-in overflow-hidden rounded-xl bg-gray-100"
+        onClick={onOpenZoom}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && onOpenZoom()}
+        aria-label="View larger image"
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={mainImage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="absolute inset-0"
+          >
+            <SafeImage
+              src={mainImage}
+              alt={productName}
+              fill
+              fallbackSrc={PRODUCT_PLACEHOLDER}
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              showShimmer
+            />
+          </motion.div>
+        </AnimatePresence>
+        {isHovering && mousePos && containerRef.current && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.15 }}
+            className="pointer-events-none absolute z-10 rounded-full border-2 border-white/80 bg-white shadow-xl"
+            style={{
+              width: MAGNIFIER_SIZE,
+              height: MAGNIFIER_SIZE,
+              left: Math.max(0, Math.min(containerRef.current.offsetWidth - MAGNIFIER_SIZE, (mousePos.x / 100) * containerRef.current.offsetWidth - MAGNIFIER_SIZE / 2)),
+              top: Math.max(0, Math.min(containerRef.current.offsetHeight - MAGNIFIER_SIZE, (mousePos.y / 100) * containerRef.current.offsetHeight - MAGNIFIER_SIZE / 2)),
+              backgroundImage: `url(${resolvedMainUrl})`,
+              backgroundSize: `${MAGNIFIER_ZOOM * 100}%`,
+              backgroundPosition: `${mousePos.x}% ${mousePos.y}%`,
+            }}
+          />
+        )}
+      </div>
+      {imageList.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {imageList.map((img, i) => (
+            <motion.button
+              key={`${img}-${i}`}
+              type="button"
+              onClick={() => onSelectImage(i)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                selectedImageIndex === i ? "border-primary ring-2 ring-primary/20" : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={img}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="relative h-full w-full"
+                >
+                  <SafeImage src={img} alt={`${productName} image ${i + 1}`} fill fallbackSrc={PRODUCT_PLACEHOLDER} className="object-cover" />
+                </motion.div>
+              </AnimatePresence>
+            </motion.button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface ProductDetailContentProps {
@@ -166,43 +304,43 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-4">
-          <div
-            className="relative aspect-square cursor-zoom-in overflow-hidden rounded-xl bg-gray-100"
-            onClick={() => setZoomOpen(true)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && setZoomOpen(true)}
-            aria-label="View larger image"
-          >
-            <SafeImage src={mainImage} alt={product.name} fill fallbackSrc={PRODUCT_PLACEHOLDER} priority sizes="(max-width: 1024px) 100vw, 50vw" showShimmer />
-          </div>
-          {zoomOpen && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-              onClick={() => setZoomOpen(false)}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Image zoom"
-            >
-              <button type="button" onClick={() => setZoomOpen(false)} className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-slate-800 hover:bg-white" aria-label="Close">
-                <X className="h-6 w-6" />
-              </button>
-              <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-                <SafeImage src={mainImage} alt={product.name} width={800} height={800} className="rounded-lg object-contain" />
-              </div>
-            </div>
-          )}
-          {product.images && product.images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {product.images.map((img, i) => (
-                <button key={i} type="button" onClick={() => setSelectedImageIndex(i)} className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 focus:border-primary ${selectedImageIndex === i ? "border-primary" : "border-gray-200"}`}>
-                  <div className="relative h-full w-full">
-                    <SafeImage src={img} alt={`${product.name} image ${i + 1}`} fill fallbackSrc={PRODUCT_PLACEHOLDER} className="object-cover" />
-                  </div>
+          <ProductImageGallery
+            mainImage={mainImage}
+            images={product.images}
+            selectedImageIndex={selectedImageIndex}
+            productName={product.name}
+            onSelectImage={setSelectedImageIndex}
+            onOpenZoom={() => setZoomOpen(true)}
+          />
+          <AnimatePresence>
+            {zoomOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                onClick={() => setZoomOpen(false)}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Image zoom"
+              >
+                <button type="button" onClick={() => setZoomOpen(false)} className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-slate-800 hover:bg-white" aria-label="Close">
+                  <X className="h-6 w-6" />
                 </button>
-              ))}
-            </div>
-          )}
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="relative max-h-[90vh] max-w-[90vw]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <SafeImage src={mainImage} alt={product.name} width={800} height={800} className="rounded-lg object-contain" />
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div>

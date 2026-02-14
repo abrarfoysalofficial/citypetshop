@@ -69,6 +69,13 @@ export interface SiteSettingsRow {
 
   // Homepage dynamic blocks (order + enable/disable) – enterprise upgrade
   homepage_blocks: HomepageBlockConfig[] | null;
+
+  // Delivery settings (added in migration 002)
+  delivery_inside_dhaka?: number;
+  delivery_outside_dhaka?: number;
+  free_delivery_threshold?: number;
+  terms_url?: string;
+  privacy_url?: string;
 }
 
 export interface AuthProvidersConfig {

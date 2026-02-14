@@ -1,20 +1,40 @@
-import { getAdminOrders } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/src/config/env";
 import AdminOrdersClient from "./AdminOrdersClient";
 
 export default async function AdminOrdersPage() {
-  const orders = DATA_SOURCE === "local" ? await getAdminOrders() : [];
+  let orders: Array<{
+    id: string;
+    customerName?: string;
+    email?: string;
+    total: number;
+    status: string;
+    createdAt: string;
+  }> = [];
 
-  return (
-    <AdminOrdersClient
-      orders={orders.map((o) => ({
-        id: o.id,
-        customerName: o.customerName,
-        email: o.email,
-        total: o.total,
-        status: o.status,
-        createdAt: o.createdAt,
-      }))}
-    />
-  );
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from("orders")
+        .select("id, created_at, shipping_name, shipping_email, total, status")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (data) {
+        orders = data.map((o: any) => ({
+          id: o.id,
+          customerName: o.shipping_name ?? undefined,
+          email: o.shipping_email ?? undefined,
+          total: Number(o.total ?? 0),
+          status: o.status ?? "pending",
+          createdAt: o.created_at,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+    }
+  }
+
+  return <AdminOrdersClient orders={orders} />;
 }

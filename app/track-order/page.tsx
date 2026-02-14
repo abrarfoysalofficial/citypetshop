@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PackageSearch, MessageSquare, Truck, User } from "lucide-react";
 import { isValidBdPhone } from "@/lib/phone-bd";
@@ -11,7 +12,9 @@ type Note = { id: string; type: string; visibility: string; message: string; cre
 type Event = { id: string; status: string; provider?: string; created_at: string; payload_summary?: unknown };
 
 export default function TrackOrderPage() {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const orderIdFromUrl = searchParams.get("orderId");
+  const [query, setQuery] = useState(orderIdFromUrl ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [orders, setOrders] = useState<OrderSummary[]>([]);
@@ -67,6 +70,13 @@ export default function TrackOrderPage() {
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const POLL_FALLBACK_MS = 10000;
+
+  useEffect(() => {
+    if (orderIdFromUrl?.trim()) {
+      setQuery(orderIdFromUrl);
+      fetchTrack(orderIdFromUrl, otpToken);
+    }
+  }, [orderIdFromUrl, fetchTrack, otpToken]);
 
   useEffect(() => {
     if (source !== "supabase" || !selectedOrderId || orders.length === 0 || requiresOtp) return;

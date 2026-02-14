@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
+import { useVouchers } from "@/context/VouchersContext";
 import { calculateCheckout, type ShippingCity } from "@/lib/checkout";
 import {
   checkoutSchema,
@@ -19,13 +22,16 @@ import SafeImage from "@/components/media/SafeImage";
 import { captureEvent } from "@/lib/analytics";
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { items, clearCart } = useCart();
+  const { getVoucherByCode } = useVouchers();
   const [voucherCode, setVoucherCode] = useState("");
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [voucherError, setVoucherError] = useState("");
   const [placed, setPlaced] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [deliverySettings, setDeliverySettings] = useState<{ deliveryInsideDhaka?: number; deliveryOutsideDhaka?: number; termsUrl?: string; privacyUrl?: string }>({});
+  const [paymentGateways, setPaymentGateways] = useState<Array<{ gateway: string; display_name_en: string; display_name_bn: string | null }>>([]);
 
   const {
     register,
@@ -55,7 +61,14 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     fetch("/api/checkout/settings").then((r) => r.json()).then(setDeliverySettings).catch(() => {});
-  }, []);
+    fetch("/api/payment-gateways").then((r) => r.json()).then((data) => {
+      setPaymentGateways(data || []);
+      // Set first payment method as default
+      if (data && data.length > 0) {
+        setValue("paymentMethod", data[0].gateway);
+      }
+    }).catch(() => {});
+  }, [setValue]);
 
   const subtotal = items.reduce((s: number, i) => s + i.price * i.quantity, 0);
   const { deliveryCharge, discountAmount, total } = calculateCheckout(
@@ -73,6 +86,19 @@ export default function CheckoutPage() {
     const code = voucherCode.trim().toUpperCase();
     if (!code) {
       setVoucherDiscount(0);
+      return;
+    }
+    const localVoucher = getVoucherByCode(code);
+    if (localVoucher && localVoucher.active) {
+      const minOk = !localVoucher.minSpend || subtotal >= localVoucher.minSpend;
+      if (!minOk) {
+        setVoucherError(`Minimum purchase ৳${localVoucher.minSpend}`);
+        return;
+      }
+      const discount = localVoucher.discountType === "percent"
+        ? Math.round(subtotal * (localVoucher.value / 100))
+        : Math.min(localVoucher.value, subtotal);
+      setVoucherDiscount(discount);
       return;
     }
     try {
@@ -110,11 +136,14 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormData) => {
     if (!data.acceptTerms) return;
     setPlacing(true);
-    const orderTotal = subtotal + deliveryCharge - voucherDiscount;
+    const orderTotal = total;
     const orderPayload = {
       customerName: data.name?.trim() ?? "",
       email: data.email?.trim() || "",
       phone: data.phone?.trim() || undefined,
+      subtotal,
+      deliveryCharge,
+      discountAmount: voucherDiscount,
       total: orderTotal,
       items: items.map((i) => ({
         productId: i.id,
@@ -123,7 +152,9 @@ export default function CheckoutPage() {
         price: i.price,
       })),
       shippingAddress: [data.address ?? "", data.district ?? "", data.city ?? ""].filter(Boolean).join(", "),
+      shippingCity: zone,
       paymentMethod: data.paymentMethod ?? "cod",
+      voucherCode: voucherDiscount > 0 ? voucherCode.trim() || undefined : undefined,
     };
     try {
       const res = await fetch("/api/checkout/order", {
@@ -132,14 +163,20 @@ export default function CheckoutPage() {
         body: JSON.stringify(orderPayload),
       });
       const json = await res.json().catch(() => ({}));
-      if (res.ok && (json as { orderId?: string }).orderId) {
-        captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: (json as { orderId: string }).orderId, value: orderTotal, content_ids: items.map((i) => i.id) } });
+      const orderId = (json as { orderId?: string }).orderId;
+      if (res.ok && orderId) {
+        captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: orderId, value: orderTotal, content_ids: items.map((i) => i.id) } });
         setPlaced(true);
         clearCart();
+        router.push(`/order-complete?orderId=${encodeURIComponent(orderId)}`);
+        router.refresh();
       } else if (res.status === 501 || res.status === 503) {
-        captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: `ORD-${Date.now()}`, value: orderTotal, content_ids: items.map((i) => i.id) } });
+        const fallbackId = `ORD-${Date.now()}`;
+        captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: fallbackId, value: orderTotal, content_ids: items.map((i) => i.id) } });
         setPlaced(true);
         clearCart();
+        router.push(`/order-complete?orderId=${encodeURIComponent(fallbackId)}`);
+        router.refresh();
       } else {
         setPlacing(false);
         return;
@@ -169,20 +206,21 @@ export default function CheckoutPage() {
 
   if (placed) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-emerald-600">
-          Order placed successfully
-        </h1>
-        <p className="mt-2 text-slate-600">
-          We will contact you shortly for delivery.
-        </p>
-        <Link
-          href="/order-complete"
-          className="mt-6 inline-block rounded-lg bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90"
+      <AnimatePresence mode="wait">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="mx-auto max-w-md px-4 py-16 text-center"
         >
-          View order status
-        </Link>
-      </div>
+          <h1 className="text-2xl font-bold text-emerald-600">
+            Order placed successfully
+          </h1>
+          <p className="mt-2 text-slate-600">
+            Redirecting to order confirmation…
+          </p>
+        </motion.div>
+      </AnimatePresence>
     );
   }
 
@@ -229,39 +267,48 @@ export default function CheckoutPage() {
             )}
           </section>
 
-          {/* Payment method tabs */}
+          {/* Payment method selection cards */}
           <section>
             <h2 className="mb-3 text-sm font-semibold text-slate-800">
               Payment method
             </h2>
-            <div className="flex gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
-              <label className="flex-1 cursor-pointer">
-                <input
-                  type="radio"
-                  value="cod"
-                  {...register("paymentMethod")}
-                  className="peer sr-only"
-                />
-                <span className="block rounded-md px-4 py-2.5 text-center text-sm font-medium transition peer-checked:bg-white peer-checked:shadow-sm peer-checked:ring-1 peer-checked:ring-slate-200">
-                  Cash on Delivery (COD)
-                </span>
-              </label>
-              <label className="flex-1 cursor-pointer">
-                <input
-                  type="radio"
-                  value="online"
-                  {...register("paymentMethod")}
-                  className="peer sr-only"
-                />
-                <span className="block rounded-md px-4 py-2.5 text-center text-sm font-medium transition peer-checked:bg-white peer-checked:shadow-sm peer-checked:ring-1 peer-checked:ring-slate-200">
-                  Online
-                </span>
-              </label>
+            <div className={`grid gap-3 ${paymentGateways.length > 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'}`}>
+              {paymentGateways.map((gateway) => (
+                <label key={gateway.gateway} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    value={gateway.gateway}
+                    {...register("paymentMethod")}
+                    className="peer sr-only"
+                  />
+                  <motion.div
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className={`rounded-xl border-2 p-4 transition-colors peer-checked:border-primary peer-checked:bg-primary/5 ${
+                      watch("paymentMethod") === gateway.gateway ? "border-primary bg-primary/5" : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <p className="font-semibold text-slate-900">{gateway.display_name_en}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {gateway.gateway === "cod" && "Pay when you receive"}
+                      {gateway.gateway === "bkash" && "Mobile payment via bKash"}
+                      {gateway.gateway === "nagad" && "Mobile payment via Nagad"}
+                      {gateway.gateway === "sslcommerz" && "Card, bKash, Nagad & more"}
+                    </p>
+                  </motion.div>
+                </label>
+              ))}
             </div>
-            <p className="mt-2 flex items-center justify-center gap-2 text-xs text-slate-500">
-              <span>Secure online payment:</span>
-              <Image src="/ui/sslcommerz.png" alt="SSLCommerz secure payment" width={80} height={20} className="h-5 w-auto object-contain" />
-            </p>
+            {watch("paymentMethod") === "online" && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-2 flex items-center justify-center gap-2 text-xs text-slate-500"
+              >
+                <span>Secure online payment:</span>
+                <Image src="/ui/sslcommerz.png" alt="SSLCommerz secure payment" width={80} height={20} className="h-5 w-auto object-contain" />
+              </motion.p>
+            )}
           </section>
 
           {/* Customer form */}

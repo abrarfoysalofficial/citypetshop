@@ -2,7 +2,9 @@
   "name": "city-plus-pet-shop",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=18 <21" },
+  "engines": {
+    "node": ">=18 <21"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
@@ -18,12 +20,13 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@portabletext/react": "^3.0.0",
-    "@radix-ui/react-dialog": "^1.1.2",
-    "@radix-ui/react-dropdown-menu": "^2.1.2",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-label": "^2.1.0",
-    "@radix-ui/react-select": "^2.1.2",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.1.0",
-    "@radix-ui/react-tabs": "^1.1.1",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@sanity/image-url": "^1.2.0",
     "@sanity/vision": "4.22.0",
     "@supabase/ssr": "0.5.2",
@@ -39,7 +42,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.0",
-    "recharts": "^2.14.1",
+    "recharts": "^2.15.4",
     "resend": "^4.0.0",
     "sanity": "4.22.0",
     "styled-components": "^6.3.8",

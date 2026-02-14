@@ -13,12 +13,17 @@ const orderItemSchema = z.object({
 const checkoutOrderSchema = z.object({
   customerId: z.string().optional(),
   customerName: z.string().min(1, "customerName is required"),
-  email: z.string().email("Invalid email"),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
+  subtotal: z.number().min(0).optional(),
+  deliveryCharge: z.number().min(0).optional(),
+  discountAmount: z.number().min(0).optional(),
   total: z.number().min(0),
   items: z.array(orderItemSchema).min(1, "At least one item required"),
   shippingAddress: z.string().optional(),
+  shippingCity: z.string().optional(),
   paymentMethod: z.string().optional(),
+  voucherCode: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -46,10 +51,15 @@ export async function POST(request: NextRequest) {
     customerName,
     email,
     phone,
+    subtotal,
+    deliveryCharge,
+    discountAmount,
     total,
     items,
     shippingAddress,
+    shippingCity,
     paymentMethod,
+    voucherCode,
   } = input;
 
   const supabase = await createClient();
@@ -59,14 +69,20 @@ export async function POST(request: NextRequest) {
 
   const userId = user?.id ?? null;
   const shippingName = customerName.trim();
-  const shippingEmail = email.trim();
+  const shippingEmail = typeof email === "string" && email.trim() ? email.trim() : "guest@checkout.local";
   const shippingPhone = typeof phone === "string" ? phone.trim() || "N/A" : "N/A";
   const shippingAddressText =
     typeof shippingAddress === "string" ? shippingAddress.trim() : "";
+  const shippingCityText = typeof shippingCity === "string" ? shippingCity.trim() : "N/A";
   const paymentMethodValue =
     typeof paymentMethod === "string" && paymentMethod
       ? paymentMethod
       : "cod";
+
+  const itemsSubtotal = items.reduce((s, i) => s + (i.qty ?? 1) * (i.price ?? 0), 0);
+  const orderSubtotal = typeof subtotal === "number" ? subtotal : itemsSubtotal;
+  const orderDeliveryCharge = typeof deliveryCharge === "number" ? deliveryCharge : 0;
+  const orderDiscountAmount = typeof discountAmount === "number" ? discountAmount : 0;
 
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
@@ -76,17 +92,18 @@ export async function POST(request: NextRequest) {
       guest_phone: userId ? null : shippingPhone,
       guest_name: userId ? null : shippingName,
       status: "pending",
-      subtotal: total,
-      delivery_charge: 0,
-      discount_amount: 0,
+      subtotal: orderSubtotal,
+      delivery_charge: orderDeliveryCharge,
+      discount_amount: orderDiscountAmount,
       total,
+      voucher_code: typeof voucherCode === "string" ? voucherCode.trim() || null : null,
       payment_method: paymentMethodValue,
       payment_status: "pending",
       shipping_name: shippingName,
       shipping_phone: shippingPhone,
       shipping_email: shippingEmail,
       shipping_address: shippingAddressText || "N/A",
-      shipping_city: "N/A",
+      shipping_city: shippingCityText || "N/A",
       shipping_area: null,
       shipping_notes: null,
     })

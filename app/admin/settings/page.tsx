@@ -1,373 +1,466 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useSiteSettings } from "@/context/SiteSettingsContext";
-import { Save, Palette, Globe, FileText, Code } from "lucide-react";
-import {
-  DEFAULT_HOMEPAGE_BLOCKS,
-  getOrderedHomepageBlocks,
-  type HomepageBlockConfig,
-} from "@/lib/commerce-settings";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { 
+  Save, 
+  Upload, 
+  Store, 
+  Palette, 
+  Loader2, 
+  Check,
+  Image as ImageIcon,
+  AlertCircle,
+  Truck,
+} from "lucide-react";
+import { isSupabaseConfigured } from "@/src/config/env";
 import type { SiteSettingsRow } from "@/lib/schema";
 
-function HomepageBlocksEditor({ settings }: { settings: SiteSettingsRow }) {
-  const initialBlocks = useMemo(
-    () =>
-      (settings.homepage_blocks && settings.homepage_blocks.length > 0
-        ? settings.homepage_blocks
-        : DEFAULT_HOMEPAGE_BLOCKS
-      ).slice().sort((a, b) => a.order - b.order),
-    [settings.homepage_blocks]
-  );
-  const [blocks, setBlocks] = useState<HomepageBlockConfig[]>(initialBlocks);
-  const [saved, setSaved] = useState(false);
-
-  const toggleEnabled = (id: string) => {
-    setBlocks((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, enabled: !b.enabled } : b))
-    );
-  };
-
-  const setOrder = (id: string, order: number) => {
-    const n = Math.max(0, Math.min(blocks.length - 1, order));
-    setBlocks((prev) => {
-      const out = prev.map((b) => (b.id === id ? { ...b, order: n } : b));
-      out.sort((a, b) => a.order - b.order);
-      return out.map((b, i) => ({ ...b, order: i }));
-    });
-  };
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    // TODO: persist to Supabase via API when connected
-  };
-
-  const blockLabels: Record<string, string> = {
-    featured: "Featured Products",
-    featured_brands: "Featured Brands",
-    flash_sale: "Flash Sale",
-    clearance: "Clearance",
-    combo_offers: "Combo Offers",
-    reviews: "Customer Reviews",
-  };
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-2 text-lg font-semibold text-slate-900">
-        Homepage dynamic blocks
-      </h2>
-      <p className="mb-4 text-sm text-slate-600">
-        Reorder and enable/disable sections. Order is 0-based. Changes apply when
-        Supabase is connected and saved.
-      </p>
-      <ul className="space-y-3">
-        {blocks.map((b) => (
-          <li
-            key={b.id}
-            className="flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3"
-          >
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={b.enabled}
-                onChange={() => toggleEnabled(b.id)}
-                className="rounded border-slate-300"
-              />
-              <span className="font-medium text-slate-900">
-                {blockLabels[b.type] ?? b.type}
-              </span>
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-600">
-              Order:
-              <input
-                type="number"
-                min={0}
-                max={blocks.length - 1}
-                value={b.order}
-                onChange={(e) => setOrder(b.id, parseInt(e.target.value, 10) || 0)}
-                className="w-16 rounded border border-slate-300 px-2 py-1"
-              />
-            </label>
-          </li>
-        ))}
-      </ul>
-      <button
-        type="button"
-        onClick={handleSave}
-        className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-      >
-        <Save className="h-4 w-4" />
-        {saved ? "Saved" : "Save block order"}
-      </button>
-    </div>
-  );
-}
-
 export default function AdminSettingsPage() {
-  const { settings, loading } = useSiteSettings();
-  const [activeTab, setActiveTab] = useState<"store" | "theme" | "homepage" | "integrations" | "seo">("store");
+  const [settings, setSettings] = useState<Partial<SiteSettingsRow>>({
+    logo_url: null,
+    site_name_en: "City Plus Pet Shop",
+    address_en: null,
+    phone: null,
+    email: null,
+    delivery_inside_dhaka: 70,
+    delivery_outside_dhaka: 130,
+    primary_color: "#0f172a",
+    secondary_color: "#06b6d4",
+    accent_color: "#f97316",
+  });
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  if (loading || !settings) {
-    return <div className="text-slate-600">Loading settings…</div>;
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch settings:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setMessage({ type: "error", text: "Please upload an image file" });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: "error", text: "File size must be less than 2MB" });
+      return;
+    }
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bucket", "store-assets");
+
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSettings((prev) => ({ ...prev, logo_url: data.url }));
+        setMessage({ type: "success", text: "Logo uploaded successfully!" });
+      } else {
+        setMessage({ type: "error", text: "Failed to upload logo" });
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Error uploading logo" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+
+      if (res.ok) {
+        setMessage({ type: "success", text: "Settings saved successfully!" });
+        await fetchSettings(); // Refresh from server
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage({ type: "error", text: "Failed to save settings" });
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Error saving settings" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-6">
+        <div className="flex gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-900">
+            <p className="font-medium mb-1">Supabase Not Configured</p>
+            <p>Configure Supabase environment variables to manage store settings.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Site Settings (CMS-Style Customization)</h1>
-
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200">
-        {[
-          { id: "store", label: "Store details", icon: FileText },
-          { id: "theme", label: "Theme Customizer", icon: Palette },
-          { id: "homepage", label: "Homepage Builder", icon: Globe },
-          { id: "integrations", label: "Integrations", icon: Code },
-          { id: "seo", label: "SEO Defaults", icon: FileText },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          );
-        })}
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Store Settings</h1>
+        <p className="mt-1 text-slate-600">Manage your store identity, branding, and business information.</p>
       </div>
 
-      {/* Store details */}
-      {activeTab === "store" && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">Store details</h2>
-          <p className="mb-4 text-sm text-slate-600">Details about the store shown in email receipts and invoices.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Store name</label>
-              <input type="text" defaultValue="City Plus Pet Shop" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-              <p className="mt-1 text-xs text-slate-500">The name of your physical store.</p>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Physical address</label>
-              <textarea rows={4} defaultValue="Mirpur 2, Borobag\nDhaka\n1216" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Phone number</label>
-              <input type="text" defaultValue="+880 1643-390045" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Email</label>
-              <input type="email" defaultValue="info@citypluspetshop.com" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-              <p className="mt-1 text-xs text-slate-500">Your store contact email.</p>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Refund &amp; Returns Policy</label>
-              <textarea rows={4} placeholder="Paste or link to your refund policy..." className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-            </div>
-          </div>
-          <button className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-            <Save className="h-4 w-4" />
-            Save changes
-          </button>
-        </div>
+      {/* Message */}
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`flex items-center gap-2 rounded-xl p-4 ${
+            message.type === "success" 
+              ? "bg-green-50 text-green-900 border border-green-200" 
+              : "bg-red-50 text-red-900 border border-red-200"
+          }`}
+        >
+          {message.type === "success" && <Check className="h-5 w-5" />}
+          {message.type === "error" && <AlertCircle className="h-5 w-5" />}
+          <p className="font-medium">{message.text}</p>
+        </motion.div>
       )}
 
-      {/* Theme Customizer */}
-      {activeTab === "theme" && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">Theme Customizer</h2>
-          <p className="mb-4 text-sm text-slate-600">
-            Change Primary Color, Secondary Color, Font, and Button Styles. Values reflect on the frontend.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Primary Color</label>
-              <input
-                type="text"
-                defaultValue={settings.primary_color}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                placeholder="#0f172a"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Secondary Color</label>
-              <input
-                type="text"
-                defaultValue={settings.secondary_color}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                placeholder="#06b6d4"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Accent Color</label>
-              <input
-                type="text"
-                defaultValue={settings.accent_color}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                placeholder="#f97316"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Button Style</label>
-              <select
-                defaultValue={settings.button_style ?? "rounded"}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option value="rounded">Rounded</option>
-                <option value="pill">Pill</option>
-                <option value="square">Square</option>
-              </select>
-            </div>
+      {/* Logo Upload */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl bg-white p-6 shadow-lg shadow-slate-200/50 border border-slate-100"
+      >
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-3 text-white">
+            <ImageIcon className="h-6 w-6" />
           </div>
-          <button className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-            <Save className="h-4 w-4" />
-            Save Changes
-          </button>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Store Logo</h3>
+            <p className="text-sm text-slate-500">Upload your store logo (Max 2MB, PNG/JPG)</p>
+          </div>
         </div>
-      )}
 
-      {/* Integrations */}
-      {activeTab === "integrations" && (
-        <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Auth Providers</h2>
-            <p className="mb-4 text-sm text-slate-600">
-              Enable login methods when AUTH_MODE=supabase. Configure Google/Facebook OAuth and Phone (Twilio) in Supabase Dashboard → Auth → Providers. Env overrides: NEXT_PUBLIC_AUTH_GOOGLE, NEXT_PUBLIC_AUTH_FACEBOOK, NEXT_PUBLIC_AUTH_PHONE.
-            </p>
-            <div className="flex flex-wrap gap-6">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked={settings.auth_providers?.google ?? true} className="rounded border-slate-300" />
-                <span className="text-sm font-medium text-slate-700">Google</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked={settings.auth_providers?.facebook ?? true} className="rounded border-slate-300" />
-                <span className="text-sm font-medium text-slate-700">Facebook</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked={settings.auth_providers?.phone ?? true} className="rounded border-slate-300" />
-                <span className="text-sm font-medium text-slate-700">Phone OTP (Bangladesh)</span>
-              </label>
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          {/* Current Logo */}
+          {settings.logo_url && (
+            <div className="flex-shrink-0">
+              <div className="relative h-32 w-32 rounded-xl border-2 border-slate-200 bg-slate-50 p-2">
+                <img
+                  src={settings.logo_url}
+                  alt="Store Logo"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-500 text-center">Current Logo</p>
             </div>
-            <p className="mt-2 text-xs text-slate-500">Persist to site_settings.auth_providers when Supabase is connected. Until then, env vars control visibility.</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Analytics & Tracking</h2>
-            <p className="mb-4 text-sm text-slate-600">
-              GTM, Cloudflare Web Analytics, Facebook Pixel. Set env vars for immediate effect: NEXT_PUBLIC_GTM_ID, NEXT_PUBLIC_ENABLE_GTM, NEXT_PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN, NEXT_PUBLIC_ENABLE_CF_ANALYTICS.
-            </p>
-            <div className="grid gap-4 sm:grid-cols-1">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Google Tag Manager ID</label>
-                <input
-                  type="text"
-                  defaultValue={settings.google_tag_manager_id ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="GTM-XXXX"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Google Analytics ID</label>
-                <input
-                  type="text"
-                  defaultValue={settings.google_analytics_id ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="G-XXXXXXXXXX"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Cloudflare Web Analytics Token</label>
-                <input
-                  type="text"
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="Use NEXT_PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN"
-                  disabled
-                />
-                <p className="mt-0.5 text-xs text-slate-500">Set via env. Supabase storage for token coming soon.</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Facebook Pixel ID</label>
-                <input
-                  type="text"
-                  defaultValue={settings.facebook_pixel_id ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="Pixel ID"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Facebook CAPI Token</label>
-                <input
-                  type="password"
-                  defaultValue={settings.facebook_capi_token ?? ""}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="Conversion API Token"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Order Tracking</h2>
-            <p className="mb-4 text-sm text-slate-600">
-              When enabled, phone-based order tracking requires OTP verification. Order ID lookup remains available.
-            </p>
-            <label className="flex items-center gap-2">
+          )}
+
+          {/* Upload Section */}
+          <div className="flex-1">
+            <label className="block">
               <input
-                type="checkbox"
-                defaultChecked={(settings as { require_otp_phone_tracking?: boolean })?.require_otp_phone_tracking ?? false}
-                className="rounded border-slate-300"
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                disabled={uploading}
+                className="hidden"
               />
-              <span className="text-sm font-medium text-slate-700">Require OTP for phone-based tracking</span>
+              <div className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 p-6 hover:border-blue-500 hover:bg-blue-50/50 transition-all">
+                {uploading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                ) : (
+                  <Upload className="h-6 w-6 text-slate-400" />
+                )}
+                <div>
+                  <p className="font-medium text-slate-900">
+                    {uploading ? "Uploading..." : "Click to upload new logo"}
+                  </p>
+                  <p className="text-sm text-slate-500">PNG, JPG up to 2MB</p>
+                </div>
+              </div>
             </label>
-            <p className="mt-2 text-xs text-slate-500">Persist to site_settings.require_otp_phone_tracking when Supabase is connected.</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Social Links</h2>
-            <p className="mb-4 text-sm text-slate-600">
-              Facebook, Instagram, YouTube. Shown in footer. Or set NEXT_PUBLIC_SOCIAL_FACEBOOK, NEXT_PUBLIC_SOCIAL_INSTAGRAM, NEXT_PUBLIC_SOCIAL_YOUTUBE.
-            </p>
-            <div className="grid gap-4 sm:grid-cols-1">
-              {(settings.social_links ?? []).length === 0 ? (
-                <p className="text-sm text-slate-500">No social links in settings. Use env vars or add via Supabase site_settings.social_links.</p>
-              ) : (
-                settings.social_links?.map((l, i) => (
-                  <div key={i}>
-                    <label className="block text-sm font-medium text-slate-700">{l.platform}</label>
-                    <input
-                      type="url"
-                      defaultValue={l.url}
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                      placeholder="https://..."
-                    />
-                  </div>
-                ))
-              )}
+        </div>
+      </motion.div>
+
+      {/* Store Information */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="rounded-2xl bg-white p-6 shadow-lg shadow-slate-200/50 border border-slate-100"
+      >
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-3 text-white">
+            <Store className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Store Information</h3>
+            <p className="text-sm text-slate-500">Business details and contact information</p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Store Name *
+            </label>
+            <input
+              type="text"
+              value={settings.site_name_en || ""}
+              onChange={(e) => setSettings({ ...settings, site_name_en: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="City Plus Pet Shop"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Store Address
+            </label>
+            <textarea
+              value={settings.address_en || ""}
+              onChange={(e) => setSettings({ ...settings, address_en: e.target.value })}
+              rows={3}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="Mirpur 2, Borobag, Dhaka 1216"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={settings.phone || ""}
+              onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="+880 1643-390045"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={settings.email || ""}
+              onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="info@citypluspetshop.com"
+            />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Delivery Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl bg-white p-6 shadow-lg shadow-slate-200/50 border border-slate-100"
+      >
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 p-3 text-white">
+            <Truck className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Delivery Charges</h3>
+            <p className="text-sm text-slate-500">These values will be used in checkout</p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Delivery Inside Dhaka (৳)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">৳</span>
+              <input
+                type="number"
+                value={settings.delivery_inside_dhaka || 70}
+                onChange={(e) => setSettings({ ...settings, delivery_inside_dhaka: parseFloat(e.target.value) || 0 })}
+                className="w-full rounded-lg border border-slate-200 pl-8 pr-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
             </div>
           </div>
-          <button className="flex gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-            <Save className="h-4 w-4" />
-            Save
-          </button>
-        </div>
-      )}
 
-      {activeTab === "homepage" && (
-        <HomepageBlocksEditor settings={settings} />
-      )}
-
-      {activeTab === "seo" && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">SEO Defaults</h2>
-          <p className="text-sm text-slate-600">
-            Default Meta Title, Description, OG Image. Managed from Admin for every page.
-          </p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Delivery Outside Dhaka (৳)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">৳</span>
+              <input
+                type="number"
+                value={settings.delivery_outside_dhaka || 130}
+                onChange={(e) => setSettings({ ...settings, delivery_outside_dhaka: parseFloat(e.target.value) || 0 })}
+                className="w-full rounded-lg border border-slate-200 pl-8 pr-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
         </div>
-      )}
+      </motion.div>
+
+      {/* Theme Colors */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="rounded-2xl bg-white p-6 shadow-lg shadow-slate-200/50 border border-slate-100"
+      >
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-orange-500 to-red-500 p-3 text-white">
+            <Palette className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Theme Colors</h3>
+            <p className="text-sm text-slate-500">Customize your store&apos;s color scheme</p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Primary Color
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={settings.primary_color || "#0f172a"}
+                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                className="h-12 w-16 rounded-lg border border-slate-200 cursor-pointer"
+              />
+              <input
+                type="text"
+                value={settings.primary_color || "#0f172a"}
+                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                className="flex-1 rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Secondary Color
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={settings.secondary_color || "#06b6d4"}
+                onChange={(e) => setSettings({ ...settings, secondary_color: e.target.value })}
+                className="h-12 w-16 rounded-lg border border-slate-200 cursor-pointer"
+              />
+              <input
+                type="text"
+                value={settings.secondary_color || "#06b6d4"}
+                onChange={(e) => setSettings({ ...settings, secondary_color: e.target.value })}
+                className="flex-1 rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Accent Color
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={settings.accent_color || "#f97316"}
+                onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}
+                className="h-12 w-16 rounded-lg border border-slate-200 cursor-pointer"
+              />
+              <input
+                type="text"
+                value={settings.accent_color || "#f97316"}
+                onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}
+                className="flex-1 rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Save Button */}
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={fetchSettings}
+          disabled={saving || uploading}
+          className="rounded-xl border border-slate-300 px-6 py-3 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          Reset Changes
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={saving || uploading}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-3 font-medium text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 transition-all"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="h-5 w-5" />
+              Save All Settings
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
