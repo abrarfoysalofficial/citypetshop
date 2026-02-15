@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Truck,
 } from "lucide-react";
-import { isSupabaseConfigured } from "@/src/config/env";
 import type { SiteSettingsRow } from "@/lib/schema";
 
 export default function AdminSettingsPage() {
@@ -40,13 +39,12 @@ export default function AdminSettingsPage() {
   }, []);
 
   const fetchSettings = async () => {
-    if (!isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch("/api/admin/settings");
+      if (res.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
@@ -125,20 +123,6 @@ export default function AdminSettingsPage() {
       setSaving(false);
     }
   };
-
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-6">
-        <div className="flex gap-3">
-          <AlertCircle className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-slate-700">
-            <p className="font-medium mb-1">Unable to load settings</p>
-            <p>Service temporarily unavailable. Please try again later.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (

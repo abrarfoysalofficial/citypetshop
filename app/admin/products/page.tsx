@@ -8,7 +8,6 @@ import {
   Pencil, 
   Package, 
   Loader2, 
-  AlertCircle,
   Search,
   Filter,
   ArrowUpDown,
@@ -17,7 +16,6 @@ import {
   Plus,
 } from "lucide-react";
 import type { ProductRow } from "@/lib/schema";
-import { isSupabaseConfigured } from "@/src/config/env";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
@@ -35,20 +33,26 @@ export default function AdminProductsPage() {
   }, []);
 
   const fetchProducts = async () => {
-    if (!isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
-    
     setLoading(true);
     try {
       const res = await fetch("/api/admin/products");
+      if (res.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      if (res.status === 403) {
+        setProducts([]);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
-        setProducts(data);
+        setProducts(Array.isArray(data) ? data : []);
+      } else {
+        setProducts([]);
       }
     } catch (err) {
       console.error("Failed to fetch products:", err);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -121,20 +125,6 @@ export default function AdminProductsPage() {
       setSortOrder("desc");
     }
   };
-
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-6">
-        <div className="flex gap-3">
-          <AlertCircle className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-slate-700">
-            <p className="font-medium mb-1">Unable to load products</p>
-            <p>Service temporarily unavailable. Please try again later.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (

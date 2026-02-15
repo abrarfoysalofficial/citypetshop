@@ -44,12 +44,21 @@ export default function AdminAnalyticsPage() {
     if (toDate) params.set("to", toDate);
     if (eventFilter) params.set("event", eventFilter);
     fetch(`/api/admin/analytics/events?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setEvents(d.events || []);
-        setCounts(d.counts || {});
-        setLastReceivedByEvent(d.lastReceivedByEvent || {});
-        setDiagnostics(d.diagnostics || { pixelConfigured: false, capiConfigured: false, warnings: [] });
+      .then((r) => {
+        if (r.status === 401) {
+          window.location.href = "/admin/login";
+          return { error: "unauthorized" };
+        }
+        return r.json();
+      })
+      .then((d: unknown) => {
+        const data = d as { error?: string; events?: EventRow[]; counts?: Record<string, number>; lastReceivedByEvent?: Record<string, string>; diagnostics?: { pixelConfigured: boolean; capiConfigured: boolean; warnings: string[] } };
+        if (data && !data.error) {
+          setEvents(data.events || []);
+          setCounts(data.counts || {});
+          setLastReceivedByEvent(data.lastReceivedByEvent || {});
+          setDiagnostics(data.diagnostics || { pixelConfigured: false, capiConfigured: false, warnings: [] });
+        }
       })
       .finally(() => setLoading(false));
   }, [eventFilter, fromDate, toDate]);

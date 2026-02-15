@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
 import { isSupabaseConfigured } from "@/src/config/env";
 
 /**
@@ -7,8 +8,13 @@ import { isSupabaseConfigured } from "@/src/config/env";
  * Upload file to Supabase Storage and return public URL
  */
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Demo mode: upload not supported" }, { status: 400 });
   }
 
   try {

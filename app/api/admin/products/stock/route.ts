@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
 import { isSupabaseConfigured } from "@/src/config/env";
 
 /**
@@ -8,8 +9,14 @@ import { isSupabaseConfigured } from "@/src/config/env";
  * Body: { id: string, stock: number }
  */
 export async function PATCH(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    const body = await request.json();
+    return NextResponse.json({ id: body?.id, name_en: "Demo", stock: body?.stock ?? 0 });
   }
 
   try {

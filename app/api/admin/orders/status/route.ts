@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
 import { isSupabaseConfigured } from "@/src/config/env";
 import type { OrderStatus } from "@/lib/schema";
 
@@ -9,8 +10,13 @@ import type { OrderStatus } from "@/lib/schema";
  * Body: { orderId: string, status: OrderStatus, note?: string }
  */
 export async function PATCH(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Demo mode: update not supported" }, { status: 400 });
   }
 
   try {

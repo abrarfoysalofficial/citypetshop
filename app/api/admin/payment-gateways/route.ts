@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
+import { DEMO_PAYMENT_GATEWAYS } from "@/lib/demo-data";
 import { isSupabaseConfigured } from "@/src/config/env";
 
 /**
  * GET /api/admin/payment-gateways
- * Fetch all payment gateways (admin view, including credentials)
+ * Fetch all payment gateways. Returns demo data when Supabase not configured.
  */
 export async function GET() {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
   }
 
   try {
@@ -19,25 +26,29 @@ export async function GET() {
       .order("gateway", { ascending: true });
 
     if (error) {
-      console.error("Failed to fetch payment_gateways:", error);
+      console.error("[api/admin/payment-gateways] GET error:", error.message);
       return NextResponse.json({ error: "Failed to fetch payment gateways" }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data ?? []);
   } catch (err) {
-    console.error("payment_gateways GET error:", err);
+    console.error("[api/admin/payment-gateways] GET unexpected:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
 
 /**
  * PATCH /api/admin/payment-gateways
- * Update a payment gateway (toggle active, update credentials)
- * Body: { id: string, is_active?: boolean, credentials_json?: object }
+ * Update a payment gateway. Requires Supabase.
  */
 export async function PATCH(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Demo mode: update not supported" }, { status: 400 });
   }
 
   try {
@@ -57,13 +68,13 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
-      console.error("Failed to update payment_gateway:", error);
+      console.error("[api/admin/payment-gateways] PATCH error:", error.message);
       return NextResponse.json({ error: "Failed to update payment gateway" }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("payment_gateways PATCH error:", err);
+    console.error("[api/admin/payment-gateways] PATCH unexpected:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

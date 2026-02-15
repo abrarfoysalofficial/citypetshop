@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/src/config/env";
+import { isSupabaseConfigured, getResolvedAuthSource } from "@/src/config/env";
+import { DEMO_ORDERS } from "@/lib/demo-data";
 import AdminOrdersClient from "./AdminOrdersClient";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,18 @@ export default async function AdminOrdersPage() {
     createdAt: string;
   }> = [];
 
-  if (isSupabaseConfigured()) {
+  const useDemo = getResolvedAuthSource() === "demo" || !isSupabaseConfigured();
+
+  if (useDemo) {
+    orders = DEMO_ORDERS.map((o) => ({
+      id: o.id,
+      customerName: o.customerName,
+      email: o.email,
+      total: o.total,
+      status: o.status,
+      createdAt: o.createdAt,
+    }));
+  } else {
     try {
       const supabase = await createClient();
       const { data } = await supabase
@@ -24,7 +36,7 @@ export default async function AdminOrdersPage() {
         .limit(200);
 
       if (data) {
-        orders = data.map((o: any) => ({
+        orders = data.map((o: { id: string; shipping_name?: string; shipping_email?: string; total?: number; status?: string; created_at: string }) => ({
           id: o.id,
           customerName: o.shipping_name ?? undefined,
           email: o.shipping_email ?? undefined,
@@ -34,7 +46,7 @@ export default async function AdminOrdersPage() {
         }));
       }
     } catch (err) {
-      console.error("Failed to fetch orders:", err);
+      console.error("[admin/orders] fetch error:", err);
     }
   }
 

@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
+import { isSupabaseConfigured } from "@/src/config/env";
 
 /** GET: List notes for an order (admin). */
 export async function GET(request: NextRequest) {
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
   const orderId = request.nextUrl.searchParams.get("orderId");
   if (!orderId) return NextResponse.json({ notes: [] });
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
     return NextResponse.json({ notes: [] });
   }
+
   const supabase = await createClient();
   const { data } = await supabase.from("order_notes").select("*").eq("order_id", orderId).order("created_at", { ascending: false });
   return NextResponse.json({ notes: data || [] });
@@ -23,9 +32,15 @@ export async function POST(request: NextRequest) {
   const noteType = ["admin", "courier", "system"].includes(type || "") ? type : "admin";
   const vis = visibility === "public" ? "public" : "internal";
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Demo mode: add note not supported" }, { status: 400 });
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("order_notes")

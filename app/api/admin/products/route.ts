@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
+import { DEMO_PRODUCTS } from "@/lib/demo-data";
 import { isSupabaseConfigured } from "@/src/config/env";
 
 /**
  * GET /api/admin/products
- * Fetch all products (admin view)
+ * Fetch all products (admin view). Returns demo data when Supabase not configured.
  */
 export async function GET() {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json(DEMO_PRODUCTS);
   }
 
   try {
@@ -19,25 +26,29 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Failed to fetch products:", error);
+      console.error("[api/admin/products] GET error:", error.message);
       return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data ?? []);
   } catch (err) {
-    console.error("products GET error:", err);
+    console.error("[api/admin/products] GET unexpected:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
 
 /**
  * POST /api/admin/products
- * Create a new product
- * Body: ProductRow (without id, created_at, updated_at)
+ * Create a new product. Requires Supabase.
  */
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Demo mode: create not supported" }, { status: 400 });
   }
 
   try {
@@ -51,25 +62,29 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error("Failed to create product:", error);
+      console.error("[api/admin/products] POST error:", error.message);
       return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("products POST error:", err);
+    console.error("[api/admin/products] POST unexpected:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
 
 /**
  * PATCH /api/admin/products
- * Update a product
- * Body: { id: string, ...updates }
+ * Update a product. Requires Supabase.
  */
 export async function PATCH(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Demo mode: update not supported" }, { status: 400 });
   }
 
   try {
@@ -89,25 +104,29 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
-      console.error("Failed to update product:", error);
+      console.error("[api/admin/products] PATCH error:", error.message);
       return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("products PATCH error:", err);
+    console.error("[api/admin/products] PATCH unexpected:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
 
 /**
  * DELETE /api/admin/products
- * Delete a product
- * Body: { id: string }
+ * Delete a product. Requires Supabase.
  */
 export async function DELETE(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Demo mode: delete not supported" }, { status: 400 });
   }
 
   try {
@@ -125,13 +144,13 @@ export async function DELETE(request: Request) {
       .eq("id", id);
 
     if (error) {
-      console.error("Failed to delete product:", error);
+      console.error("[api/admin/products] DELETE error:", error.message);
       return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("products DELETE error:", err);
+    console.error("[api/admin/products] DELETE unexpected:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

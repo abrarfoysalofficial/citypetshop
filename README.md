@@ -36,6 +36,12 @@ A multi-page e-commerce website for **City Plus Pet Shop** built with Next.js 14
 
    Open [http://localhost:3000](http://localhost:3000).
 
+## Admin Panel
+
+- **Admin** (`/admin`) – Dashboard, Products, Orders, Payments, Checkout Settings, Store Settings, Analytics
+- **Admin Login** (`/admin/login`) – Supabase Auth, team_members authorization
+- Full feature requirements: [docs/ADMIN_FEATURE_REQUIREMENTS.md](docs/ADMIN_FEATURE_REQUIREMENTS.md)
+
 ## Pages & Features
 
 - **Home** (`/`) – Hero, category cards (Food, Accessories, Toys, Medicine), featured products

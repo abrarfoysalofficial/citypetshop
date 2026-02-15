@@ -28,12 +28,19 @@ export default function AdminPaymentsPage() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/payment-gateways");
+      if (res.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
-        setGateways(data);
+        setGateways(Array.isArray(data) ? data : []);
+      } else {
+        setGateways([]);
       }
     } catch (err) {
       console.error("Failed to fetch payment gateways:", err);
+      setGateways([]);
     } finally {
       setLoading(false);
     }

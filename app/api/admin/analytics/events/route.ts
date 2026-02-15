@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
+import { DEMO_ANALYTICS_EVENTS } from "@/lib/demo-data";
+import { isSupabaseConfigured } from "@/src/config/env";
 
 const META_EVENT_NAMES = ["ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase"];
 
-/** GET: Fetch analytics events (Meta Events Manager style). Returns events, counts by date range, last received, diagnostics, source/dedup. */
+/** GET: Fetch analytics events (Meta Events Manager style). Returns demo data when Supabase not configured. */
 export async function GET(request: NextRequest) {
-  const empty = {
-    events: [] as unknown[],
-    counts: {} as Record<string, number>,
-    lastReceivedByEvent: {} as Record<string, string>,
-    diagnostics: { pixelConfigured: false, capiConfigured: false, warnings: [] as string[] },
-  };
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.json(empty);
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+    return NextResponse.json({
+      ...DEMO_ANALYTICS_EVENTS,
+      metaEventNames: META_EVENT_NAMES,
+    });
   }
   const { searchParams } = new URL(request.url);
   const fromDate = searchParams.get("from");
@@ -33,7 +38,16 @@ export async function GET(request: NextRequest) {
   if (source) q = q.eq("source", source);
 
   const { data, error } = await q;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[api/admin/analytics/events] query error:", error.message);
+    return NextResponse.json({
+      events: [],
+      counts: {},
+      lastReceivedByEvent: {},
+      diagnostics: { pixelConfigured: false, capiConfigured: false, warnings: [error.message] },
+      metaEventNames: META_EVENT_NAMES,
+    });
+  }
 
   const rangeStart = fromDate || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const rangeEnd = toDate || new Date().toISOString();
