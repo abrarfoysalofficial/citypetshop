@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdminAuth } from "@/lib/admin-auth";
 import type { OrderStatus } from "@/lib/schema";
 
+export const dynamic = "force-dynamic";
+
 /**
  * PATCH /api/admin/orders/status
  * Update order status and create a status event

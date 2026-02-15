@@ -13,11 +13,11 @@ import PromoBanners from "@/components/home/PromoBanners";
 import PopularCategoryRow from "@/components/home/PopularCategoryRow";
 import HomeProductGrid from "@/components/home/HomeProductGrid";
 import HomeComboBlock from "@/components/home/HomeComboBlock";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import LazyBelowFold from "@/components/ui/LazyBelowFold";
 
-const FeaturedBrandsSlider = dynamic(() => import("@/components/home/FeaturedBrandsSlider"), { ssr: true });
-const HomeReviewSection = dynamic(() => import("@/components/home/HomeReviewSection"), { ssr: true });
+const FeaturedBrandsSlider = nextDynamic(() => import("@/components/home/FeaturedBrandsSlider"), { ssr: true });
+const HomeReviewSection = nextDynamic(() => import("@/components/home/HomeReviewSection"), { ssr: true });
 import DiscountStrip from "@/components/home/DiscountStrip";
 import type { DisplayProduct } from "@/components/ProductCard";
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_MODE } from "@/src/config/runtime";
 
+export const dynamic = "force-dynamic";
+
 const DEMO_ADMIN = { email: "admin@cityplus.local", password: "Admin@12345" };
 const DEMO_USER = { email: "user@cityplus.local", password: "User@12345" };
 
