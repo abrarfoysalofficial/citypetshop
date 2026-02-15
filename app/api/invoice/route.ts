@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 501 });
+    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
   }
 
   try {

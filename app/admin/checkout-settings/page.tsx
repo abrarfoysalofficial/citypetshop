@@ -72,12 +72,12 @@ export default function CheckoutSettingsPage() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-6">
+      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-6">
         <div className="flex gap-3">
-          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-900">
-            <p className="font-medium mb-1">Supabase Not Configured</p>
-            <p>Configure Supabase to manage checkout settings from the admin panel.</p>
+          <AlertCircle className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-slate-700">
+            <p className="font-medium mb-1">Unable to load checkout settings</p>
+            <p>Service temporarily unavailable. Please try again later.</p>
           </div>
         </div>
       </div>

@@ -29,8 +29,8 @@ const checkoutOrderSchema = z.object({
 export async function POST(request: NextRequest) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
-      { error: "Supabase not configured" },
-      { status: 501 }
+      { error: "Service unavailable" },
+      { status: 500 }
     );
   }
 

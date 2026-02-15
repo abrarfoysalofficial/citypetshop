@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const vis = visibility === "public" ? "public" : "internal";
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
   }
   const supabase = await createClient();
   const { data, error } = await supabase

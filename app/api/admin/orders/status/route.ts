@@ -10,7 +10,7 @@ import type { OrderStatus } from "@/lib/schema";
  */
 export async function PATCH(request: Request) {
   if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
   }
 
   try {

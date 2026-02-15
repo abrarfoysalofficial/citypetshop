@@ -110,7 +110,7 @@ export default function AdminStatusPage() {
           {supabaseOk && sources.orders === "supabase" ? (
             <span className="font-medium text-emerald-600">Ready</span>
           ) : (
-            <span className="text-amber-600">Not active (route exists; configure Supabase and set auth source for orders)</span>
+            <span className="text-amber-600">Not active</span>
           )}
         </p>
       </section>

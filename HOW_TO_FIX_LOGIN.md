@@ -1,7 +1,7 @@
 # 🔧 How to Fix Admin Login Issue
 
 ## Problem
-You're seeing the error: **"Sign in with your admin account. Configure Supabase Auth for production."**
+You're seeing login errors or cannot access the admin panel.
 
 ## Root Cause
 Your `.env.local` is missing the **`SUPABASE_SERVICE_ROLE_KEY`** which is required for server-side admin operations.

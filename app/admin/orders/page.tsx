@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/src/config/env";
 import AdminOrdersClient from "./AdminOrdersClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminOrdersPage() {
   let orders: Array<{
     id: string;
