@@ -44,7 +44,7 @@ export async function getProducts(): Promise<Product[]> {
     .eq("is_active", true)
     .order("created_at", { ascending: false });
   if (error) return [];
-  return (data ?? []).map((r) => rowToProduct(r as ProductRow));
+  return (data ?? []).map((r: ProductRow) => rowToProduct(r));
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
@@ -58,7 +58,7 @@ export async function getFeaturedProducts(): Promise<Product[]> {
     .order("created_at", { ascending: false })
     .limit(12);
   if (error) return [];
-  return (data ?? []).map((r) => rowToProduct(r as ProductRow));
+  return (data ?? []).map((r: ProductRow) => rowToProduct(r));
 }
 
 export async function getFlashSaleProducts(_limit = 8): Promise<Product[]> {
@@ -72,7 +72,7 @@ export async function getFlashSaleProducts(_limit = 8): Promise<Product[]> {
     .order("discount_percent", { ascending: false })
     .limit(_limit);
   if (error) return [];
-  return (data ?? []).map((r) => rowToProduct(r as ProductRow));
+  return (data ?? []).map((r: ProductRow) => rowToProduct(r));
 }
 
 export async function getClearanceProducts(_limit = 8): Promise<Product[]> {
@@ -87,7 +87,7 @@ export async function getClearanceProducts(_limit = 8): Promise<Product[]> {
     .order("stock", { ascending: true })
     .limit(_limit);
   if (error) return [];
-  return (data ?? []).map((r) => rowToProduct(r as ProductRow));
+  return (data ?? []).map((r: ProductRow) => rowToProduct(r));
 }
 
 export async function getRecommendedProducts(
@@ -105,7 +105,7 @@ export async function getRecommendedProducts(
     .neq("id", excludeId)
     .limit(limit);
   if (error) return [];
-  return (data ?? []).map((r) => rowToProduct(r as ProductRow));
+  return (data ?? []).map((r: ProductRow) => rowToProduct(r));
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
@@ -118,7 +118,7 @@ export async function getProductById(id: string): Promise<Product | null> {
     .eq("is_active", true)
     .single();
   if (error || !data) return null;
-  return rowToProduct(data as ProductRow);
+  return rowToProduct(data as ProductRow & { brand?: string; rating?: number; discount_percent?: number });
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -131,5 +131,5 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     .eq("is_active", true)
     .single();
   if (error || !data) return null;
-  return rowToProduct(data as ProductRow);
+  return rowToProduct(data as ProductRow & { brand?: string; rating?: number; discount_percent?: number });
 }
