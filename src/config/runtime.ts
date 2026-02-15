@@ -25,11 +25,15 @@ export const PRODUCTS_SOURCE_RESOLVED = getResolvedProductsSource();
 export const AUTH_SOURCE_RESOLVED = getResolvedAuthSource();
 
 /**
- * Legacy: DATA_SOURCE for products/content. "supabase" is mapped to "local" (products come from Sanity or local).
- * So: "sanity" | "local" only.
+ * Legacy: DATA_SOURCE for products/content.
+ * "sanity" | "local" | "supabase"
  */
-export const DATA_SOURCE: "local" | "sanity" =
-  PRODUCTS_SOURCE_RESOLVED === "sanity" ? "sanity" : "local";
+export const DATA_SOURCE: "local" | "sanity" | "supabase" =
+  PRODUCTS_SOURCE_RESOLVED === "sanity"
+    ? "sanity"
+    : PRODUCTS_SOURCE_RESOLVED === "supabase"
+      ? "supabase"
+      : "local";
 
 /**
  * Legacy: AUTH_MODE for auth. Same as AUTH_SOURCE_RESOLVED.

@@ -1,5 +1,9 @@
 # Storage Setup for Admin Panel
 
+## Required: Service Role Key
+
+Add `SUPABASE_SERVICE_ROLE_KEY` to your `.env.local` (and Vercel env vars). The admin upload API uses it to bypass RLS for storage uploads. Get it from Supabase Dashboard → Settings → API → service_role.
+
 ## Create Buckets in Supabase Dashboard
 
 1. Go to **Supabase Dashboard** → **Storage**

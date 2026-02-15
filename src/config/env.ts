@@ -5,7 +5,7 @@
  * Build never fails due to missing env; runtime uses fallbacks when appropriate.
  */
 
-export type ProductsSource = "sanity" | "local" | "auto";
+export type ProductsSource = "sanity" | "local" | "supabase" | "auto";
 export type AuthSource = "supabase" | "demo" | "auto";
 
 function getEnv(key: string): string | undefined {
@@ -47,14 +47,14 @@ export function getProductsSource(): ProductsSource {
   const productsSource = getEnv("NEXT_PUBLIC_PRODUCTS_SOURCE") as ProductsSource | undefined;
   const legacyDataSource = getEnv("NEXT_PUBLIC_DATA_SOURCE") as "sanity" | "local" | "supabase" | undefined;
 
-  if (productsSource === "sanity" || productsSource === "local" || productsSource === "auto") {
+  if (productsSource === "sanity" || productsSource === "local" || productsSource === "supabase" || productsSource === "auto") {
     return productsSource;
   }
   if (legacyDataSource === "sanity" || legacyDataSource === "local") {
     return legacyDataSource;
   }
   if (legacyDataSource === "supabase") {
-    return "local";
+    return "supabase";
   }
   return process.env.NODE_ENV === "production" ? "auto" : "local";
 }
@@ -80,12 +80,14 @@ export function getEnableFallbacks(): boolean {
   return true;
 }
 
-/** Resolved "effective" products source after auto/fallback: "sanity" | "local". */
-export function getResolvedProductsSource(): "sanity" | "local" {
+/** Resolved "effective" products source after auto/fallback: "sanity" | "local" | "supabase". */
+export function getResolvedProductsSource(): "sanity" | "local" | "supabase" {
   const source = getProductsSource();
   const fallbacks = getEnableFallbacks();
   if (source === "sanity") return "sanity";
   if (source === "local") return "local";
+  if (source === "supabase") return "supabase";
+  if (source === "auto" && fallbacks && isSupabaseConfigured()) return "supabase";
   if (source === "auto" && fallbacks && isSanityConfigured()) return "sanity";
   return "local";
 }

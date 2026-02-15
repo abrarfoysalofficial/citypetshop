@@ -1,8 +1,10 @@
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /** Stub – local preview without Supabase */
 async function createStubClient() {
@@ -52,4 +54,16 @@ export async function createClient() {
     });
   }
   return createStubClient() as unknown as Awaited<ReturnType<typeof createServerClient>>;
+}
+
+/**
+ * Service-role client for admin operations (bypasses RLS).
+ * Use ONLY after requireAdminAuth has validated the user.
+ * Requires SUPABASE_SERVICE_ROLE_KEY in env.
+ */
+export function createServiceRoleClient() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for admin storage");
+  }
+  return createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
