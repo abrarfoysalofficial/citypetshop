@@ -4,6 +4,8 @@ import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
 import { isSupabaseConfigured } from "@/src/config/env";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const providerSchema = z.enum(["pathao", "steadfast", "redx"]);
 
 const defaults = {

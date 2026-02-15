@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { DATA_SOURCE } from "@/src/config/runtime";
+
+export const dynamic = "force-dynamic";
 import { getAdminVouchers } from "@/src/data/provider";
 
 /** POST: Validate voucher code, return discount amount. */

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 /** GET: Delivery charges, policy URLs. Falls back to defaults when Supabase not connected. */
 export async function GET() {
   const defaults = {

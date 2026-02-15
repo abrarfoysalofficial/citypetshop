@@ -1,9 +1,8 @@
 /**
  * Server-only: fetch storefront settings (e.g. homepage blocks) from Supabase.
- * Cached 60s to reduce repeat requests and improve response time.
+ * No unstable_cache - avoids cookies-in-cache build error when Supabase is used.
  */
-import { unstable_cache } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/server";
 import {
   getOrderedHomepageBlocks,
   type HomepageBlockConfig,
@@ -13,9 +12,9 @@ export interface StorefrontSettings {
   homepageBlocks: HomepageBlockConfig[];
 }
 
-async function getStorefrontSettingsUncached(): Promise<StorefrontSettings> {
+export async function getStorefrontSettings(): Promise<StorefrontSettings> {
   try {
-    const supabase = await createClient();
+    const supabase = createAnonClient();
     const { data } = await supabase
       .from("site_settings")
       .select("homepage_blocks")
@@ -32,9 +31,3 @@ async function getStorefrontSettingsUncached(): Promise<StorefrontSettings> {
     };
   }
 }
-
-export const getStorefrontSettings = unstable_cache(
-  getStorefrontSettingsUncached,
-  ["storefront-settings"],
-  { revalidate: 60 }
-);

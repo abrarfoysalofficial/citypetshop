@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const schema = z.object({ id: z.string(), status: z.enum(["approved", "rejected"]) });
 
 /** PATCH: Update review status (approve/reject). */

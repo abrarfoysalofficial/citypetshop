@@ -1,7 +1,7 @@
 import type { Product } from "../types";
 import type { ProductRow } from "@/lib/schema";
 import { isSupabaseConfigured } from "@/src/config/env";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/server";
 
 function rowToProduct(row: ProductRow & { brand?: string; rating?: number; discount_percent?: number }): Product {
   const price = Number(row.selling_price ?? 0);
@@ -37,7 +37,7 @@ function rowToProduct(row: ProductRow & { brand?: string; rating?: number; disco
 
 export async function getProducts(): Promise<Product[]> {
   if (!isSupabaseConfigured()) return [];
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -49,7 +49,7 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function getFeaturedProducts(): Promise<Product[]> {
   if (!isSupabaseConfigured()) return [];
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -63,7 +63,7 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 
 export async function getFlashSaleProducts(_limit = 8): Promise<Product[]> {
   if (!isSupabaseConfigured()) return [];
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -77,7 +77,7 @@ export async function getFlashSaleProducts(_limit = 8): Promise<Product[]> {
 
 export async function getClearanceProducts(_limit = 8): Promise<Product[]> {
   if (!isSupabaseConfigured()) return [];
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -96,7 +96,7 @@ export async function getRecommendedProducts(
   limit = 4
 ): Promise<Product[]> {
   if (!isSupabaseConfigured()) return [];
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -110,7 +110,7 @@ export async function getRecommendedProducts(
 
 export async function getProductById(id: string): Promise<Product | null> {
   if (!isSupabaseConfigured()) return null;
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -123,7 +123,7 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   if (!isSupabaseConfigured()) return null;
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")

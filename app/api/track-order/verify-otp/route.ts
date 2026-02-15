@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
+
+export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 

@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { getProducts } from "@/src/data/provider";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/products/by-ids?ids=1,2,3
  * Returns products whose id is in the comma-separated list. Used for recently viewed, etc.

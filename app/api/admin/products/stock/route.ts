@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
 import { isSupabaseConfigured } from "@/src/config/env";
 

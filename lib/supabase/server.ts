@@ -57,6 +57,18 @@ export async function createClient() {
 }
 
 /**
+ * Anon client for public/storefront data (no cookies).
+ * Use for cached fetches (unstable_cache) - avoids "cookies inside cache" error.
+ * Public RLS policies allow reads without auth.
+ */
+export function createAnonClient() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return createStubClient() as unknown as ReturnType<typeof createSupabaseClient>;
+  }
+  return createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+/**
  * Service-role client for admin operations (bypasses RLS).
  * Use ONLY after requireAdminAuth has validated the user.
  * Requires SUPABASE_SERVICE_ROLE_KEY in env.

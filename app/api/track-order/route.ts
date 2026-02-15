@@ -4,6 +4,8 @@ import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
 import { getAdminOrders, getAdminCustomers } from "@/src/data/provider";
 import { DATA_SOURCE } from "@/src/config/runtime";
 
+export const dynamic = "force-dynamic";
+
 function getQueryParams(searchParams: URLSearchParams) {
   const q = searchParams.get("q")?.trim();
   const orderId = searchParams.get("orderId")?.trim();

@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { DATA_SOURCE } from "@/src/config/runtime";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const reviewSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   orderId: z.string().min(1, "Order is required"),

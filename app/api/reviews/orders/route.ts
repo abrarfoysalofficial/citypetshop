@@ -3,6 +3,8 @@ import { getUserOrders, getUserOrderById } from "@/src/data/provider";
 import { createClient } from "@/lib/supabase/server";
 import { DATA_SOURCE } from "@/src/config/runtime";
 
+export const dynamic = "force-dynamic";
+
 async function getUserId(request: NextRequest): Promise<string | null> {
   const AUTH_MODE = (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ?? "demo";
   if (AUTH_MODE === "demo") {

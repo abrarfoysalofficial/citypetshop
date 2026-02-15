@@ -1,4 +1,3 @@
-import { unstable_cache } from "next/cache";
 import {
   getHomeData,
   getFeaturedProducts,
@@ -22,22 +21,20 @@ const HomeReviewSection = dynamic(() => import("@/components/home/HomeReviewSect
 import DiscountStrip from "@/components/home/DiscountStrip";
 import type { DisplayProduct } from "@/components/ProductCard";
 
-const getCachedHomepageData = unstable_cache(
-  async () => {
-    const [storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers] =
-      await Promise.all([
-        getStorefrontSettings(),
-        getHomeData(),
-        getFeaturedProducts(),
-        getFlashSaleProducts(8),
-        getClearanceProducts(8),
-        getComboOffers(),
-      ]);
-    return { storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers };
-  },
-  ["homepage-data"],
-  { revalidate: 60 }
-);
+export const dynamic = "force-dynamic";
+
+async function getHomepageData() {
+  const [storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers] =
+    await Promise.all([
+      getStorefrontSettings(),
+      getHomeData(),
+      getFeaturedProducts(),
+      getFlashSaleProducts(8),
+      getClearanceProducts(8),
+      getComboOffers(),
+    ]);
+  return { storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers };
+}
 
 function mapToDisplayProduct(p: {
   id: string;
@@ -69,7 +66,7 @@ function mapToDisplayProduct(p: {
 
 export default async function HomePage() {
   const { storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers } =
-    await getCachedHomepageData();
+    await getHomepageData();
 
   const heroSlides = homeData.heroSlides.map((s) => ({
     id: s.id,

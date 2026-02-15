@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { AUTH_MODE } from "@/src/config/runtime";
 
+export const dynamic = "force-dynamic";
+
 /** Returns session status for client-side auth checks (demo or Supabase). */
 export async function GET(request: NextRequest) {
   if (AUTH_MODE === "demo") {

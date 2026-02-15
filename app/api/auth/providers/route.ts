@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthProvidersConfig } from "@/lib/schema";
 
+export const dynamic = "force-dynamic";
+
 const AUTH_MODE =
   (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ??
   (process.env.NODE_ENV === "production" ? "supabase" : "demo");
