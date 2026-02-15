@@ -4,6 +4,7 @@ import { createMiddlewareClient } from "@/lib/supabase/middleware";
 
 const AUTH_MODE =
   (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ??
+  (process.env.NEXT_PUBLIC_AUTH_SOURCE as "demo" | "supabase") ??
   (process.env.NODE_ENV === "production" ? "supabase" : "demo");
 
 export async function middleware(request: NextRequest) {
