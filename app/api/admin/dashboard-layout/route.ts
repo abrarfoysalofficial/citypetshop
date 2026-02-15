@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getResolvedAuthSource } from "@/src/config/env";
+import { requireAdminAuth } from "@/lib/admin-auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +15,11 @@ const defaultLayout = [
   { id: "loss", visible: true },
 ];
 
-/** GET: Load dashboard layout. No Supabase in demo mode. */
+/** GET: Load dashboard layout. Admin Supabase only. */
 export async function GET() {
-  if (getResolvedAuthSource() === "demo") {
-    return NextResponse.json({ layout: defaultLayout });
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
   try {
     const supabase = await createClient();
@@ -40,17 +41,18 @@ export async function GET() {
   return NextResponse.json({ layout: defaultLayout });
 }
 
-/** PATCH: Save dashboard layout. No Supabase in demo mode. */
+/** PATCH: Save dashboard layout. Admin Supabase only. */
 export async function PATCH(request: NextRequest) {
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
   const body = await request.json().catch(() => ({}));
   const parsed = layoutSchema.safeParse(body.layout ?? body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid layout" }, { status: 400 });
   }
   const layout = parsed.data;
-  if (getResolvedAuthSource() === "demo") {
-    return NextResponse.json({ ok: true });
-  }
   try {
     const supabase = await createClient();
     const defaultUserId = "00000000-0000-0000-0000-000000000000";

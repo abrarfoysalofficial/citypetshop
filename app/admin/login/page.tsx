@@ -59,7 +59,7 @@ export default function AdminLoginPage() {
       const normalizedEmail = userEmail.toLowerCase();
       const { data: teamMember, error: teamError } = await supabase
         .from("team_members")
-        .select("role, is_active")
+        .select("role, is_active, is_admin")
         .ilike("email", normalizedEmail)
         .maybeSingle();
 
@@ -88,7 +88,8 @@ export default function AdminLoginPage() {
       }
 
       const role = (teamMember.role ?? "").toLowerCase();
-      if (role !== "admin" && role !== "adm") {
+      const isAdmin = role === "admin" || role === "adm" || (teamMember as { is_admin?: boolean }).is_admin === true;
+      if (!isAdmin) {
         setError("Access denied. You are not authorized to access the admin panel.");
         await supabase.auth.signOut();
         setLoading(false);
@@ -99,7 +100,7 @@ export default function AdminLoginPage() {
         console.log("[admin/login] Authorized, redirecting to dashboard");
       }
 
-      router.replace("/admin/dashboard");
+      router.replace("/admin");
       router.refresh();
     } catch (err) {
       console.error("Login error:", err);

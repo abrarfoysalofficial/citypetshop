@@ -1,33 +1,27 @@
 /**
- * Admin API authorization helper.
- * - Demo mode: no auth required (returns { demo: true })
- * - Supabase mode: requires logged-in user in team_members with admin role
+ * Admin API authorization - SUPABASE ONLY.
+ * No demo/local fallback. Requires:
+ * - Supabase Auth (signInWithPassword)
+ * - User in team_members by email (case-insensitive)
+ * - role='admin' OR is_admin=true
  */
 import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured, getResolvedAuthSource } from "@/src/config/env";
+import { isSupabaseConfigured } from "@/src/config/env";
 
 export type AdminAuthResult =
-  | { ok: true; demo: true }
   | { ok: true; userId: string; email: string }
   | { ok: false; status: 401; message: string }
   | { ok: false; status: 403; message: string }
   | { ok: false; status: 500; message: string };
 
-/** True when auth passed in demo mode (no Supabase required). */
-export function isDemoAuth(auth: AdminAuthResult): boolean {
-  return auth.ok && "demo" in auth;
+/** No demo mode - always requires Supabase auth. */
+export function isDemoAuth(_auth: AdminAuthResult): boolean {
+  return false;
 }
 
 export async function requireAdminAuth(): Promise<AdminAuthResult> {
-  const authSource = getResolvedAuthSource();
-  const configured = isSupabaseConfigured();
-
-  // Demo mode or Supabase not configured: allow without auth
-  if (authSource === "demo" || !configured) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[admin-auth] Demo mode or Supabase not configured, allowing access");
-    }
-    return { ok: true, demo: true };
+  if (!isSupabaseConfigured()) {
+    return { ok: false, status: 500, message: "Supabase not configured" };
   }
 
   try {
@@ -53,7 +47,7 @@ export async function requireAdminAuth(): Promise<AdminAuthResult> {
 
     const { data: member, error: memberError } = await supabase
       .from("team_members")
-      .select("role, is_active")
+      .select("role, is_active, is_admin")
       .ilike("email", email)
       .maybeSingle();
 
@@ -71,7 +65,8 @@ export async function requireAdminAuth(): Promise<AdminAuthResult> {
     }
 
     const role = (member.role ?? "").toLowerCase();
-    if (role !== "admin" && role !== "adm") {
+    const isAdmin = role === "admin" || role === "adm" || (member as { is_admin?: boolean }).is_admin === true;
+    if (!isAdmin) {
       return { ok: false, status: 403, message: "Access denied. Admin role required." };
     }
 

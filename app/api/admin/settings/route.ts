@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
-import { getAdminSettings } from "@/src/data/provider";
+import { requireAdminAuth } from "@/lib/admin-auth";
 import { DEMO_SITE_SETTINGS } from "@/lib/demo-data";
-import { isSupabaseConfigured } from "@/src/config/env";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/settings
- * Branches through provider; no Supabase in demo mode.
+ * Admin: Supabase only. Fetches from site_settings; falls back to defaults for form structure.
  */
 export async function GET() {
   const auth = await requireAdminAuth();
@@ -16,26 +16,31 @@ export async function GET() {
   }
 
   try {
-    const settings = await getAdminSettings();
-    return NextResponse.json(settings ?? DEMO_SITE_SETTINGS);
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("*")
+      .eq("id", "default")
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
+    }
+    return NextResponse.json(data);
   } catch (err) {
     console.error("[api/admin/settings] GET error:", err);
-    return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
+    return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
   }
 }
 
 /**
  * PATCH /api/admin/settings
- * Update site_settings. Requires Supabase.
+ * Update site_settings. Admin Supabase only.
  */
 export async function PATCH(request: Request) {
   const auth = await requireAdminAuth();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
-  }
-
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Demo mode: save not supported" }, { status: 400 });
   }
 
   try {

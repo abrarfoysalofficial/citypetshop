@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -20,6 +20,7 @@ import type { ProductRow } from "@/lib/schema";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const [categories, setCategories] = useState<{ slug: string; name_en: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStock, setUpdatingStock] = useState<string | null>(null);
   const [editingStock, setEditingStock] = useState<{ id: string; value: number } | null>(null);
@@ -29,14 +30,13 @@ export default function AdminProductsPage() {
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/products");
+      const params = new URLSearchParams();
+      if (searchQuery) params.set("search", searchQuery);
+      if (categoryFilter && categoryFilter !== "all") params.set("category", categoryFilter);
+      const res = await fetch(`/api/admin/products?${params}`);
       if (res.status === 401) {
         window.location.href = "/admin/login";
         return;
@@ -47,7 +47,7 @@ export default function AdminProductsPage() {
       }
       if (res.ok) {
         const data = await res.json();
-        setProducts(Array.isArray(data) ? data : []);
+        setProducts(Array.isArray(data.products) ? data.products : []);
       } else {
         setProducts([]);
       }
@@ -57,7 +57,18 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, categoryFilter]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    fetch("/api/admin/categories")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
 
   const updateStock = async (productId: string, newStock: number) => {
     setUpdatingStock(productId);
@@ -80,22 +91,13 @@ export default function AdminProductsPage() {
     }
   };
 
-  // Get unique categories
-  const categories = useMemo(() => {
-    const cats = new Set(products.map(p => p.category_slug));
-    return Array.from(cats);
-  }, [products]);
-
-  // Filter and sort products
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter(p => {
-      const matchesSearch = p.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           p.slug.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === "all" || p.category_slug === categoryFilter;
-      const matchesStatus = statusFilter === "all" || 
-                           (statusFilter === "active" && p.is_active) ||
-                           (statusFilter === "inactive" && !p.is_active);
-      return matchesSearch && matchesCategory && matchesStatus;
+    let filtered = products.filter((p) => {
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && p.is_active) ||
+        (statusFilter === "inactive" && !p.is_active);
+      return matchesStatus;
     });
 
     // Sort
@@ -190,8 +192,8 @@ export default function AdminProductsPage() {
               className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+              {categories.map((c) => (
+                <option key={c.slug} value={c.slug}>{c.name_en}</option>
               ))}
             </select>
           </div>

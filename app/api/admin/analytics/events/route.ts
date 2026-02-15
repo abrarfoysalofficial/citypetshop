@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/admin-auth";
-import { getAdminAnalyticsEvents } from "@/src/data/provider";
+import { getAdminAnalyticsEvents } from "@/src/data/supabase/adminData";
 
 export const dynamic = "force-dynamic";
 
 const META_EVENT_NAMES = ["ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase"];
 
-/** GET: Fetch analytics events. Branches through provider; no Supabase in demo mode. */
+/** GET: Fetch analytics events. Admin Supabase only. */
 export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) {

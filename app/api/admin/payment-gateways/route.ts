@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
-import { getAdminPaymentGateways } from "@/src/data/provider";
-import { isSupabaseConfigured } from "@/src/config/env";
+import { requireAdminAuth } from "@/lib/admin-auth";
+import { DEMO_PAYMENT_GATEWAYS } from "@/lib/demo-data";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/payment-gateways
- * Branches through provider; no Supabase in demo mode.
+ * Admin: Supabase only. Falls back to defaults if table empty.
  */
 export async function GET() {
   const auth = await requireAdminAuth();
@@ -15,26 +16,30 @@ export async function GET() {
   }
 
   try {
-    const gateways = await getAdminPaymentGateways();
-    return NextResponse.json(gateways);
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("payment_gateways")
+      .select("*")
+      .order("gateway", { ascending: true });
+
+    if (error || !data || data.length === 0) {
+      return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
+    }
+    return NextResponse.json(data);
   } catch (err) {
     console.error("[api/admin/payment-gateways] GET error:", err);
-    return NextResponse.json({ error: "Failed to fetch payment gateways" }, { status: 500 });
+    return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
   }
 }
 
 /**
  * PATCH /api/admin/payment-gateways
- * Update a payment gateway. Requires Supabase.
+ * Update a payment gateway. Admin Supabase only.
  */
 export async function PATCH(request: Request) {
   const auth = await requireAdminAuth();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
-  }
-
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Demo mode: update not supported" }, { status: 400 });
   }
 
   try {

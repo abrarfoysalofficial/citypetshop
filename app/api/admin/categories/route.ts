@@ -4,51 +4,38 @@ import { requireAdminAuth } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
-/** GET: List products with optional search, category filter, pagination */
-export async function GET(request: NextRequest) {
+export async function GET() {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search") ?? "";
-  const category = searchParams.get("category") ?? "";
-  const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
-  const offset = (page - 1) * limit;
-
   const supabase = await createClient();
-  let q = supabase.from("products").select("*", { count: "exact" }).order("created_at", { ascending: false });
-
-  if (search) q = q.or(`name_en.ilike.%${search}%,slug.ilike.%${search}%`);
-  if (category) q = q.eq("category_slug", category);
-
-  const { data, error, count } = await q.range(offset, offset + limit - 1);
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .order("sort_order", { ascending: true });
 
   if (error) {
-    console.error("[admin/products] GET:", error.message);
-    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+    console.error("[admin/categories] GET:", error.message);
+    return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
   }
-
-  return NextResponse.json({ products: data ?? [], total: count ?? 0, page, limit });
+  return NextResponse.json(data ?? []);
 }
 
-/** POST: Create product */
 export async function POST(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
   const body = await request.json().catch(() => ({}));
   const supabase = await createClient();
-  const { data, error } = await supabase.from("products").insert(body).select().single();
+  const { data, error } = await supabase.from("categories").insert(body).select().single();
 
   if (error) {
-    console.error("[admin/products] POST:", error.message);
+    console.error("[admin/categories] POST:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json(data);
 }
 
-/** PATCH: Update product */
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
@@ -58,16 +45,15 @@ export async function PATCH(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const supabase = await createClient();
-  const { data, error } = await supabase.from("products").update(updates).eq("id", id).select().single();
+  const { data, error } = await supabase.from("categories").update(updates).eq("id", id).select().single();
 
   if (error) {
-    console.error("[admin/products] PATCH:", error.message);
+    console.error("[admin/categories] PATCH:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json(data);
 }
 
-/** DELETE: Delete product */
 export async function DELETE(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
@@ -77,10 +63,10 @@ export async function DELETE(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const supabase = await createClient();
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { error } = await supabase.from("categories").delete().eq("id", id);
 
   if (error) {
-    console.error("[admin/products] DELETE:", error.message);
+    console.error("[admin/categories] DELETE:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ success: true });

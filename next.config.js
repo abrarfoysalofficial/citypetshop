@@ -24,6 +24,7 @@ const nextConfig = {
       { source: '/my-account/orders/:id', destination: '/account/orders/:id', permanent: false },
       { source: '/my-account/invoices', destination: '/account/invoices', permanent: false },
       { source: '/my-account/returns', destination: '/account/returns', permanent: false },
+      { source: '/admin/products/new', destination: '/admin/products/upload', permanent: false },
     ];
   },
 };

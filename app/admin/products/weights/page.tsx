@@ -6,17 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus } from "lucide-react";
 
-const schema = z.object({
-  slug: z.string().min(1),
-  name_en: z.string().min(1),
-  name_bn: z.string().optional(),
-  sort_order: z.coerce.number().default(0),
-  is_active: z.boolean().default(true),
-});
+const schema = z.object({ value: z.string().min(1), sort_order: z.coerce.number().default(0), is_active: z.boolean().default(true) });
 type FormData = z.infer<typeof schema>;
-type Row = { id: string; slug: string; name_en: string; name_bn?: string; sort_order: number; is_active: boolean };
+type Row = { id: string; value: string; sort_order: number; is_active: boolean };
 
-export default function CategoriesPage() {
+export default function ProductWeightsPage() {
   const [items, setItems] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,7 +21,7 @@ export default function CategoriesPage() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/categories");
+      const res = await fetch("/api/admin/product-weights");
       if (res.status === 401) window.location.href = "/admin/login";
       else if (res.ok) setItems(await res.json());
     } catch { setError("Failed to load"); }
@@ -40,10 +34,10 @@ export default function CategoriesPage() {
     setError(null);
     try {
       const res = editing
-        ? await fetch("/api/admin/categories", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing, ...data }) })
-        : await fetch("/api/admin/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        ? await fetch("/api/admin/product-weights", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing, ...data }) })
+        : await fetch("/api/admin/product-weights", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       if (!res.ok) throw new Error((await res.json()).error);
-      reset();
+      reset({ value: "", sort_order: 0, is_active: true });
       setEditing(null);
       fetchItems();
     } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
@@ -51,9 +45,9 @@ export default function CategoriesPage() {
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm("Delete this category?")) return;
+    if (!confirm("Delete?")) return;
     try {
-      const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/product-weights?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       fetchItems();
     } catch { setError("Failed to delete"); }
@@ -63,12 +57,10 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Category</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Add Product WEIGHT</h1>
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-wrap gap-4">
-          <input {...register("slug")} placeholder="Slug" className="rounded-lg border border-slate-300 px-3 py-2" />
-          <input {...register("name_en")} placeholder="Name (EN)" className="rounded-lg border border-slate-300 px-3 py-2" />
-          <input {...register("name_bn")} placeholder="Name (BN)" className="rounded-lg border border-slate-300 px-3 py-2" />
+          <input {...register("value")} placeholder="Value (e.g. 1kg)" className="rounded-lg border border-slate-300 px-3 py-2" />
           <input type="number" {...register("sort_order")} className="w-24 rounded-lg border border-slate-300 px-3 py-2" />
           <label className="flex items-center gap-2"><input type="checkbox" {...register("is_active")} />Active</label>
           <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50">
@@ -79,24 +71,15 @@ export default function CategoriesPage() {
       </div>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="p-3 text-left font-medium">Slug</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Sort</th>
-              <th className="p-3 text-left">Active</th>
-              <th className="p-3 text-right">Actions</th>
-            </tr>
-          </thead>
+          <thead className="bg-slate-50"><tr><th className="p-3 text-left font-medium">Value</th><th className="p-3 text-left">Sort</th><th className="p-3 text-left">Active</th><th className="p-3 text-right">Actions</th></tr></thead>
           <tbody>
             {items.map((r) => (
               <tr key={r.id} className="border-t border-slate-100">
-                <td className="p-3">{r.slug}</td>
-                <td className="p-3">{r.name_en}</td>
+                <td className="p-3">{r.value}</td>
                 <td className="p-3">{r.sort_order}</td>
                 <td className="p-3">{r.is_active ? "Yes" : "No"}</td>
                 <td className="p-3 text-right">
-                  <button onClick={() => { setEditing(r.id); setValue("slug", r.slug); setValue("name_en", r.name_en); setValue("name_bn", r.name_bn ?? ""); setValue("sort_order", r.sort_order); setValue("is_active", r.is_active); }} className="text-blue-600 hover:underline mr-2">Edit</button>
+                  <button onClick={() => { setEditing(r.id); setValue("value", r.value); setValue("sort_order", r.sort_order); setValue("is_active", r.is_active); }} className="text-blue-600 hover:underline mr-2">Edit</button>
                   <button onClick={() => onDelete(r.id)} className="text-red-600 hover:underline">Delete</button>
                 </td>
               </tr>
