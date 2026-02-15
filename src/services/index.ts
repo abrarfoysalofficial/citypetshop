@@ -45,7 +45,7 @@ export interface Services {
 
 /** Resolved sources for status panel / debugging. */
 export function getResolvedSources(): {
-  products: "sanity" | "local";
+  products: "sanity" | "local" | "supabase";
   auth: "supabase" | "demo";
   orders: "supabase" | "local";
 } {
