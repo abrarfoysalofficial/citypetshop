@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { 
   Upload, 
@@ -267,9 +268,11 @@ export default function AdminProductsPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {product.images[0] && (
-                          <img
+                          <Image
                             src={product.images[0]}
                             alt={product.name_en}
+                            width={40}
+                            height={40}
                             className="h-10 w-10 rounded-lg object-cover border border-slate-200"
                           />
                         )}

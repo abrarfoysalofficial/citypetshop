@@ -1,90 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
-import { DEMO_ANALYTICS_EVENTS } from "@/lib/demo-data";
-import { isSupabaseConfigured } from "@/src/config/env";
+import { requireAdminAuth } from "@/lib/admin-auth";
+import { getAdminAnalyticsEvents } from "@/src/data/provider";
+
+export const dynamic = "force-dynamic";
 
 const META_EVENT_NAMES = ["ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase"];
 
-/** GET: Fetch analytics events (Meta Events Manager style). Returns demo data when Supabase not configured. */
+/** GET: Fetch analytics events. Branches through provider; no Supabase in demo mode. */
 export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+  const { searchParams } = new URL(request.url);
+  const params = {
+    from: searchParams.get("from") ?? undefined,
+    to: searchParams.get("to") ?? undefined,
+    event: searchParams.get("event") ?? undefined,
+    source: searchParams.get("source") ?? undefined,
+  };
+
+  try {
+    const result = await getAdminAnalyticsEvents(params);
     return NextResponse.json({
-      ...DEMO_ANALYTICS_EVENTS,
+      ...result,
       metaEventNames: META_EVENT_NAMES,
     });
-  }
-  const { searchParams } = new URL(request.url);
-  const fromDate = searchParams.get("from");
-  const toDate = searchParams.get("to");
-  const eventName = searchParams.get("event");
-  const source = searchParams.get("source");
-
-  const supabase = await createClient();
-  let q = supabase
-    .from("analytics_events")
-    .select("id, event_name, event_id, source, page_url, created_at, has_email_hash, has_phone_hash, has_fbp, has_fbc, payload_summary")
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  if (fromDate) q = q.gte("created_at", fromDate);
-  if (toDate) q = q.lte("created_at", toDate);
-  if (eventName) q = q.eq("event_name", eventName);
-  if (source) q = q.eq("source", source);
-
-  const { data, error } = await q;
-  if (error) {
-    console.error("[api/admin/analytics/events] query error:", error.message);
+  } catch (err) {
+    console.error("[api/admin/analytics/events] error:", err);
     return NextResponse.json({
       events: [],
       counts: {},
       lastReceivedByEvent: {},
-      diagnostics: { pixelConfigured: false, capiConfigured: false, warnings: [error.message] },
+      diagnostics: { pixelConfigured: false, capiConfigured: false, warnings: ["Failed to load analytics"] },
       metaEventNames: META_EVENT_NAMES,
     });
   }
-
-  const rangeStart = fromDate || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const rangeEnd = toDate || new Date().toISOString();
-  const countQ = supabase.from("analytics_events").select("event_name, created_at").gte("created_at", rangeStart).lte("created_at", rangeEnd);
-  const { data: countRows } = await countQ;
-  const byName: Record<string, number> = {};
-  const lastReceived: Record<string, string> = {};
-  type CountRow = { event_name: string; created_at: string };
-  (countRows || []).forEach((r: CountRow) => {
-    const row = r;
-    byName[row.event_name] = (byName[row.event_name] || 0) + 1;
-    if (!lastReceived[row.event_name] || row.created_at > lastReceived[row.event_name]) lastReceived[row.event_name] = row.created_at;
-  });
-  const eventsData = data || [];
-  type EventRow = { event_name: string; created_at: string };
-  eventsData.forEach((e: EventRow) => {
-    const ev = e;
-    if (!lastReceived[ev.event_name] || ev.created_at > lastReceived[ev.event_name]) lastReceived[ev.event_name] = ev.created_at;
-  });
-
-  const { data: settingsRow } = await supabase.from("site_settings").select("facebook_pixel_id, facebook_capi_token").eq("id", "default").single();
-  const settings = settingsRow as { facebook_pixel_id?: string; facebook_capi_token?: string } | null;
-  const pixelConfigured = !!(settings?.facebook_pixel_id?.trim() || process.env.NEXT_PUBLIC_FB_PIXEL_ID);
-  const capiConfigured = !!(settings?.facebook_capi_token?.trim() || process.env.FACEBOOK_CAPI_TOKEN);
-  const warnings: string[] = [];
-  if (!pixelConfigured) warnings.push("Meta Pixel ID not configured (site_settings or NEXT_PUBLIC_FB_PIXEL_ID).");
-  if (!capiConfigured) warnings.push("Meta CAPI token not configured (site_settings or FACEBOOK_CAPI_TOKEN).");
-
-  return NextResponse.json({
-    events: eventsData,
-    counts: byName,
-    lastReceivedByEvent: lastReceived,
-    diagnostics: {
-      pixelConfigured,
-      capiConfigured,
-      warnings,
-    },
-    metaEventNames: META_EVENT_NAMES,
-  });
 }

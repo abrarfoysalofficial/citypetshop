@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
 import { isSupabaseConfigured } from "@/src/config/env";
 
+export const dynamic = "force-dynamic";
+
 /** GET: List notes for an order (admin). */
 export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();

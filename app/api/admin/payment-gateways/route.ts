@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
-import { DEMO_PAYMENT_GATEWAYS } from "@/lib/demo-data";
+import { getAdminPaymentGateways } from "@/src/data/provider";
 import { isSupabaseConfigured } from "@/src/config/env";
 
 /**
  * GET /api/admin/payment-gateways
- * Fetch all payment gateways. Returns demo data when Supabase not configured.
+ * Branches through provider; no Supabase in demo mode.
  */
 export async function GET() {
   const auth = await requireAdminAuth();
@@ -14,26 +14,12 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
-    return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
-  }
-
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("payment_gateways")
-      .select("*")
-      .order("gateway", { ascending: true });
-
-    if (error) {
-      console.error("[api/admin/payment-gateways] GET error:", error.message);
-      return NextResponse.json({ error: "Failed to fetch payment gateways" }, { status: 500 });
-    }
-
-    return NextResponse.json(data ?? []);
+    const gateways = await getAdminPaymentGateways();
+    return NextResponse.json(gateways);
   } catch (err) {
-    console.error("[api/admin/payment-gateways] GET unexpected:", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    console.error("[api/admin/payment-gateways] GET error:", err);
+    return NextResponse.json({ error: "Failed to fetch payment gateways" }, { status: 500 });
   }
 }
 

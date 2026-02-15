@@ -125,10 +125,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <p className="text-xs text-slate-500 truncate">admin@store.com</p>
             </div>
           </div>
-          <button className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+          <Link
+            href="/admin/logout"
+            className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
             <LogOut className="h-4 w-4" />
             Sign Out
-          </button>
+          </Link>
         </div>
       </motion.aside>
 

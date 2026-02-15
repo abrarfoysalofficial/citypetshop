@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
-  TrendingDown,
   DollarSign,
   ShoppingCart,
   Package,
@@ -13,12 +12,8 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -27,10 +22,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
-import { createClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/src/config/env";
 
 const COLORS = ["#3b82f6", "#06b6d4", "#8b5cf6", "#ec4899", "#f59e0b"];
 
@@ -48,11 +40,7 @@ export default function AdminDashboardPage() {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const setDemoData = () => {
+  const setDemoData = useCallback(() => {
     setStats({
       totalRevenue: 45231.89,
       totalOrders: 127,
@@ -83,69 +71,25 @@ export default function AdminDashboardPage() {
       { id: "ORD-004", customer: "Sarah Williams", total: 450, status: "pending", date: "2026-02-04" },
       { id: "ORD-005", customer: "Tom Brown", total: 1680, status: "delivered", date: "2026-02-03" },
     ]);
-  };
+  }, []);
 
-  const fetchDashboardData = async () => {
-    if (!isSupabaseConfigured()) {
-      setDemoData();
-      setLoading(false);
-      return;
-    }
-
+  const fetchDashboardData = useCallback(async () => {
     const timeout = (ms: number) =>
       new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), ms));
 
     try {
-      const supabase = createClient();
       const fetchPromise = (async () => {
-        const { data: orders } = await supabase
-          .from("orders")
-          .select("total, created_at, status");
-        const totalRevenue = orders?.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0) || 0;
-        const totalOrders = orders?.length || 0;
-
-        const { count: productsCount } = await supabase
-          .from("products")
-          .select("*", { count: "exact", head: true });
-
-        const { data: recentOrdersData } = await supabase
-          .from("orders")
-          .select("id, shipping_name, total, status, created_at")
-          .order("created_at", { ascending: false })
-          .limit(5);
-
-        setStats({
-          totalRevenue,
-          totalOrders,
-          totalProducts: productsCount || 0,
-          totalCustomers: 0,
-          revenueChange: 12.5,
-          ordersChange: 8.2,
-        });
-        setRecentOrders(
-          recentOrdersData?.map((o: any) => ({
-            id: o.id.slice(0, 8),
-            customer: o.shipping_name,
-            total: Number(o.total),
-            status: o.status,
-            date: new Date(o.created_at).toLocaleDateString(),
-          })) || []
-        );
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-        setSalesData(
-          months.map((name) => ({
-            name,
-            revenue: Math.floor(Math.random() * 3000) + 3000,
-            orders: Math.floor(Math.random() * 20) + 15,
-          }))
-        );
-        setCategoryData([
-          { name: "Dog Food", value: 400, count: 45 },
-          { name: "Cat Food", value: 300, count: 38 },
-          { name: "Toys", value: 200, count: 52 },
-          { name: "Accessories", value: 278, count: 41 },
-          { name: "Healthcare", value: 189, count: 28 },
-        ]);
+        const res = await fetch("/api/admin/dashboard");
+        if (res.status === 401) {
+          window.location.href = "/admin/login";
+          return;
+        }
+        if (!res.ok) throw new Error("Dashboard fetch failed");
+        const data = await res.json();
+        setStats(data.stats ?? { totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0 });
+        setSalesData(data.salesData ?? []);
+        setCategoryData(data.categoryData ?? []);
+        setRecentOrders(data.recentOrders ?? []);
       })();
 
       const result = await Promise.race([fetchPromise, timeout(8000)]);
@@ -158,7 +102,11 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setDemoData]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const StatCard = ({ title, value, change, icon: Icon, trend }: any) => (
     <motion.div

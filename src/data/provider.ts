@@ -1,6 +1,7 @@
 /**
  * Data provider: switches on NEXT_PUBLIC_DATA_SOURCE (local | supabase | sanity).
  * Sanity: products, categories, home, combo offers from Sanity CMS; blog/admin fallback to local.
+ * Admin data: branches on AUTH_MODE (demo | supabase). Demo = no Supabase calls.
  */
 import type {
   Product,
@@ -16,7 +17,11 @@ import type {
   DemoInvoice,
   DemoReturn,
 } from "./types";
+import type { ProductRow, SiteSettingsRow, PaymentGatewayRow } from "@/lib/schema";
+import type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 import { DATA_SOURCE, AUTH_MODE } from "@/src/config/runtime";
+
+export type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 
 export async function getProducts(): Promise<Product[]> {
   if (DATA_SOURCE === "local") {
@@ -210,6 +215,96 @@ export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
   }
   const { getAdminAuditLogs: getLocal } = await import("./local/adminDemo");
   return getLocal();
+}
+
+/** Admin products list. Demo mode: no Supabase. */
+export async function getAdminProducts(): Promise<ProductRow[]> {
+  if (AUTH_MODE === "demo") {
+    const { DEMO_PRODUCTS } = await import("@/lib/demo-data");
+    return DEMO_PRODUCTS;
+  }
+  const { getAdminProducts: getSupabase } = await import("./supabase/adminData");
+  return getSupabase();
+}
+
+/** Admin site settings. Demo mode: no Supabase. */
+export async function getAdminSettings(): Promise<Partial<SiteSettingsRow> | null> {
+  if (AUTH_MODE === "demo") {
+    const { DEMO_SITE_SETTINGS } = await import("@/lib/demo-data");
+    return DEMO_SITE_SETTINGS;
+  }
+  const { getAdminSettings: getSupabase } = await import("./supabase/adminData");
+  return getSupabase();
+}
+
+/** Admin payment gateways. Demo mode: no Supabase. */
+export async function getAdminPaymentGateways(): Promise<PaymentGatewayRow[]> {
+  if (AUTH_MODE === "demo") {
+    const { DEMO_PAYMENT_GATEWAYS } = await import("@/lib/demo-data");
+    return DEMO_PAYMENT_GATEWAYS;
+  }
+  const { getAdminPaymentGateways: getSupabase } = await import("./supabase/adminData");
+  return getSupabase();
+}
+
+/** Admin analytics events. Demo mode: no Supabase. */
+export async function getAdminAnalyticsEvents(params: {
+  from?: string;
+  to?: string;
+  event?: string;
+  source?: string;
+}): Promise<AdminAnalyticsResult> {
+  if (AUTH_MODE === "demo") {
+    const { DEMO_ANALYTICS_EVENTS } = await import("@/lib/demo-data");
+    return {
+      events: DEMO_ANALYTICS_EVENTS.events,
+      counts: DEMO_ANALYTICS_EVENTS.counts,
+      lastReceivedByEvent: DEMO_ANALYTICS_EVENTS.lastReceivedByEvent,
+      diagnostics: DEMO_ANALYTICS_EVENTS.diagnostics,
+    };
+  }
+  const { getAdminAnalyticsEvents: getSupabase } = await import("./supabase/adminData");
+  return getSupabase(params);
+}
+
+/** Admin dashboard stats (KPIs, charts, recent orders). Demo mode: no Supabase. */
+export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
+  if (AUTH_MODE === "demo") {
+    return {
+      stats: {
+        totalRevenue: 45231.89,
+        totalOrders: 127,
+        totalProducts: 234,
+        totalCustomers: 89,
+        revenueChange: 12.5,
+        ordersChange: 8.2,
+      },
+      salesData: [
+        { name: "Jan", revenue: 4000, orders: 24 },
+        { name: "Feb", revenue: 3000, orders: 18 },
+        { name: "Mar", revenue: 5000, orders: 32 },
+        { name: "Apr", revenue: 4500, orders: 28 },
+        { name: "May", revenue: 6000, orders: 38 },
+        { name: "Jun", revenue: 5500, orders: 35 },
+      ],
+      categoryData: [
+        { name: "Dog Food", value: 400, count: 45 },
+        { name: "Cat Food", value: 300, count: 38 },
+        { name: "Toys", value: 200, count: 52 },
+        { name: "Accessories", value: 278, count: 41 },
+        { name: "Healthcare", value: 189, count: 28 },
+      ],
+      recentOrders: [
+        { id: "ORD-001", customer: "John Doe", total: 1250, status: "delivered", date: "2026-02-05" },
+        { id: "ORD-002", customer: "Jane Smith", total: 890, status: "processing", date: "2026-02-05" },
+        { id: "ORD-003", customer: "Mike Johnson", total: 2100, status: "shipped", date: "2026-02-04" },
+        { id: "ORD-004", customer: "Sarah Williams", total: 450, status: "pending", date: "2026-02-04" },
+        { id: "ORD-005", customer: "Tom Brown", total: 1680, status: "delivered", date: "2026-02-03" },
+      ],
+    };
+  }
+  const { getAdminDashboardStats: getSupabase } = await import("./supabase/adminData");
+  return getSupabase();
 }
 
 export async function getUserAccountOverview(): Promise<{

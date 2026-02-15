@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
+import { getAdminSettings } from "@/src/data/provider";
 import { DEMO_SITE_SETTINGS } from "@/lib/demo-data";
 import { isSupabaseConfigured } from "@/src/config/env";
 
 /**
  * GET /api/admin/settings
- * Fetch site_settings row. Returns demo data when Supabase not configured.
+ * Branches through provider; no Supabase in demo mode.
  */
 export async function GET() {
   const auth = await requireAdminAuth();
@@ -14,27 +15,12 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
-    return NextResponse.json(DEMO_SITE_SETTINGS);
-  }
-
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("site_settings")
-      .select("*")
-      .eq("id", "default")
-      .single();
-
-    if (error) {
-      console.error("[api/admin/settings] GET error:", error.message);
-      return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
-    }
-
-    return NextResponse.json(data ?? DEMO_SITE_SETTINGS);
+    const settings = await getAdminSettings();
+    return NextResponse.json(settings ?? DEMO_SITE_SETTINGS);
   } catch (err) {
-    console.error("[api/admin/settings] GET unexpected:", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    console.error("[api/admin/settings] GET error:", err);
+    return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { 
   Save, 
@@ -178,10 +179,11 @@ export default function AdminSettingsPage() {
           {settings.logo_url && (
             <div className="flex-shrink-0">
               <div className="relative h-32 w-32 rounded-xl border-2 border-slate-200 bg-slate-50 p-2">
-                <img
+                <Image
                   src={settings.logo_url}
                   alt="Store Logo"
-                  className="h-full w-full object-contain"
+                  fill
+                  className="object-contain"
                 />
               </div>
               <p className="mt-2 text-xs text-slate-500 text-center">Current Logo</p>

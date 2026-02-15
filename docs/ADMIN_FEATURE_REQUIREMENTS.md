@@ -70,7 +70,11 @@ This document captures all feature requirements for the City Plus Pet Shop admin
 
 - `export const dynamic = "force-dynamic"` on:
   - `/api/payment-gateways`
+  - `/api/auth/demo-logout`
+  - `/api/admin/analytics/events`
+  - `/api/admin/order-notes`
   - `/admin/orders`
+  - `/admin/orders/[id]`
   - `/admin/login` (via layout)
 
 ---

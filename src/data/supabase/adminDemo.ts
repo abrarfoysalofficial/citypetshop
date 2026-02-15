@@ -6,18 +6,20 @@ function rowToDemoOrder(row: {
   user_id: string | null;
   guest_email: string | null;
   guest_name: string | null;
+  shipping_name?: string | null;
+  shipping_email?: string | null;
+  shipping_address?: string | null;
   status: string;
   total: number;
   created_at: string;
-  shipping_address?: string | null;
   payment_method?: string | null;
   order_items?: { product_id: string; product_name: string; quantity: number; unit_price: number }[];
 }): DemoOrder {
   return {
     id: row.id,
     customerId: row.user_id ?? undefined,
-    customerName: row.guest_name ?? undefined,
-    email: row.guest_email ?? undefined,
+    customerName: row.guest_name ?? row.shipping_name ?? undefined,
+    email: row.guest_email ?? row.shipping_email ?? undefined,
     total: Number(row.total),
     status: row.status,
     createdAt: row.created_at,
@@ -79,7 +81,7 @@ export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, user_id, guest_email, guest_name, status, total, created_at, shipping_address, payment_method"
+      "id, user_id, guest_email, guest_name, shipping_name, shipping_email, shipping_address, status, total, created_at, payment_method"
     )
     .eq("id", id)
     .single();

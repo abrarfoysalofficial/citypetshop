@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
-import { DEMO_PRODUCTS } from "@/lib/demo-data";
+import { getAdminProducts } from "@/src/data/provider";
 import { isSupabaseConfigured } from "@/src/config/env";
 
 /**
  * GET /api/admin/products
- * Fetch all products (admin view). Returns demo data when Supabase not configured.
+ * Branches through provider; no Supabase in demo mode.
  */
 export async function GET() {
   const auth = await requireAdminAuth();
@@ -14,26 +14,12 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
-    return NextResponse.json(DEMO_PRODUCTS);
-  }
-
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[api/admin/products] GET error:", error.message);
-      return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
-    }
-
-    return NextResponse.json(data ?? []);
+    const products = await getAdminProducts();
+    return NextResponse.json(products);
   } catch (err) {
-    console.error("[api/admin/products] GET unexpected:", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    console.error("[api/admin/products] GET error:", err);
+    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
   }
 }
 

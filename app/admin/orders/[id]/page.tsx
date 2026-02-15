@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { getAdminOrderById } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
 import { notFound } from "next/navigation";
 import OrderNotesBlock from "./OrderNotesBlock";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -10,17 +11,9 @@ export default async function AdminOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = DATA_SOURCE === "local" ? await getAdminOrderById(id) : null;
+  const order = await getAdminOrderById(id);
   if (!order) {
-    if (DATA_SOURCE === "local") notFound();
-    return (
-      <div className="space-y-6">
-        <h1 className="text-xl font-bold text-slate-900">Order #{id.slice(0, 8)}</h1>
-        <p className="text-slate-600">Connect backend for full workflow.</p>
-        <Link href="/admin/orders" className="inline-block text-primary hover:underline">← Orders</Link>
-        {process.env.NEXT_PUBLIC_SUPABASE_URL && <OrderNotesBlock orderId={id} />}
-      </div>
-    );
+    notFound();
   }
 
   return (
