@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,8 +11,6 @@ import {
   CreditCard,
   Settings,
   BarChart3,
-  Users,
-  FileText,
   Menu,
   X,
   Store,
@@ -35,9 +33,27 @@ const navigation = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    setIsMobile(mq.matches);
+    const fn = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
+
+  // Login page: no sidebar, minimal layout
+  if (pathname === "/admin/login") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex items-center justify-center">
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex">
       {/* Mobile sidebar backdrop */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -51,13 +67,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Sidebar - visible on desktop (lg), slide on mobile */}
       <motion.aside
         initial={false}
         animate={{
-          x: sidebarOpen ? 0 : "-100%",
+          x: isMobile && !sidebarOpen ? "-100%" : 0,
         }}
-        className="fixed inset-y-0 left-0 z-50 w-64 bg-white/80 backdrop-blur-xl border-r border-slate-200/50 shadow-xl lg:translate-x-0 lg:static lg:inset-auto"
+        transition={{ type: "tween", duration: 0.2 }}
+        className="fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white/80 backdrop-blur-xl border-r border-slate-200/50 shadow-xl lg:relative lg:translate-x-0"
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-6 border-b border-slate-200/50">
@@ -116,7 +133,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </motion.aside>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="flex-1 min-w-0 lg:pl-0">
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200/50 bg-white/80 backdrop-blur-xl px-6 shadow-sm">
           <button
