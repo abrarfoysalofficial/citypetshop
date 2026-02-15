@@ -52,111 +52,110 @@ export default function AdminDashboardPage() {
     fetchDashboardData();
   }, []);
 
+  const setDemoData = () => {
+    setStats({
+      totalRevenue: 45231.89,
+      totalOrders: 127,
+      totalProducts: 234,
+      totalCustomers: 89,
+      revenueChange: 12.5,
+      ordersChange: 8.2,
+    });
+    setSalesData([
+      { name: "Jan", revenue: 4000, orders: 24 },
+      { name: "Feb", revenue: 3000, orders: 18 },
+      { name: "Mar", revenue: 5000, orders: 32 },
+      { name: "Apr", revenue: 4500, orders: 28 },
+      { name: "May", revenue: 6000, orders: 38 },
+      { name: "Jun", revenue: 5500, orders: 35 },
+    ]);
+    setCategoryData([
+      { name: "Dog Food", value: 400, count: 45 },
+      { name: "Cat Food", value: 300, count: 38 },
+      { name: "Toys", value: 200, count: 52 },
+      { name: "Accessories", value: 278, count: 41 },
+      { name: "Healthcare", value: 189, count: 28 },
+    ]);
+    setRecentOrders([
+      { id: "ORD-001", customer: "John Doe", total: 1250, status: "delivered", date: "2026-02-05" },
+      { id: "ORD-002", customer: "Jane Smith", total: 890, status: "processing", date: "2026-02-05" },
+      { id: "ORD-003", customer: "Mike Johnson", total: 2100, status: "shipped", date: "2026-02-04" },
+      { id: "ORD-004", customer: "Sarah Williams", total: 450, status: "pending", date: "2026-02-04" },
+      { id: "ORD-005", customer: "Tom Brown", total: 1680, status: "delivered", date: "2026-02-03" },
+    ]);
+  };
+
   const fetchDashboardData = async () => {
     if (!isSupabaseConfigured()) {
-      // Demo data
-      setStats({
-        totalRevenue: 45231.89,
-        totalOrders: 127,
-        totalProducts: 234,
-        totalCustomers: 89,
-        revenueChange: 12.5,
-        ordersChange: 8.2,
-      });
-      
-      setSalesData([
-        { name: "Jan", revenue: 4000, orders: 24 },
-        { name: "Feb", revenue: 3000, orders: 18 },
-        { name: "Mar", revenue: 5000, orders: 32 },
-        { name: "Apr", revenue: 4500, orders: 28 },
-        { name: "May", revenue: 6000, orders: 38 },
-        { name: "Jun", revenue: 5500, orders: 35 },
-      ]);
-
-      setCategoryData([
-        { name: "Dog Food", value: 400, count: 45 },
-        { name: "Cat Food", value: 300, count: 38 },
-        { name: "Toys", value: 200, count: 52 },
-        { name: "Accessories", value: 278, count: 41 },
-        { name: "Healthcare", value: 189, count: 28 },
-      ]);
-
-      setRecentOrders([
-        { id: "ORD-001", customer: "John Doe", total: 1250, status: "delivered", date: "2026-02-05" },
-        { id: "ORD-002", customer: "Jane Smith", total: 890, status: "processing", date: "2026-02-05" },
-        { id: "ORD-003", customer: "Mike Johnson", total: 2100, status: "shipped", date: "2026-02-04" },
-        { id: "ORD-004", customer: "Sarah Williams", total: 450, status: "pending", date: "2026-02-04" },
-        { id: "ORD-005", customer: "Tom Brown", total: 1680, status: "delivered", date: "2026-02-03" },
-      ]);
-
+      setDemoData();
       setLoading(false);
       return;
     }
 
+    const timeout = (ms: number) =>
+      new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), ms));
+
     try {
       const supabase = createClient();
+      const fetchPromise = (async () => {
+        const { data: orders } = await supabase
+          .from("orders")
+          .select("total, created_at, status");
+        const totalRevenue = orders?.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0) || 0;
+        const totalOrders = orders?.length || 0;
 
-      // Fetch orders stats
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("total, created_at, status");
+        const { count: productsCount } = await supabase
+          .from("products")
+          .select("*", { count: "exact", head: true });
 
-      const totalRevenue = orders?.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0) || 0;
-      const totalOrders = orders?.length || 0;
+        const { data: recentOrdersData } = await supabase
+          .from("orders")
+          .select("id, shipping_name, total, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(5);
 
-      // Fetch products count
-      const { count: productsCount } = await supabase
-        .from("products")
-        .select("*", { count: "exact", head: true });
+        setStats({
+          totalRevenue,
+          totalOrders,
+          totalProducts: productsCount || 0,
+          totalCustomers: 0,
+          revenueChange: 12.5,
+          ordersChange: 8.2,
+        });
+        setRecentOrders(
+          recentOrdersData?.map((o: any) => ({
+            id: o.id.slice(0, 8),
+            customer: o.shipping_name,
+            total: Number(o.total),
+            status: o.status,
+            date: new Date(o.created_at).toLocaleDateString(),
+          })) || []
+        );
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+        setSalesData(
+          months.map((name) => ({
+            name,
+            revenue: Math.floor(Math.random() * 3000) + 3000,
+            orders: Math.floor(Math.random() * 20) + 15,
+          }))
+        );
+        setCategoryData([
+          { name: "Dog Food", value: 400, count: 45 },
+          { name: "Cat Food", value: 300, count: 38 },
+          { name: "Toys", value: 200, count: 52 },
+          { name: "Accessories", value: 278, count: 41 },
+          { name: "Healthcare", value: 189, count: 28 },
+        ]);
+      })();
 
-      // Fetch recent orders
-      const { data: recentOrdersData } = await supabase
-        .from("orders")
-        .select("id, shipping_name, total, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      setStats({
-        totalRevenue,
-        totalOrders,
-        totalProducts: productsCount || 0,
-        totalCustomers: 0, // Would need a users/customers table
-        revenueChange: 12.5,
-        ordersChange: 8.2,
-      });
-
-      setRecentOrders(
-        recentOrdersData?.map((o: any) => ({
-          id: o.id.slice(0, 8),
-          customer: o.shipping_name,
-          total: Number(o.total),
-          status: o.status,
-          date: new Date(o.created_at).toLocaleDateString(),
-        })) || []
-      );
-
-      // Generate sales chart data (mock for now - would need daily aggregation)
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-      setSalesData(
-        months.map((name, i) => ({
-          name,
-          revenue: Math.floor(Math.random() * 3000) + 3000,
-          orders: Math.floor(Math.random() * 20) + 15,
-        }))
-      );
-
-      // Generate category data (mock - would need product categories aggregation)
-      setCategoryData([
-        { name: "Dog Food", value: 400, count: 45 },
-        { name: "Cat Food", value: 300, count: 38 },
-        { name: "Toys", value: 200, count: 52 },
-        { name: "Accessories", value: 278, count: 41 },
-        { name: "Healthcare", value: 189, count: 28 },
-      ]);
-
-      setLoading(false);
+      const result = await Promise.race([fetchPromise, timeout(8000)]);
+      if (result === "timeout") {
+        setDemoData();
+      }
     } catch (err) {
       console.error("Dashboard data fetch error:", err);
+      setDemoData();
+    } finally {
       setLoading(false);
     }
   };
