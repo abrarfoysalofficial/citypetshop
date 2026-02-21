@@ -1,0 +1,1238 @@
+// City Plus Pet Shop - Self-hosted Postgres schema
+// Prisma ORM - no Supabase/Sanity
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+enum OrderStatus {
+  draft
+  pending
+  processing
+  shipped
+  handed_to_courier
+  delivered
+  cancelled
+  returned
+  refund_requested
+  refunded
+  failed
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  cancelled
+  refunded
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+// =============================================================================
+// USERS (Auth.js credentials - replaces Supabase Auth)
+// =============================================================================
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String?
+  role          String    @default("user") // admin | user
+  emailVerified DateTime? @map("email_verified")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  accounts  Account[]
+  sessions  Session[]
+  orders    Order[]
+  roles     UserRole[]
+  auditLogs AuditLog[]
+  tickets   SupportTicket[]
+  messages  TicketMessage[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// =============================================================================
+// SITE SETTINGS
+// =============================================================================
+model SiteSettings {
+  id        String   @id @default("default")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  logoUrl     String? @map("logo_url")
+  logoDarkUrl String? @map("logo_dark_url")
+  siteNameEn  String  @default("City Plus Pet Shop") @map("site_name_en")
+  siteNameBn  String? @map("site_name_bn")
+  taglineEn   String? @map("tagline_en")
+  taglineBn   String? @map("tagline_bn")
+
+  primaryColor   String  @default("#0f172a") @map("primary_color")
+  secondaryColor String  @default("#06b6d4") @map("secondary_color")
+  accentColor    String  @default("#f97316") @map("accent_color")
+  fontFamily     String? @map("font_family")
+  buttonStyle    String? @map("button_style")
+
+  navbarLinks   Json    @default("[]") @map("navbar_links")
+  footerTextEn  String? @map("footer_text_en")
+  footerTextBn  String? @map("footer_text_bn")
+  footerLinks   Json    @default("[]") @map("footer_links")
+  copyrightText String? @map("copyright_text")
+
+  socialLinks    Json    @default("[]") @map("social_links")
+  addressEn      String? @map("address_en")
+  addressBn      String? @map("address_bn")
+  phone          String?
+  email          String?
+  whatsappNumber String? @map("whatsapp_number")
+
+  heroSlider     Json    @default("[]") @map("hero_slider")
+  sideBanners    Json    @default("[]") @map("side_banners")
+  ctaButtons     Json    @default("[]") @map("cta_buttons")
+  popupEnabled   Boolean @default(false) @map("popup_enabled")
+  popupContentEn String? @map("popup_content_en")
+  popupContentBn String? @map("popup_content_bn")
+  popupImageUrl  String? @map("popup_image_url")
+
+  facebookPixelId    String? @map("facebook_pixel_id")
+  facebookCapiToken  String? @map("facebook_capi_token")
+  googleAnalyticsId  String? @map("google_analytics_id")
+  googleTagManagerId String? @map("google_tag_manager_id")
+
+  defaultMetaTitle       String? @map("default_meta_title")
+  defaultMetaDescription String? @map("default_meta_description")
+  defaultOgImageUrl      String? @map("default_og_image_url")
+
+  homepageBlocks          Json?    @map("homepage_blocks")
+  deliveryInsideDhaka     Decimal? @map("delivery_inside_dhaka") @db.Decimal(10, 2)
+  deliveryOutsideDhaka    Decimal? @map("delivery_outside_dhaka") @db.Decimal(10, 2)
+  freeDeliveryThreshold   Decimal? @map("free_delivery_threshold") @db.Decimal(10, 2)
+  termsUrl                String?  @map("terms_url")
+  privacyUrl              String?  @map("privacy_url")
+  requireOtpPhoneTracking Boolean  @default(false) @map("require_otp_phone_tracking")
+  reviewEligibleDays      Int?     @map("review_eligible_days")
+  authProviders           Json?    @map("auth_providers")
+  advancedSettings        Json?    @map("advanced_settings")
+  toolsExtras             Json?    @map("tools_extras")
+
+  @@map("site_settings")
+}
+
+// =============================================================================
+// CATEGORIES
+// =============================================================================
+model Category {
+  id            String   @id @default(uuid())
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  slug          String   @unique
+  nameEn        String   @map("name_en")
+  nameBn        String?  @map("name_bn")
+  descriptionEn String?  @map("description_en")
+  descriptionBn String?  @map("description_bn")
+  imageUrl      String?  @map("image_url")
+  parentId      String?  @map("parent_id")
+  sortOrder     Int      @default(0) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+
+  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryToCategory")
+  products Product[]
+
+  @@map("categories")
+}
+
+// =============================================================================
+// PRODUCTS
+// =============================================================================
+model Product {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  nameEn        String  @map("name_en")
+  nameBn        String? @map("name_bn")
+  slug          String  @unique
+  descriptionEn String? @map("description_en")
+  descriptionBn String? @map("description_bn")
+
+  buyingPrice  Decimal  @default(0) @map("buying_price") @db.Decimal(12, 2)
+  sellingPrice Decimal  @map("selling_price") @db.Decimal(12, 2)
+  stock             Int  @default(0)
+  lowStockThreshold Int? @map("low_stock_threshold")
+  weightKg     Decimal? @map("weight_kg") @db.Decimal(8, 3)
+  sku          String?
+
+  categorySlug String  @map("category_slug")
+  categoryId   String? @map("category_id")
+  isFeatured   Boolean @default(false) @map("is_featured")
+  isActive     Boolean @default(true) @map("is_active")
+
+  brandId         String?  @map("brand_id")
+  rating          Decimal? @db.Decimal(3, 2)
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(5, 2)
+
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  seoTags        String[] @default([]) @map("seo_tags")
+  metaOgImage    String?  @map("meta_og_image")
+
+  category       Category?             @relation(fields: [categoryId], references: [id])
+  brand          Brand?                @relation(fields: [brandId], references: [id])
+  orderItems     OrderItem[]
+  productReviews ProductReview[]
+  variants       ProductVariant[]
+  images         ProductImage[]
+  tags           ProductTagOnProduct[]
+
+  @@index([categorySlug])
+  @@index([slug])
+  @@index([isFeatured])
+  @@map("products")
+}
+
+// =============================================================================
+// ORDERS
+// =============================================================================
+model Order {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId     String? @map("user_id")
+  guestEmail String? @map("guest_email")
+  guestPhone String? @map("guest_phone")
+  guestName  String? @map("guest_name")
+
+  status         OrderStatus @default(pending) // enum
+  subtotal       Decimal     @map("subtotal") @db.Decimal(12, 2)
+  deliveryCharge Decimal     @default(0) @map("delivery_charge") @db.Decimal(12, 2)
+  discountAmount Decimal     @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  total          Decimal     @map("total") @db.Decimal(12, 2)
+
+  paymentMethod String        @default("cod") @map("payment_method")
+  paymentStatus PaymentStatus @default(pending) @map("payment_status") // enum
+  paymentMeta   Json?         @map("payment_meta")
+
+  shippingName     String  @map("shipping_name")
+  shippingPhone    String  @map("shipping_phone")
+  shippingEmail    String? @map("shipping_email")
+  shippingAddress  String  @map("shipping_address")
+  shippingCity     String  @map("shipping_city")
+  shippingArea     String? @map("shipping_area")
+  shippingNotes    String? @map("shipping_notes")
+  orderNotes       String? @map("order_notes")
+  courierRiderNote String? @map("courier_rider_note")
+
+  courierProvider  String? @map("courier_provider")
+  courierBookingId String? @map("courier_booking_id")
+  trackingCode     String? @map("tracking_code")
+  deliveryMethod   String? @map("delivery_method")
+  riderNote        String? @map("rider_note")
+
+  voucherCode String? @map("voucher_code")
+
+  user              User?              @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  productReviews    ProductReview[]
+  orderNotesRel     OrderNote[]
+  orderStatusEvents OrderStatusEvent[]
+  orderTags         OrderTag[]
+  trackingEvents    TrackingEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@index([guestPhone])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String  @map("order_id")
+  productId   String? @map("product_id")
+  productName String  @map("product_name")
+  quantity    Int
+  unitPrice   Decimal @map("unit_price") @db.Decimal(12, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(12, 2)
+  imageUrl    String? @map("image_url")
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderNote {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  orderId    String   @map("order_id")
+  type       String // admin | courier | system
+  visibility String   @default("internal") // public | internal
+  message    String   @db.Text
+  createdBy  String?  @map("created_by")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_notes")
+}
+
+model OrderStatusEvent {
+  id             String   @id @default(uuid())
+  createdAt      DateTime @default(now()) @map("created_at")
+  orderId        String   @map("order_id")
+  provider       String?
+  status         String
+  payloadSummary Json?    @map("payload_summary")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_status_events")
+}
+
+// Phase 2: Order tags for internal categorization
+model OrderTag {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  orderId   String   @map("order_id")
+  tag       String
+  createdBy String?  @map("created_by")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([tag])
+  @@map("order_tags")
+}
+
+// =============================================================================
+// PAYMENT WEBHOOK LOG (idempotency + audit)
+// =============================================================================
+model PaymentWebhookLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  orderId    String   @map("order_id")
+  valId      String?  @unique @map("val_id") // Idempotency: one log per val_id
+  gateway    String   @default("sslcommerz")
+  status     String   // VALID | FAILED | CANCELLED | EXPIRED
+  amount     Decimal? @db.Decimal(12, 2)
+  rawPayload Json?    @map("raw_payload")
+
+  @@index([orderId])
+  @@map("payment_webhook_logs")
+}
+
+// =============================================================================
+// PAYMENT GATEWAYS
+// =============================================================================
+model PaymentGateway {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  gateway         String   @unique
+  isActive        Boolean  @default(false) @map("is_active")
+  displayNameEn   String   @map("display_name_en")
+  displayNameBn   String?  @map("display_name_bn")
+  credentialsJson Json?    @map("credentials_json")
+
+  @@map("payment_gateways")
+}
+
+// =============================================================================
+// VOUCHERS
+// =============================================================================
+model Voucher {
+  id             String    @id @default(uuid())
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  code           String    @unique
+  discountType   String    @map("discount_type") // fixed | percent
+  discountValue  Decimal   @map("discount_value") @db.Decimal(12, 2)
+  minOrderAmount Decimal?  @map("min_order_amount") @db.Decimal(12, 2)
+  expiryAt       DateTime? @map("expiry_at")
+  usageLimit     Int?      @map("usage_limit")
+  usageCount     Int       @default(0) @map("usage_count")
+  isActive       Boolean   @default(true) @map("is_active")
+
+  @@map("vouchers")
+}
+
+// =============================================================================
+// COURIER CONFIGS
+// =============================================================================
+model CourierConfig {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  provider   String   @unique
+  isActive   Boolean  @default(true) @map("is_active")
+  apiKey     String?  @map("api_key")
+  apiSecret  String?  @map("api_secret")
+  apiUrl     String?  @map("api_url")
+  configJson Json?    @map("config_json")
+
+  trackingEvents TrackingEvent[]
+
+  @@map("courier_configs")
+}
+
+// =============================================================================
+// PRODUCT REVIEWS
+// =============================================================================
+model ProductReview {
+  id        String       @id @default(uuid())
+  createdAt DateTime     @default(now()) @map("created_at")
+  productId String?      @map("product_id")
+  orderId   String       @map("order_id")
+  userId    String?      @map("user_id")
+  rating    Int
+  comment   String       @db.Text
+  status    ReviewStatus @default(pending) // enum
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("product_reviews")
+}
+
+// =============================================================================
+// ANALYTICS
+// =============================================================================
+model Analytics {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  eventType  String   @map("event_type")
+  sessionId  String?  @map("session_id")
+  userId     String?  @map("user_id")
+  payload    Json?
+  pageUrl    String?  @map("page_url")
+  referrer   String?
+  deviceType String?  @map("device_type")
+
+  @@index([eventType])
+  @@index([createdAt(sort: Desc)])
+  @@map("analytics")
+}
+
+model AnalyticsEvent {
+  id             String   @id @default(uuid())
+  createdAt      DateTime @default(now()) @map("created_at")
+  eventName      String   @map("event_name")
+  eventId        String?  @unique @map("event_id")
+  source         String   @default("browser")
+  pageUrl        String?  @map("page_url")
+  referrer       String?
+  userId         String?  @map("user_id")
+  sessionId      String?  @map("session_id")
+  payloadSummary Json?    @map("payload_summary")
+
+  @@index([eventName])
+  @@index([createdAt(sort: Desc)])
+  @@map("analytics_events")
+}
+
+// =============================================================================
+// CMS PAGES (Blog, About, Legal)
+// =============================================================================
+model CmsPage {
+  id             String    @id @default(uuid())
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  slug           String    @unique
+  titleEn        String    @map("title_en")
+  titleBn        String?   @map("title_bn")
+  contentEn      String?   @map("content_en") @db.Text
+  contentBn      String?   @map("content_bn") @db.Text
+  excerptEn      String?   @map("excerpt_en")
+  excerptBn      String?   @map("excerpt_bn")
+  isPublished    Boolean   @default(false) @map("is_published")
+  publishedAt    DateTime? @map("published_at")
+  template       String?
+  seoTitle       String?   @map("seo_title")
+  seoDescription String?   @map("seo_description")
+  ogImageUrl     String?   @map("og_image_url")
+
+  @@map("cms_pages")
+}
+
+// =============================================================================
+// TRACK OTP (Order tracking)
+// =============================================================================
+model TrackOtpVerification {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now()) @map("created_at")
+  phoneNormalized String   @map("phone_normalized")
+  code            String
+  expiresAt       DateTime @map("expires_at")
+
+  @@index([phoneNormalized])
+  @@index([expiresAt])
+  @@map("track_otp_verification")
+}
+
+model TrackVerifiedToken {
+  id              String   @id @default(uuid())
+  token           String   @unique
+  phoneNormalized String   @map("phone_normalized")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("track_verified_tokens")
+}
+
+// =============================================================================
+// MEDIA (MinIO object references)
+// =============================================================================
+model Media {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  bucket    String
+  objectKey String   @map("object_key")
+  mimeType  String   @map("mime_type")
+  sizeBytes Int      @map("size_bytes")
+  url       String // Full URL or path for serving
+
+  @@map("media")
+}
+
+// =============================================================================
+// HOME BANNERS
+// =============================================================================
+model HomeBannerSlide {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  imageUrl  String   @map("image_url")
+  titleEn   String?  @map("title_en")
+  titleBn   String?  @map("title_bn")
+  link      String?
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("home_banner_slides")
+}
+
+model HomeBanner {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  imageUrl  String   @map("image_url")
+  titleEn   String?  @map("title_en")
+  titleBn   String?  @map("title_bn")
+  link      String?
+  ctaText   String?  @map("cta_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("home_banners")
+}
+
+model HomeSideBanner {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  imageUrl  String   @map("image_url")
+  titleEn   String?  @map("title_en")
+  titleBn   String?  @map("title_bn")
+  link      String?
+  ctaText   String?  @map("cta_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("home_side_banners")
+}
+
+model HomeBottomBanner {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  imageUrl  String   @map("image_url")
+  titleEn   String?  @map("title_en")
+  titleBn   String?  @map("title_bn")
+  link      String?
+  ctaText   String?  @map("cta_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("home_bottom_banners")
+}
+
+// Product variant attributes
+model ProductRam {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  value     String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("product_rams")
+}
+
+model ProductWeight {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  value     String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("product_weights")
+}
+
+model ProductSize {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  value     String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("product_sizes")
+}
+
+// =============================================================================
+// PRODUCT VARIATIONS & ATTRIBUTES
+// =============================================================================
+model Attribute {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  name        String   @unique
+  displayName String   @map("display_name")
+  type        String // text | number | select
+  isRequired  Boolean  @default(false) @map("is_required")
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  values            AttributeValue[]
+  variantAttributes ProductVariantAttribute[]
+
+  @@map("attributes")
+}
+
+model AttributeValue {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  attributeId String   @map("attribute_id")
+  value       String
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  attribute         Attribute                 @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  variantAttributes ProductVariantAttribute[]
+
+  @@unique([attributeId, value])
+  @@map("attribute_values")
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  productId String   @map("product_id")
+  sku       String?  @unique
+  price     Decimal? @db.Decimal(12, 2)
+  stock     Int      @default(0)
+  isActive  Boolean  @default(true) @map("is_active")
+
+  product    Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributes ProductVariantAttribute[]
+
+  @@map("product_variants")
+}
+
+model ProductVariantAttribute {
+  id               String @id @default(uuid())
+  productVariantId String @map("product_variant_id")
+  attributeId      String @map("attribute_id")
+  attributeValueId String @map("attribute_value_id")
+
+  variant        ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  attribute      Attribute      @relation(fields: [attributeId], references: [id])
+  attributeValue AttributeValue @relation(fields: [attributeValueId], references: [id])
+
+  @@unique([productVariantId, attributeId])
+  @@map("product_variant_attributes")
+}
+
+// =============================================================================
+// BRANDS
+// =============================================================================
+model Brand {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  name        String   @unique
+  slug        String   @unique
+  description String?  @db.Text
+  logoUrl     String?  @map("logo_url")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  products Product[]
+
+  @@map("brands")
+}
+
+// =============================================================================
+// PRODUCT TAGS
+// =============================================================================
+model ProductTag {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  name      String   @unique
+  slug      String   @unique
+  color     String?
+
+  products ProductTagOnProduct[]
+
+  @@map("product_tags")
+}
+
+model ProductTagOnProduct {
+  productId String @map("product_id")
+  tagId     String @map("tag_id")
+
+  product Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     ProductTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+  @@map("product_tags_on_products")
+}
+
+// =============================================================================
+// ROLES & PERMISSIONS
+// =============================================================================
+model Role {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  name        String   @unique
+  resource    String // e.g., "products", "orders"
+  action      String // e.g., "read", "write", "delete"
+  description String?
+
+  roles RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// =============================================================================
+// AUDIT LOGS
+// =============================================================================
+model AuditLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  userId     String?  @map("user_id")
+  action     String // create | update | delete
+  resource   String // e.g., "product", "order"
+  resourceId String   @map("resource_id")
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// SUPPORT TICKETS
+// =============================================================================
+model SupportTicket {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  userId     String?  @map("user_id")
+  guestEmail String?  @map("guest_email")
+  guestName  String?  @map("guest_name")
+  subject    String
+  status     String   @default("open") // open | in_progress | closed
+  priority   String   @default("medium") // low | medium | high
+  category   String? // e.g., "order", "product", "general"
+
+  user     User?           @relation(fields: [userId], references: [id])
+  messages TicketMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  ticketId    String   @map("ticket_id")
+  userId      String?  @map("user_id")
+  isAdmin     Boolean  @default(false) @map("is_admin")
+  message     String   @db.Text
+  attachments Json? // array of file URLs
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User?         @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+// =============================================================================
+// PRODUCT IMAGES
+// =============================================================================
+model ProductImage {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  productId String   @map("product_id")
+  url       String
+  alt       String?
+  sortOrder Int      @default(0) @map("sort_order")
+  isPrimary Boolean  @default(false) @map("is_primary")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+// =============================================================================
+// HOMEPAGE SECTIONS
+// =============================================================================
+model HomepageSection {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  name      String   @unique
+  title     String?
+  type      String // banner | featured_products | categories | custom
+  content   Json? // flexible content
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("homepage_sections")
+}
+
+// =============================================================================
+// CHECKOUT SETTINGS
+// =============================================================================
+model CheckoutSetting {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  key         String   @unique
+  value       Json
+  description String?
+
+  @@map("checkout_settings")
+}
+
+// =============================================================================
+// TRACKING EVENTS
+// =============================================================================
+model TrackingEvent {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  orderId     String    @map("order_id")
+  courierId   String?   @map("courier_id")
+  status      String
+  description String?
+  location    String?
+  timestamp   DateTime?
+
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courier CourierConfig? @relation(fields: [courierId], references: [id])
+
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("tracking_events")
+}
+
+// =============================================================================
+// PHASE 3: Inventory logs, collections, flash sale
+// =============================================================================
+model InventoryLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  productId  String   @map("product_id")
+  type       String   // in | out | adjust | return
+  quantity   Int
+  refId      String?  @map("ref_id") // order_id, etc.
+  note       String?  @db.Text
+
+  @@index([productId])
+  @@index([createdAt(sort: Desc)])
+  @@map("inventory_logs")
+}
+
+model Collection {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  slug      String   @unique
+  nameEn    String   @map("name_en")
+  nameBn    String?  @map("name_bn")
+  productIds Json    @default("[]") @map("product_ids") // array of product IDs
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("collections")
+}
+
+model FlashSaleRule {
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  productId    String    @map("product_id")
+  startAt      DateTime  @map("start_at")
+  endAt        DateTime  @map("end_at")
+  discountPct  Decimal   @map("discount_pct") @db.Decimal(5, 2)
+  isActive     Boolean   @default(true) @map("is_active")
+
+  @@index([productId])
+  @@index([endAt])
+  @@map("flash_sale_rules")
+}
+
+// =============================================================================
+// PHASE 4: Landing page builder
+// =============================================================================
+model LandingPage {
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  slug         String    @unique
+  title        String
+  layoutJson   Json      @map("layout_json")
+  isPublished  Boolean   @default(false) @map("is_published")
+  publishedAt  DateTime? @map("published_at")
+  seoTitle     String?   @map("seo_title")
+  seoDesc      String?   @map("seo_desc")
+
+  blocks LandingBlock[]
+
+  @@map("landing_pages")
+}
+
+model LandingBlock {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  pageId     String   @map("page_id")
+  type       String   // hero | countdown | product_grid | review | social_proof
+  configJson Json     @map("config_json")
+  sortOrder  Int      @default(0) @map("sort_order")
+
+  page LandingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("landing_blocks")
+}
+
+// =============================================================================
+// PHASE 5: CRM - customers, reminders
+// =============================================================================
+model Customer {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  email      String?  @unique
+  phone      String?  @unique
+  name       String?
+  userId     String?  @map("user_id")
+  totalOrders Int     @default(0) @map("total_orders")
+  totalSpent  Decimal @default(0) @map("total_spent") @db.Decimal(12, 2)
+  lastOrderAt DateTime? @map("last_order_at")
+  metadata   Json?    @default("{}")
+
+  reminders Reminder[]
+
+  @@index([email])
+  @@index([phone])
+  @@map("customers")
+}
+
+model Reminder {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  customerId  String    @map("customer_id")
+  type        String    // cart_abandonment | order_followup | review_request
+  channel     String    // sms | email | whatsapp
+  scheduledAt DateTime  @map("scheduled_at")
+  templateId  String?   @map("template_id")
+  status      String    @default("pending") // pending | sent | failed | cancelled
+  metadata    Json?     @default("{}")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  logs     ReminderLog[]
+
+  @@index([customerId])
+  @@index([scheduledAt])
+  @@map("reminders")
+}
+
+model ReminderLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  reminderId String   @map("reminder_id")
+  sentAt     DateTime? @map("sent_at")
+  status     String   // sent | failed
+  error      String?  @db.Text
+
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([reminderId])
+  @@map("reminder_logs")
+}
+
+model ConversionTracking {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  reminderId String   @map("reminder_id")
+  orderId    String?  @map("order_id")
+  revenue    Decimal? @db.Decimal(12, 2)
+  converted  Boolean  @default(false)
+
+  @@index([reminderId])
+  @@map("conversion_tracking")
+}
+
+// =============================================================================
+// PHASE 6: Catalog ad manager
+// =============================================================================
+model CampaignPerformance {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  platform   String   // meta | tiktok | google
+  campaignId String?  @map("campaign_id")
+  impressions Int    @default(0)
+  clicks     Int     @default(0)
+  spend      Decimal @default(0) @db.Decimal(12, 2)
+  revenue    Decimal @default(0) @db.Decimal(12, 2)
+  conversions Int    @default(0)
+  date       DateTime @db.Date
+
+  @@index([platform])
+  @@index([date])
+  @@map("campaign_performance")
+}
+
+// =============================================================================
+// PHASE 7: AI + Human message automation
+// =============================================================================
+model Conversation {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  channel    String   // whatsapp | messenger | web
+  customerId String?  @map("customer_id")
+  guestPhone String?  @map("guest_phone")
+  guestEmail String?  @map("guest_email")
+  status     String   @default("open") // open | escalated | closed
+  resolvedBy String? @map("resolved_by")
+
+  messages ConversationMessage[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String   @id @default(uuid())
+  createdAt      DateTime @default(now()) @map("created_at")
+  conversationId String   @map("conversation_id")
+  role           String   // user | assistant | human
+  content        String   @db.Text
+  metadata       Json?    @default("{}")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("conversation_messages")
+}
+
+// =============================================================================
+// PHASE 9: Incomplete order (draft)
+// =============================================================================
+model DraftOrder {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  sessionId  String   @unique @map("session_id")
+  guestEmail String?  @map("guest_email")
+  guestPhone String?  @map("guest_phone")
+  guestName  String?  @map("guest_name")
+  cartJson   Json     @map("cart_json")
+  shippingJson Json?  @map("shipping_json")
+  lastActivityAt DateTime @map("last_activity_at")
+
+  @@index([sessionId])
+  @@index([lastActivityAt(sort: Desc)])
+  @@map("draft_orders")
+}
+
+// =============================================================================
+// PHASE 10: Fraud engine
+// =============================================================================
+model FraudPolicy {
+  id                   String  @id @default("default")
+  blockThreshold       Int     @default(60) @map("block_threshold")
+  otpThreshold         Int     @default(40) @map("otp_threshold")
+  manualReviewThreshold Int    @default(30) @map("manual_review_threshold")
+  phoneVelocityLimit   Int     @default(3) @map("phone_velocity_limit")
+  phoneVelocityHours   Int     @default(24) @map("phone_velocity_hours")
+  ipRiskScoreThreshold Int     @default(70) @map("ip_risk_score_threshold")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("fraud_policy")
+}
+
+model FraudFlag {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  orderId     String    @map("order_id")
+  flagType    String    @map("flag_type") // duplicate_phone | velocity | ip_block
+  score       Int       @default(0)
+  detailsJson Json?     @map("details_json")
+  reviewStatus String   @default("pending") @map("review_status") // pending | approved | rejected
+  reviewedBy  String?   @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at")
+
+  @@index([orderId])
+  @@index([reviewStatus])
+  @@map("fraud_flags")
+}
+
+model BlockedIp {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  ip        String    @unique
+  reason    String?   @db.Text
+  expiresAt DateTime? @map("expires_at")
+
+  @@index([ip])
+  @@map("blocked_ips")
+}
+
+model RiskScore {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  entityType String   @map("entity_type") // phone | email | ip | address
+  entityId   String   @map("entity_id")
+  score      Int      @default(0)
+  factorsJson Json?   @map("factors_json")
+
+  @@index([entityType, entityId])
+  @@map("risk_scores")
+}
+
+// =============================================================================
+// PHASE 11: Real-time analytics
+// =============================================================================
+model LiveVisitor {
+  id         String   @id @default(uuid())
+  sessionId  String   @unique @map("session_id")
+  pageUrl    String?  @map("page_url")
+  referrer   String?
+  firstSeen  DateTime @map("first_seen")
+  lastSeen   DateTime @map("last_seen")
+
+  @@index([lastSeen(sort: Desc)])
+  @@map("live_visitors")
+}
