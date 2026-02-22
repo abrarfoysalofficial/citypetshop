@@ -29,6 +29,15 @@ export function getCategoryImagePath(slug: string): string {
   return `/categories/${slug}.png`;
 }
 
+/**
+ * Safe image src that avoids 404/400 from missing files.
+ * Returns fallback when slug-specific image may not exist.
+ * Add /public/categories/{slug}.png to enable per-category images.
+ */
+export function getCategoryImageSrc(slug: string): string {
+  return CATEGORY_FALLBACK_IMAGE;
+}
+
 export function getCategoryShortDescription(slug: string): string | undefined {
   return CATEGORY_SHORT_DESCRIPTIONS[slug];
 }

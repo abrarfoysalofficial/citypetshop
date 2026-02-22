@@ -55,7 +55,6 @@ export async function createSslCommerzSession(params: {
     return { status: "FAILED", failedreason: "SSLCommerz not configured" };
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || "http://localhost:3000";
   const form = new URLSearchParams({
     store_id: creds.store_id,
     store_passwd: creds.store_password,

@@ -48,8 +48,9 @@ export async function middleware(request: NextRequest) {
     });
     const isLoggedIn = !!token;
 
+    const adminRoles = ["admin", "adm", "super_admin"];
     if (pathname === "/admin/login" || pathname === "/login" || pathname.startsWith("/auth/")) {
-      if (token && (token as { role?: string }).role && ["admin", "adm"].includes((token as { role?: string }).role ?? "")) {
+      if (token && (token as { role?: string }).role && adminRoles.includes((token as { role?: string }).role ?? "")) {
         if (pathname === "/admin/login") return NextResponse.redirect(new URL("/admin", request.url));
       }
       if (isLoggedIn && pathname === "/login") return NextResponse.redirect(new URL("/account", request.url));
@@ -57,7 +58,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (pathname.startsWith("/admin/") || pathname === "/admin") {
-      const isAdmin = token && ["admin", "adm"].includes((token as { role?: string }).role ?? "");
+      const isAdmin = token && adminRoles.includes((token as { role?: string }).role ?? "");
       if (!isAdmin) return NextResponse.redirect(new URL("/admin/login", request.url));
       return NextResponse.next();
     }

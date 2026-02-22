@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSslCommerzSession } from "@/lib/sslcommerz";
+import { getServerBaseUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Order is not for online payment" }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || "http://localhost:3000";
+    const baseUrl = getServerBaseUrl();
     const productName = order.items.map((i) => i.productName).join(", ").slice(0, 255) || "Order";
 
     const result = await createSslCommerzSession({

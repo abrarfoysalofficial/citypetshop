@@ -75,10 +75,10 @@ Used in **Featured Brands** (Home) and shop brand filter. Only brands in `FEATUR
 ## 4) Implementation notes (visual/behavior)
 
 - **Brand section (Home):** Lazy-loaded; alt text `"{Brand Name} pet food brand in Bangladesh"`.
-- **Category sidebar / Popular Categories:** Use `/categories/{slug}.png` with fallback `category-1.svg`; alt `"{Category name} for pets"`.
+- **Category sidebar / Popular Categories:** Use `getCategoryImageSrc()` (returns `category-1.svg`) to avoid `/_next/image` 400 from missing PNGs; alt `"{Category name} for pets"`.
 - **Product cards:** Primary image from `product.images` or `product.image`; fallback `/products/placeholder.webp`; `next/image` via SafeImage with responsive `sizes`.
 - **Product detail:** Gallery from `product.images`; zoom modal; JSON-LD `image` array uses absolute URLs (including fallback).
-- **Category pages:** `generateMetadata` sets title, description, and OG image from `getCategoryShortDescription` and `getCategoryImagePath`.
+- **Category pages:** `generateMetadata` sets title, description, and OG image from `getCategoryShortDescription` and `CATEGORY_FALLBACK_IMAGE` (avoids 404/400).
 - **Product JSON-LD:** `image` array normalized to full URLs (relative paths prefixed with `NEXT_PUBLIC_SITE_URL`).
 
 ---

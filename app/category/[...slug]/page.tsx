@@ -3,9 +3,9 @@ import Link from "next/link";
 import { getProducts } from "@/src/data/provider";
 import CategoryClient from "./CategoryClient";
 import { getCategoryBySlug, getSubcategoryByFullSlug } from "@/lib/categories-master";
-import { getCategoryShortDescription, getCategoryImagePath } from "@/lib/category-meta";
+import { getCategoryShortDescription, CATEGORY_FALLBACK_IMAGE } from "@/lib/category-meta";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
+import { getServerBaseUrl } from "@/lib/site-url";
 
 function normalizeSlug(slug: string | string[]): string {
   return Array.isArray(slug) ? slug.join("/") : slug;
@@ -25,16 +25,18 @@ export async function generateMetadata({
   const categorySlug = getCategorySlugFromParams(slug);
   const cat = getCategoryBySlug(categorySlug);
   const shortDesc = getCategoryShortDescription(categorySlug);
-  const ogImage = getCategoryImagePath(categorySlug);
+  // Use fallback for OG to avoid 404/400 from missing /categories/{slug}.png
+  const ogImage = CATEGORY_FALLBACK_IMAGE;
   const title = cat ? `${cat.name} | City Plus Pet Shop` : "Category | City Plus Pet Shop";
   const description = shortDesc ?? "Shop pet products at City Plus Pet Shop.";
+  const siteUrl = getServerBaseUrl();
   return {
     title,
     description,
     openGraph: {
       title,
       description,
-      images: [{ url: ogImage.startsWith("http") ? ogImage : `${SITE_URL}${ogImage}` }],
+      images: [{ url: ogImage.startsWith("http") ? ogImage : `${siteUrl}${ogImage}` }],
     },
   };
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import SafeImage from "@/components/media/SafeImage";
 import { MASTER_CATEGORIES } from "@/lib/categories-master";
-import { getCategoryImagePath, CATEGORY_FALLBACK_IMAGE } from "@/lib/category-meta";
+import { getCategoryImageSrc, CATEGORY_FALLBACK_IMAGE } from "@/lib/category-meta";
 
 export default function PopularCategoryRow() {
   const popularCategories = MASTER_CATEGORIES.slice(0, 8);
@@ -21,7 +21,7 @@ export default function PopularCategoryRow() {
             >
               <div className="relative h-16 w-16 overflow-hidden rounded-full sm:h-20 sm:w-20">
                 <SafeImage
-                  src={getCategoryImagePath(cat.slug)}
+                  src={getCategoryImageSrc(cat.slug)}
                   alt={`${cat.name} for pets`}
                   fill
                   fallbackSrc={CATEGORY_FALLBACK_IMAGE}

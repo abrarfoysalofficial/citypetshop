@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
+import { getAuthBaseUrl } from "@/lib/site-url";
 
 export const authOptions: AuthOptions = {
   session: {
@@ -53,6 +54,18 @@ export const authOptions: AuthOptions = {
         (session.user as { role?: string }).role = token.role as string;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      const authBase = getAuthBaseUrl();
+      if (url.startsWith("/")) return `${authBase}${url}`;
+      try {
+        const u = new URL(url);
+        if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return `${authBase}/admin`;
+        if (u.origin === authBase) return url;
+      } catch {
+        return `${authBase}/admin`;
+      }
+      return `${authBase}/admin`;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,

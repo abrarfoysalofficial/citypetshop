@@ -35,7 +35,7 @@ export function usePrefetch() {
   const prefetch = useCallback(
     (href: string) => {
       if (!shouldPrefetch(href)) return;
-      const url = new URL(href, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+      const url = new URL(href, typeof window !== "undefined" ? window.location.origin : "https://citypetshopbd.com");
       const path = url.pathname + url.search;
       if (path === pathname) return;
       router.prefetch(path);
@@ -55,7 +55,9 @@ export function PreloadLinks() {
 
   useEffect(() => {
     const handler = (e: MouseEvent | FocusEvent) => {
-      const target = (e.target as HTMLElement).closest("a");
+      const el = e.target;
+      if (!(el instanceof Element)) return;
+      const target = el.closest("a");
       if (!target?.href) return;
       prefetch(target.href);
     };
