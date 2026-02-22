@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { getBlogPosts } from "@/src/data/provider";
 import SafeImage from "@/components/media/SafeImage";

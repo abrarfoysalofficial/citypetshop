@@ -12,9 +12,10 @@ const BANNERS = [
 
 export default function PromoBanners() {
   return (
-    <section className="py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-4 sm:grid-cols-3">
+    <section className="py-6 md:py-8">
+      <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8">
+        {/* 2-col on mobile avoids 3 stacked full-width banners */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4">
           {BANNERS.map((b) => (
             <Link
               key={b.id}

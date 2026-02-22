@@ -1,30 +1,30 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getUserAccountOverview } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
 
-export default async function AccountDashboardPage() {
-  const data = DATA_SOURCE === "local" ? await getUserAccountOverview() : { profile: { id: "", email: "", name: "" }, recentOrders: [], orderCount: 0 };
+export default async function AccountPage() {
+  const data = await getUserAccountOverview();
 
   return (
-    <div className="space-y-6">
-      <p className="text-slate-600">
+    <div className="space-y-4 sm:space-y-6">
+      <p className="text-sm text-slate-600 sm:text-base">
         Welcome, {data.profile.name || data.profile.email}. View your orders, download invoices, and manage returns.
       </p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/account/orders" className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+        <Link href="/account/orders" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-6">
           <h2 className="font-semibold text-slate-900">Orders</h2>
           <p className="mt-1 text-2xl font-bold text-primary">{data.orderCount}</p>
           <p className="mt-1 text-sm text-slate-600">View purchase history and track orders</p>
         </Link>
-        <Link href="/account/invoices" className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+        <Link href="/account/invoices" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-6">
           <h2 className="font-semibold text-slate-900">Invoices</h2>
           <p className="mt-1 text-sm text-slate-600">Download invoices for your orders</p>
         </Link>
-        <Link href="/account/returns" className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+        <Link href="/account/returns" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-6">
           <h2 className="font-semibold text-slate-900">Returns</h2>
           <p className="mt-1 text-sm text-slate-600">Request returns and refunds</p>
         </Link>
-        <Link href="/track-order" className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+        <Link href="/track-order" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-6">
           <h2 className="font-semibold text-slate-900">Track Order</h2>
           <p className="mt-1 text-sm text-slate-600">Track your parcel with order ID</p>
         </Link>

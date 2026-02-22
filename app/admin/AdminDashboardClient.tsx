@@ -87,12 +87,7 @@ export function AdminDashboardClient({ initialData }: AdminDashboardClientProps)
         if (Array.isArray(d.layout) && d.layout.length > 0) setLayout(d.layout);
       })
       .catch(() => {
-        try {
-          const stored = localStorage.getItem(DASHBOARD_LAYOUT_KEY);
-          if (stored) setLayout(JSON.parse(stored));
-        } catch {
-          //
-        }
+        // No fallback
       });
   }, []);
 

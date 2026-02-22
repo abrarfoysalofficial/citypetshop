@@ -1,9 +1,14 @@
+export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getProducts } from "@/src/data/provider";
 import ShopClient from "./ShopClient";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
+
+// Phase 1: 5 min revalidate for product list
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Shop | City Plus Pet Shop",

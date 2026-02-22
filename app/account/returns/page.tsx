@@ -1,9 +1,9 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getUserReturns } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
 
 export default async function AccountReturnsPage() {
-  const returns = DATA_SOURCE === "local" ? await getUserReturns() : [];
+  const returns = await getUserReturns();
 
   return (
     <div className="space-y-4">

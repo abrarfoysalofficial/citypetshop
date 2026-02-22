@@ -1,9 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { Offer } from "@/lib/types";
-
-const STORAGE_KEY = "city-plus-pet-shop-offers";
 
 interface OffersContextValue {
   offers: Offer[];
@@ -16,39 +14,12 @@ interface OffersContextValue {
 
 const OffersContext = createContext<OffersContextValue | null>(null);
 
-function loadStored(): Offer[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as Offer[];
-  } catch {
-    return [];
-  }
-}
-
-function save(offers: Offer[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(offers));
-    localStorage.setItem(STORAGE_KEY + "-updated", new Date().toISOString());
-  } catch {
-    //
-  }
-}
-
 export function OffersProvider({ children }: { children: ReactNode }) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  useEffect(() => {
-    setOffers(loadStored());
-    setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
-  }, []);
-
   const persist = useCallback((next: Offer[]) => {
     setOffers(next);
-    save(next);
     setLastUpdated(new Date().toISOString());
   }, []);
 

@@ -4,11 +4,11 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { 
-  Upload, 
-  Pencil, 
-  Package, 
-  Loader2, 
+import {
+  Upload,
+  Pencil,
+  Package,
+  Loader2,
   Search,
   Filter,
   ArrowUpDown,
@@ -18,17 +18,58 @@ import {
 } from "lucide-react";
 import type { ProductRow } from "@/lib/schema";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<{ slug: string; name_en: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updatingStock, setUpdatingStock] = useState<string | null>(null);
-  const [editingStock, setEditingStock] = useState<{ id: string; value: number } | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    nameEn: "",
+    nameBn: "",
+    slug: "",
+    descriptionEn: "",
+    descriptionBn: "",
+    sellingPrice: "",
+    stock: "",
+    categorySlug: "",
+    isActive: true
+  });
+  const [creating, setCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [updatingStock, setUpdatingStock] = useState<string | null>(null);
+  const [editingStock, setEditingStock] = useState<{ id: string; value: number } | null>(null);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -91,6 +132,56 @@ export default function AdminProductsPage() {
     }
   };
 
+  const createProduct = useCallback(async () => {
+    if (!createForm.nameEn || !createForm.slug || !createForm.sellingPrice) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nameEn: createForm.nameEn,
+          nameBn: createForm.nameBn,
+          slug: createForm.slug,
+          descriptionEn: createForm.descriptionEn,
+          descriptionBn: createForm.descriptionBn,
+          sellingPrice: parseFloat(createForm.sellingPrice),
+          stock: parseInt(createForm.stock) || 0,
+          categorySlug: createForm.categorySlug,
+          isActive: createForm.isActive
+        }),
+      });
+
+      if (res.ok) {
+        setShowCreateModal(false);
+        setCreateForm({
+          nameEn: "",
+          nameBn: "",
+          slug: "",
+          descriptionEn: "",
+          descriptionBn: "",
+          sellingPrice: "",
+          stock: "",
+          categorySlug: "",
+          isActive: true
+        });
+        fetchProducts();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to create product");
+      }
+    } catch (error) {
+      console.error("Create product error:", error);
+      alert("Failed to create product");
+    } finally {
+      setCreating(false);
+    }
+  }, [createForm, fetchProducts]);
+
   const filteredProducts = useMemo(() => {
     let filtered = products.filter((p) => {
       const matchesStatus =
@@ -132,7 +223,7 @@ export default function AdminProductsPage() {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -142,24 +233,120 @@ export default function AdminProductsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Products</h1>
-          <p className="mt-1 text-slate-600">{filteredProducts.length} of {products.length} products</p>
+          <h1 className="text-3xl font-bold">Products</h1>
+          <p className="text-muted-foreground">
+            {filteredProducts.length} of {products.length} products
+          </p>
         </div>
         <div className="flex gap-2">
-          <Link
-            href="/admin/products/new"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            New Product
-          </Link>
-          <Link
-            href="/admin/products/bulk"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all"
-          >
-            <Upload className="h-4 w-4" />
-            Bulk Import
-          </Link>
+          <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Product</DialogTitle>
+                <DialogDescription>
+                  Add a new product to your store.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Name (English) *</label>
+                    <Input
+                      value={createForm.nameEn}
+                      onChange={(e) => setCreateForm({ ...createForm, nameEn: e.target.value })}
+                      placeholder="Product name"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Name (Bengali)</label>
+                    <Input
+                      value={createForm.nameBn}
+                      onChange={(e) => setCreateForm({ ...createForm, nameBn: e.target.value })}
+                      placeholder="পণ্যের নাম"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Slug *</label>
+                    <Input
+                      value={createForm.slug}
+                      onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
+                      placeholder="product-slug"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Category</label>
+                    <Select
+                      value={createForm.categorySlug}
+                      onValueChange={(value) => setCreateForm({ ...createForm, categorySlug: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.slug} value={c.slug}>
+                            {c.name_en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Selling Price *</label>
+                    <Input
+                      type="number"
+                      value={createForm.sellingPrice}
+                      onChange={(e) => setCreateForm({ ...createForm, sellingPrice: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Stock</label>
+                    <Input
+                      type="number"
+                      value={createForm.stock}
+                      onChange={(e) => setCreateForm({ ...createForm, stock: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description (English)</label>
+                  <Textarea
+                    value={createForm.descriptionEn}
+                    onChange={(e) => setCreateForm({ ...createForm, descriptionEn: e.target.value })}
+                    placeholder="Product description"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={createProduct} disabled={creating}>
+                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Product
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button variant="outline" asChild>
+            <Link href="/admin/products/bulk">
+              <Upload className="mr-2 h-4 w-4" />
+              Bulk Import
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -167,48 +354,51 @@ export default function AdminProductsPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-white p-4 shadow-lg shadow-slate-200/50 border border-slate-100"
+        className="rounded-lg border bg-card p-4 shadow-sm"
       >
         <div className="grid gap-4 md:grid-cols-4">
           {/* Search */}
           <div className="md:col-span-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search products..."
-                className="w-full rounded-lg border border-slate-200 pl-10 pr-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="pl-10"
               />
             </div>
           </div>
 
           {/* Category Filter */}
           <div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.slug} value={c.slug}>{c.name_en}</option>
-              ))}
-            </select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.slug} value={c.slug}>
+                    {c.name_en}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Status Filter */}
           <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </motion.div>
@@ -217,153 +407,147 @@ export default function AdminProductsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-white shadow-lg shadow-slate-200/50 border border-slate-100 overflow-hidden"
+        className="rounded-lg border bg-card shadow-sm"
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50">
-              <tr>
-                <th className="p-4">
-                  <button
-                    onClick={() => toggleSort("name_en")}
-                    className="flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900"
-                  >
-                    Product
-                    <ArrowUpDown className="h-3 w-3" />
-                  </button>
-                </th>
-                <th className="p-4">
-                  <button
-                    onClick={() => toggleSort("selling_price")}
-                    className="flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900"
-                  >
-                    Price
-                    <ArrowUpDown className="h-3 w-3" />
-                  </button>
-                </th>
-                <th className="p-4 font-medium text-slate-700">Category</th>
-                <th className="p-4">
-                  <button
-                    onClick={() => toggleSort("stock")}
-                    className="flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900"
-                  >
-                    Stock
-                    <ArrowUpDown className="h-3 w-3" />
-                  </button>
-                </th>
-                <th className="p-4 font-medium text-slate-700">Status</th>
-                <th className="p-4 font-medium text-slate-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-500">
-                    <Package className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                    <p className="font-medium">No products found</p>
-                    <p className="text-sm mt-1">Try adjusting your filters</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        {product.images[0] && (
-                          <Image
-                            src={product.images[0]}
-                            alt={product.name_en}
-                            width={40}
-                            height={40}
-                            className="h-10 w-10 rounded-lg object-cover border border-slate-200"
-                          />
-                        )}
-                        <div>
-                          <p className="font-medium text-slate-900">{product.name_en}</p>
-                          <p className="text-xs text-slate-500">{product.slug}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="font-semibold text-slate-900">৳{product.selling_price}</span>
-                    </td>
-                    <td className="p-4">
-                      <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-                        {product.category_slug}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      {editingStock?.id === product.id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={editingStock.value}
-                            onChange={(e) => setEditingStock({ id: product.id, value: parseInt(e.target.value) || 0 })}
-                            className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                updateStock(product.id, editingStock.value);
-                              } else if (e.key === "Escape") {
-                                setEditingStock(null);
-                              }
-                            }}
-                          />
-                          <button
-                            onClick={() => updateStock(product.id, editingStock.value)}
-                            disabled={updatingStock === product.id}
-                            className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            {updatingStock === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
-                          </button>
-                          <button
-                            onClick={() => setEditingStock(null)}
-                            className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-300"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setEditingStock({ id: product.id, value: product.stock })}
-                          className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer hover:underline"
-                        >
-                          {product.stock} units
-                        </button>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => toggleSort("name_en")}
+                  className="h-auto p-0 font-medium"
+                >
+                  Product
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => toggleSort("selling_price")}
+                  className="h-auto p-0 font-medium"
+                >
+                  Price
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => toggleSort("stock")}
+                  className="h-auto p-0 font-medium"
+                >
+                  Stock
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredProducts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <p className="mt-2 font-medium">No products found</p>
+                  <p className="text-sm text-muted-foreground">Try adjusting your filters</p>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredProducts.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      {product.images[0] && (
+                        <Image
+                          src={product.images[0]}
+                          alt={product.name_en}
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 rounded-lg object-cover border"
+                        />
                       )}
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                        product.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {product.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="p-4">
+                      <div>
+                        <p className="font-medium">{product.name_en}</p>
+                        <p className="text-sm text-muted-foreground">{product.slug}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-semibold">৳{product.selling_price}</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{product.category_slug}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {editingStock?.id === product.id ? (
                       <div className="flex items-center gap-2">
-                        <Link
-                          href={`/product/${product.id}`}
-                          target="_blank"
-                          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
-                          title="View Product"
+                        <Input
+                          type="number"
+                          value={editingStock.value}
+                          onChange={(e) => setEditingStock({ id: product.id, value: parseInt(e.target.value) || 0 })}
+                          className="w-20"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              updateStock(product.id, editingStock.value);
+                            } else if (e.key === "Escape") {
+                              setEditingStock(null);
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => updateStock(product.id, editingStock.value)}
+                          disabled={updatingStock === product.id}
                         >
+                          {updatingStock === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingStock(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="link"
+                        className="h-auto p-0"
+                        onClick={() => setEditingStock({ id: product.id, value: product.stock })}
+                      >
+                        {product.stock} units
+                      </Button>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={product.is_active ? "default" : "secondary"}>
+                      {product.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/product/${product.id}`} target="_blank">
                           <Eye className="h-4 w-4" />
                         </Link>
-                        <Link
-                          href={`/admin/products/${product.id}/edit`}
-                          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
-                          title="Edit Product"
-                        >
+                      </Button>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/admin/products/${product.id}/edit`}>
                           <Pencil className="h-4 w-4" />
                         </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </motion.div>
     </div>
   );

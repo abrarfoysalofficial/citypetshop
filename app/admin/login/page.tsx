@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
+import { AUTH_MODE } from "@/src/config/runtime";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -13,18 +15,43 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePrismaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
+      if (res?.error) {
+        setError("Invalid email or password.");
+        setLoading(false);
+        return;
+      }
+      const session = res?.ok;
+      if (!session) {
+        setError("Sign in failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+      router.replace("/admin");
+      router.refresh();
+    } catch (err) {
+      console.error("Admin login error:", err);
+      setError("An error occurred. Please try again.");
+    }
+    setLoading(false);
+  };
+
+  const handleSupabaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
       const supabase = createClient();
-
-      if (process.env.NODE_ENV === "development") {
-        console.log("[admin/login] Attempting Supabase Auth sign-in");
-      }
-
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -55,7 +82,6 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // RLS: team_members needs policy USING (lower(auth.email()) = lower(email))
       const normalizedEmail = userEmail.toLowerCase();
       const { data: teamMember, error: teamError } = await supabase
         .from("team_members")
@@ -64,9 +90,6 @@ export default function AdminLoginPage() {
         .maybeSingle();
 
       if (teamError) {
-        if (process.env.NODE_ENV === "development") {
-          console.log("[admin/login] team_members query error:", teamError.message);
-        }
         setError("Access check failed. Please contact support.");
         await supabase.auth.signOut();
         setLoading(false);
@@ -96,10 +119,6 @@ export default function AdminLoginPage() {
         return;
       }
 
-      if (process.env.NODE_ENV === "development") {
-        console.log("[admin/login] Authorized, redirecting to dashboard");
-      }
-
       router.replace("/admin");
       router.refresh();
     } catch (err) {
@@ -109,6 +128,8 @@ export default function AdminLoginPage() {
       setLoading(false);
     }
   };
+
+  const handleSubmit = AUTH_MODE === "prisma" ? handlePrismaSubmit : handleSupabaseSubmit;
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">

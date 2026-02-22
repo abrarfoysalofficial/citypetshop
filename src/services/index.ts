@@ -1,13 +1,11 @@
 /**
  * Central service access: products, orders, auth.
- * Uses resolved config (env.ts + runtime.ts); fallbacks applied there.
- * Build never depends on env; missing Sanity/Supabase yields local/demo.
+ * All backed by Prisma/PostgreSQL – single source of truth.
  */
 import type { ProductsRepository, OrdersRepository, AuthService } from "./types";
 import { createProviderProductsRepository } from "./products";
-import { createLocalOrdersRepository, createSupabaseOrdersRepository } from "./orders";
-import { createSupabaseAuthService, createDemoAuthService } from "./auth";
-import { getResolvedProductsSource, getResolvedAuthSource, isSupabaseConfigured } from "@/src/config/env";
+import { createLocalOrdersRepository } from "./orders";
+import { createDemoAuthService } from "./auth";
 
 let _products: ProductsRepository | null = null;
 let _orders: OrdersRepository | null = null;
@@ -22,17 +20,14 @@ function getProductsRepository(): ProductsRepository {
 
 function getOrdersRepository(): OrdersRepository {
   if (!_orders) {
-    const auth = getResolvedAuthSource();
-    const useSupabase = auth === "supabase" && isSupabaseConfigured();
-    _orders = useSupabase ? createSupabaseOrdersRepository() : createLocalOrdersRepository();
+    _orders = createLocalOrdersRepository();
   }
   return _orders;
 }
 
 function getAuthService(): AuthService {
   if (!_auth) {
-    const auth = getResolvedAuthSource();
-    _auth = auth === "supabase" ? createSupabaseAuthService() : createDemoAuthService();
+    _auth = createDemoAuthService();
   }
   return _auth;
 }
@@ -45,15 +40,14 @@ export interface Services {
 
 /** Resolved sources for status panel / debugging. */
 export function getResolvedSources(): {
-  products: "sanity" | "local" | "supabase";
-  auth: "supabase" | "demo";
-  orders: "supabase" | "local";
+  products: string;
+  auth: string;
+  orders: string;
 } {
-  const auth = getResolvedAuthSource();
   return {
-    products: getResolvedProductsSource(),
-    auth,
-    orders: auth === "supabase" && isSupabaseConfigured() ? "supabase" : "local",
+    products: "prisma",
+    auth: "nextauth",
+    orders: "prisma",
   };
 }
 
@@ -67,5 +61,5 @@ export function getServices(): Services {
 
 export type { ProductsRepository, OrdersRepository, AuthService, CreateOrderInput } from "./types";
 export { createProviderProductsRepository } from "./products";
-export { createLocalOrdersRepository, createSupabaseOrdersRepository } from "./orders";
-export { createSupabaseAuthService, createDemoAuthService } from "./auth";
+export { createLocalOrdersRepository } from "./orders";
+export { createDemoAuthService } from "./auth";

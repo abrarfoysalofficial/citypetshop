@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { requireAdminAuth } from "@/lib/admin-auth";
-import type { OrderStatus } from "@/lib/schema";
+import { prisma } from "@/lib/db";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-/**
- * PATCH /api/admin/orders/status
- * Update order status and create a status event
- * Body: { orderId: string, status: OrderStatus, note?: string }
- */
+const schema = z.object({
+  orderId: z.string().min(1),
+  status: z.enum([
+    "pending", "processing", "shipped", "handed_to_courier",
+    "delivered", "cancelled", "returned", "refund_requested", "refunded", "failed",
+  ]),
+  note: z.string().optional(),
+});
+
 export async function PATCH(request: Request) {
   const auth = await requireAdminAuth();
   if (!auth.ok) {
@@ -17,64 +21,30 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const { orderId, status, note } = body;
+    const body = schema.parse(await request.json());
 
-    if (!orderId || !status) {
-      return NextResponse.json({ error: "Missing orderId or status" }, { status: 400 });
-    }
+    const updated = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.update({
+        where: { id: body.orderId },
+        data: { status: body.status },
+        select: { id: true, status: true },
+      });
+      await tx.orderStatusEvent.create({
+        data: {
+          orderId: body.orderId,
+          status: body.status,
+          provider: "admin",
+          payloadSummary: body.note ? { note: body.note } : undefined,
+        },
+      });
+      return order;
+    });
 
-    const validStatuses = [
-      "pending",
-      "processing",
-      "shipped",
-      "handed_to_courier",
-      "delivered",
-      "cancelled",
-      "returned",
-      "refund_requested",
-      "refunded",
-      "failed"
-    ];
-
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
-    }
-
-    const supabase = await createClient();
-
-    // Update order status
-    const { data: orderData, error: orderError } = await supabase
-      .from("orders")
-      .update({ status: status as OrderStatus })
-      .eq("id", orderId)
-      .select()
-      .single();
-
-    if (orderError) {
-      console.error("Failed to update order status:", orderError);
-      return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
-    }
-
-    // Create status event
-    const statusEventPayload: any = {
-      order_id: orderId,
-      status,
-      provider: "admin",
-      payload_summary: note ? { note } : null,
-    };
-
-    const { error: eventError } = await supabase
-      .from("order_status_events")
-      .insert(statusEventPayload);
-
-    if (eventError) {
-      console.error("Failed to create status event:", eventError);
-      // Don't fail the request if event creation fails
-    }
-
-    return NextResponse.json(orderData);
+    return NextResponse.json(updated);
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: err.errors[0].message }, { status: 400 });
+    }
     console.error("order status PATCH error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }

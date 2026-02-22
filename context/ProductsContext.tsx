@@ -1,10 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { Product } from "@/lib/types";
 import { products as initialProducts } from "@/lib/data";
-
-const STORAGE_KEY = "city-plus-pet-shop-products";
 
 interface ProductsContextValue {
   products: Product[];
@@ -15,37 +13,11 @@ interface ProductsContextValue {
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
 
-function loadStored(): Product[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as Product[];
-  } catch {
-    return null;
-  }
-}
-
-function save(products: Product[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-  } catch {
-    //
-  }
-}
-
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const [products, setProductsState] = useState<Product[]>(initialProducts);
 
-  useEffect(() => {
-    const stored = loadStored();
-    if (stored && stored.length > 0) setProductsState(stored);
-  }, []);
-
   const setProducts = useCallback((next: Product[]) => {
     setProductsState(next);
-    save(next);
   }, []);
 
   const addProducts = useCallback((rows: Omit<Product, "id">[]) => {
@@ -60,14 +32,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         inStock: row.inStock ?? true,
       }));
       const next = [...prev, ...newProducts];
-      save(next);
       return next;
     });
   }, []);
 
   const resetToDefault = useCallback(() => {
     setProductsState(initialProducts);
-    save(initialProducts);
   }, []);
 
   const value: ProductsContextValue = {

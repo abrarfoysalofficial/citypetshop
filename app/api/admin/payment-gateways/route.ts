@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/db";
 import { requireAdminAuth } from "@/lib/admin-auth";
 import { DEMO_PAYMENT_GATEWAYS } from "@/lib/demo-data";
+import { AUTH_MODE } from "@/src/config/runtime";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/payment-gateways
- * Admin: Supabase only. Falls back to defaults if table empty.
+ * Admin: Prisma or Supabase. Demo: static data.
  */
 export async function GET() {
   const auth = await requireAdminAuth();
@@ -15,7 +16,35 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
+  if (AUTH_MODE === "prisma") {
+    try {
+      const rows = await prisma.paymentGateway.findMany({
+        orderBy: { gateway: "asc" },
+      });
+      return NextResponse.json(
+        rows.map((r) => ({
+          id: r.id,
+          created_at: r.createdAt.toISOString(),
+          updated_at: r.updatedAt.toISOString(),
+          gateway: r.gateway,
+          is_active: r.isActive,
+          display_name_en: r.displayNameEn,
+          display_name_bn: r.displayNameBn,
+          credentials_json: r.credentialsJson,
+        }))
+      );
+    } catch (err) {
+      console.error("[api/admin/payment-gateways] Prisma error:", err);
+      return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
+    }
+  }
+
+  if (AUTH_MODE === "demo") {
+    return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
+  }
+
   try {
+    const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("payment_gateways")
@@ -34,7 +63,7 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/payment-gateways
- * Update a payment gateway. Admin Supabase only.
+ * Update a payment gateway. Prisma or Supabase.
  */
 export async function PATCH(request: Request) {
   const auth = await requireAdminAuth();
@@ -50,6 +79,31 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Missing gateway id" }, { status: 400 });
     }
 
+    if (AUTH_MODE === "prisma") {
+      const allowed = ["isActive", "displayNameEn", "displayNameBn", "credentialsJson"];
+      const data: Record<string, unknown> = {};
+      if ("is_active" in updates) data.isActive = updates.is_active;
+      if ("display_name_en" in updates) data.displayNameEn = updates.display_name_en;
+      if ("display_name_bn" in updates) data.displayNameBn = updates.display_name_bn;
+      if ("credentials_json" in updates) data.credentialsJson = updates.credentials_json;
+
+      const updated = await prisma.paymentGateway.update({
+        where: { id },
+        data,
+      });
+      return NextResponse.json({
+        id: updated.id,
+        created_at: updated.createdAt.toISOString(),
+        updated_at: updated.updatedAt.toISOString(),
+        gateway: updated.gateway,
+        is_active: updated.isActive,
+        display_name_en: updated.displayNameEn,
+        display_name_bn: updated.displayNameBn,
+        credentials_json: updated.credentialsJson,
+      });
+    }
+
+    const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("payment_gateways")
@@ -59,10 +113,8 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
-      console.error("[api/admin/payment-gateways] PATCH error:", error.message);
       return NextResponse.json({ error: "Failed to update payment gateway" }, { status: 500 });
     }
-
     return NextResponse.json(data);
   } catch (err) {
     console.error("[api/admin/payment-gateways] PATCH unexpected:", err);

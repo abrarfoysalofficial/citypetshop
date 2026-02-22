@@ -1,30 +1,71 @@
-import { createClient } from "@/lib/supabase/server";
+/**
+ * NextAuth v4 configuration - self-hosted credentials auth.
+ * Used when Supabase is not configured (fallback in admin-auth).
+ */
+import type { AuthOptions } from "next-auth";
+import { getServerSession } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { prisma } from "@/lib/db";
+import { compare } from "bcryptjs";
 
-export type User = { id: string; email?: string; role?: string };
+export const authOptions: AuthOptions = {
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: "/login",
+  },
+  providers: [
+    Credentials({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        const email = (credentials.email as string).toLowerCase().trim();
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user?.passwordHash) return null;
+        const valid = await compare(credentials.password as string, user.passwordHash);
+        if (!valid) return null;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as { role?: string }).role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as { id?: string }).id = token.id as string;
+        (session.user as { role?: string }).role = token.role as string;
+      }
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+};
 
-/** Get current Supabase user (server). Returns null if not authenticated or Supabase not connected. */
-export async function getUser(): Promise<User | null> {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user as { id: string; email?: string } | null | undefined;
-  if (!user) return null;
-  return { id: user.id, email: user.email ?? undefined };
+/** Get session (for admin-auth fallback when Supabase not configured). */
+export async function auth() {
+  return getServerSession(authOptions);
 }
 
-/** Require auth; redirect to /admin/login if not logged in. Use in admin layout/server components. */
-export async function requireAuth(): Promise<User> {
-  const user = await getUser();
-  if (!user) {
-    const { redirect } = await import("next/navigation");
-    redirect("/admin/login");
-  }
-  return user as User;
-}
-
-/** Check if current user is in team_members with admin/owner/manager (or similar). Falls back to "any logged-in user is admin" when Supabase not connected. */
-export async function requireAdmin(): Promise<User> {
-  const user = await requireAuth();
-  // When DB connected: select from team_members where user_id = user.id and role in ('owner','admin','manager') and is_active
-  // For now we treat any authenticated user as allowed in admin
-  return user;
-}
+export type SessionUser = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  role?: string;
+};

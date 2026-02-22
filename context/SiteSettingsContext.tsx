@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { SiteSettingsRow } from "@/lib/schema";
 
 const DEFAULT_SETTINGS: SiteSettingsRow = {
@@ -62,24 +61,15 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchSettings = useCallback(async () => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      setSettings(DEFAULT_SETTINGS);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      const supabase = createClient();
-      const { data, error: err } = await supabase
-        .from("site_settings")
-        .select("*")
-        .eq("id", "default")
-        .single();
-
-      if (err) {
+      const res = await fetch("/api/settings", { cache: "no-store" });
+      if (!res.ok) {
         setSettings(DEFAULT_SETTINGS);
         return;
       }
+      const data = await res.json();
       setSettings(data != null ? (data as SiteSettingsRow) : DEFAULT_SETTINGS);
     } catch (e) {
       setError(e instanceof Error ? e : new Error("Failed to load settings"));

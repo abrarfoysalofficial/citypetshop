@@ -1,108 +1,359 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 
-const schema = z.object({
-  slug: z.string().min(1),
-  name_en: z.string().min(1),
-  name_bn: z.string().optional(),
-  sort_order: z.coerce.number().default(0),
-  is_active: z.boolean().default(true),
-});
-type FormData = z.infer<typeof schema>;
-type Row = { id: string; slug: string; name_en: string; name_bn?: string; sort_order: number; is_active: boolean };
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type Category = {
+  id: string;
+  slug: string;
+  nameEn: string;
+  nameBn?: string;
+  descriptionEn?: string;
+  descriptionBn?: string;
+  sortOrder: number;
+  isActive: boolean;
+  parent?: { nameEn: string };
+  _count?: { products: number };
+};
 
 export default function CategoriesPage() {
-  const [items, setItems] = useState<Row[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, reset, setValue } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const fetchItems = async () => {
+  const [formData, setFormData] = useState({
+    slug: "",
+    nameEn: "",
+    nameBn: "",
+    descriptionEn: "",
+    descriptionBn: "",
+    sortOrder: 0,
+    isActive: true,
+    parentId: ""
+  });
+
+  const fetchCategories = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/categories");
-      if (res.status === 401) window.location.href = "/admin/login";
-      else if (res.ok) setItems(await res.json());
-    } catch { setError("Failed to load"); }
-    finally { setLoading(false); }
+      if (res.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      }
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+      setError("Failed to load categories");
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { fetchItems(); }, []);
 
-  const onSubmit = async (data: FormData) => {
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const resetForm = () => {
+    setFormData({
+      slug: "",
+      nameEn: "",
+      nameBn: "",
+      descriptionEn: "",
+      descriptionBn: "",
+      sortOrder: 0,
+      isActive: true,
+      parentId: ""
+    });
+    setEditingCategory(null);
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.nameEn || !formData.slug) {
+      setError("Name and slug are required");
+      return;
+    }
+
     setSaving(true);
     setError(null);
+
     try {
-      const res = editing
-        ? await fetch("/api/admin/categories", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing, ...data }) })
-        : await fetch("/api/admin/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-      if (!res.ok) throw new Error((await res.json()).error);
-      reset();
-      setEditing(null);
-      fetchItems();
-    } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setSaving(false); }
+      const method = editingCategory ? "PATCH" : "POST";
+      const body = editingCategory
+        ? { id: editingCategory.id, ...formData }
+        : formData;
+
+      const res = await fetch("/api/admin/categories", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to save category");
+      }
+
+      resetForm();
+      setShowCreateModal(false);
+      fetchCategories();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save category");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const onDelete = async (id: string) => {
-    if (!confirm("Delete this category?")) return;
+  const handleEdit = (category: Category) => {
+    setFormData({
+      slug: category.slug,
+      nameEn: category.nameEn,
+      nameBn: category.nameBn || "",
+      descriptionEn: category.descriptionEn || "",
+      descriptionBn: category.descriptionBn || "",
+      sortOrder: category.sortOrder,
+      isActive: category.isActive,
+      parentId: ""
+    });
+    setEditingCategory(category);
+    setShowCreateModal(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this category?")) return;
+
     try {
       const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      fetchItems();
-    } catch { setError("Failed to delete"); }
+      if (!res.ok) throw new Error("Failed to delete category");
+      fetchCategories();
+    } catch (err) {
+      setError("Failed to delete category");
+    }
   };
 
-  if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Category</h1>
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-wrap gap-4">
-          <input {...register("slug")} placeholder="Slug" className="rounded-lg border border-slate-300 px-3 py-2" />
-          <input {...register("name_en")} placeholder="Name (EN)" className="rounded-lg border border-slate-300 px-3 py-2" />
-          <input {...register("name_bn")} placeholder="Name (BN)" className="rounded-lg border border-slate-300 px-3 py-2" />
-          <input type="number" {...register("sort_order")} className="w-24 rounded-lg border border-slate-300 px-3 py-2" />
-          <label className="flex items-center gap-2"><input type="checkbox" {...register("is_active")} />Active</label>
-          <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{editing ? "Update" : "Add"}
-          </button>
-        </form>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Categories</h1>
+          <p className="text-muted-foreground">
+            Manage product categories ({categories.length} total)
+          </p>
+        </div>
+        <Dialog open={showCreateModal} onOpenChange={(open) => {
+          setShowCreateModal(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Category
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingCategory ? "Edit Category" : "Create New Category"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingCategory ? "Update category details." : "Add a new category to organize your products."}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Name (English) *</label>
+                  <Input
+                    value={formData.nameEn}
+                    onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                    placeholder="Category name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Name (Bengali)</label>
+                  <Input
+                    value={formData.nameBn}
+                    onChange={(e) => setFormData({ ...formData, nameBn: e.target.value })}
+                    placeholder="ক্যাটাগরি নাম"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Slug *</label>
+                  <Input
+                    value={formData.slug}
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    placeholder="category-slug"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Sort Order</label>
+                  <Input
+                    type="number"
+                    value={formData.sortOrder}
+                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Description (English)</label>
+                <Textarea
+                  value={formData.descriptionEn}
+                  onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                  placeholder="Category description"
+                  rows={2}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="isActive" className="text-sm font-medium">
+                  Active
+                </label>
+              </div>
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingCategory ? "Update Category" : "Create Category"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="p-3 text-left font-medium">Slug</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Sort</th>
-              <th className="p-3 text-left">Active</th>
-              <th className="p-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100">
-                <td className="p-3">{r.slug}</td>
-                <td className="p-3">{r.name_en}</td>
-                <td className="p-3">{r.sort_order}</td>
-                <td className="p-3">{r.is_active ? "Yes" : "No"}</td>
-                <td className="p-3 text-right">
-                  <button onClick={() => { setEditing(r.id); setValue("slug", r.slug); setValue("name_en", r.name_en); setValue("name_bn", r.name_bn ?? ""); setValue("sort_order", r.sort_order); setValue("is_active", r.is_active); }} className="text-blue-600 hover:underline mr-2">Edit</button>
-                  <button onClick={() => onDelete(r.id)} className="text-red-600 hover:underline">Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      {/* Categories Table */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Slug</TableHead>
+              <TableHead>Sort Order</TableHead>
+              <TableHead>Products</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {categories.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  <p className="text-muted-foreground">No categories found</p>
+                </TableCell>
+              </TableRow>
+            ) : (
+              categories.map((category) => (
+                <TableRow key={category.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{category.nameEn}</p>
+                      {category.nameBn && (
+                        <p className="text-sm text-muted-foreground">{category.nameBn}</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <code className="text-sm">{category.slug}</code>
+                  </TableCell>
+                  <TableCell>{category.sortOrder}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {category._count?.products || 0} products
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={category.isActive ? "default" : "secondary"}>
+                      {category.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(category)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(category.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

@@ -1,10 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { CategoryItem } from "@/lib/types";
 import { categories as initialCategories } from "@/lib/data";
-
-const STORAGE_KEY = "city-plus-pet-shop-categories";
 
 interface CategoriesContextValue {
   categories: CategoryItem[];
@@ -20,42 +18,12 @@ interface CategoriesContextValue {
 
 const CategoriesContext = createContext<CategoriesContextValue | null>(null);
 
-function loadStored(): CategoryItem[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as CategoryItem[];
-  } catch {
-    return null;
-  }
-}
-
-function save(categories: CategoryItem[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
-    localStorage.setItem(STORAGE_KEY + "-updated", new Date().toISOString());
-  } catch {
-    //
-  }
-}
-
 export function CategoriesProvider({ children }: { children: ReactNode }) {
   const [categories, setCategoriesState] = useState<CategoryItem[]>(initialCategories);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = loadStored();
-    if (stored && stored.length > 0) {
-      setCategoriesState(stored);
-      setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
-    }
-  }, []);
-
   const setCategories = useCallback((next: CategoryItem[]) => {
     setCategoriesState(next);
-    save(next);
     setLastUpdated(new Date().toISOString());
   }, []);
 
@@ -71,7 +39,6 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       if (categories.some((c) => c.slug === item.slug)) return;
       setCategoriesState((prev) => {
         const next = [...prev, item];
-        save(next);
         setLastUpdated(new Date().toISOString());
         return next;
       });
@@ -82,7 +49,6 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
   const updateCategory = useCallback((oldSlug: string, item: CategoryItem) => {
     setCategoriesState((prev) => {
       const next = prev.map((c) => (c.slug === oldSlug ? item : c));
-      save(next);
       setLastUpdated(new Date().toISOString());
       return next;
     });
@@ -91,7 +57,6 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
   const deleteCategory = useCallback((slug: string) => {
     setCategoriesState((prev) => {
       const next = prev.filter((c) => c.slug !== slug);
-      save(next);
       setLastUpdated(new Date().toISOString());
       return next;
     });
@@ -99,7 +64,6 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
 
   const resetToDefault = useCallback(() => {
     setCategoriesState(initialCategories);
-    save(initialCategories);
     setLastUpdated(new Date().toISOString());
   }, []);
 

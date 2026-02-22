@@ -11,6 +11,7 @@ import { VouchersProvider } from "@/context/VouchersContext";
 import { BlogProvider } from "@/context/BlogContext";
 import StoreLayout from "@/components/StoreLayout";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
+import { PreloadLinks, PreloadCriticalRoutes } from "@/components/PreloadLinks";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
 
@@ -51,6 +52,8 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen flex flex-col">
         <AnalyticsScripts />
+        <PreloadLinks />
+        <PreloadCriticalRoutes />
         <SiteSettingsProvider>
           <ProductsProvider>
             <CategoriesProvider>

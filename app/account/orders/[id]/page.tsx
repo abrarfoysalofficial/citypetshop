@@ -1,6 +1,6 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getUserOrderById } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
 import { notFound } from "next/navigation";
 import { OrderActions } from "./OrderActions";
 
@@ -10,17 +10,8 @@ export default async function AccountOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = DATA_SOURCE === "local" ? await getUserOrderById(id) : null;
-  if (!order) {
-    if (DATA_SOURCE === "local") notFound();
-    return (
-      <div>
-        <h2 className="text-xl font-semibold text-slate-900">Order #{id.slice(0, 8)}</h2>
-        <p className="mt-2 text-slate-600">Order details will appear here when connected to backend.</p>
-        <Link href="/account/orders" className="mt-4 inline-block font-medium text-primary hover:underline">← Back to Orders</Link>
-      </div>
-    );
-  }
+  const order = await getUserOrderById(id);
+  if (!order) notFound();
 
   return (
     <div className="space-y-6">

@@ -1,78 +1,123 @@
 /**
- * Admin API authorization - SUPABASE ONLY.
- * No demo/local fallback. Requires:
- * - Supabase Auth (signInWithPassword)
- * - User in team_members by email (case-insensitive)
- * - role='admin' OR is_admin=true
+ * Admin API authorization - supports demo (cookie) and Supabase auth.
+ * When NEXTAUTH_SECRET is set, also supports Auth.js credentials.
+ * Now uses RBAC (Role-Based Access Control) for granular permissions.
  */
+import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { AUTH_MODE } from "@/src/config/runtime";
 import { isSupabaseConfigured } from "@/src/config/env";
+import { getUserPermissions, hasPermission } from "@/lib/rbac";
+import type { AdminAuthResult } from "./admin-auth-types";
 
-export type AdminAuthResult =
-  | { ok: true; userId: string; email: string }
-  | { ok: false; status: 401; message: string }
-  | { ok: false; status: 403; message: string }
-  | { ok: false; status: 500; message: string };
+export type { AdminAuthResult };
 
-/** No demo mode - always requires Supabase auth. */
-export function isDemoAuth(_auth: AdminAuthResult): boolean {
-  return false;
+export function isDemoAuth(auth: AdminAuthResult): boolean {
+  return auth.ok && (auth as { _demo?: boolean })._demo === true;
 }
 
 export async function requireAdminAuth(): Promise<AdminAuthResult> {
-  if (!isSupabaseConfigured()) {
-    return { ok: false, status: 500, message: "Supabase not configured" };
-  }
-
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    // Prisma mode: NextAuth credentials only
+    if (AUTH_MODE === "prisma") {
+      const session = await auth();
+      const user = session?.user;
+      if (!user) {
+        return { ok: false, status: 401, message: "Sign in required" };
+      }
+      const userId = (user as { id?: string }).id ?? "";
+      if (!userId) {
+        return { ok: false, status: 401, message: "Invalid user session" };
+      }
 
-    if (userError) {
-      console.error("[admin-auth] getUser error:", userError.message);
-      return { ok: false, status: 500, message: "Auth check failed" };
+      // Check if user has admin panel access permission
+      const hasAdminAccess = await hasPermission(userId, "admin.view");
+      if (!hasAdminAccess) {
+        return { ok: false, status: 403, message: "Access denied. Admin access required." };
+      }
+
+      return {
+        ok: true,
+        userId,
+        email: user.email ?? "",
+      };
     }
 
-    if (!user) {
+    // Demo mode: check demo_session cookie
+    if (AUTH_MODE === "demo") {
+      const cookieStore = await cookies();
+      const session = cookieStore.get("demo_session")?.value;
+      if (session === "admin") {
+        return {
+          ok: true,
+          userId: "demo-admin",
+          email: "admin@cityplus.local",
+          _demo: true,
+        } as AdminAuthResult & { _demo?: boolean };
+      }
       return { ok: false, status: 401, message: "Sign in required" };
     }
 
-    const email = user.email?.toLowerCase();
-    if (!email) {
-      return { ok: false, status: 403, message: "Access denied. No email on account." };
+    // Supabase mode: use Supabase auth
+    if (isSupabaseConfigured()) {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        return {
+          ok: true,
+          userId: user.id,
+          email: user.email ?? "",
+        };
+      }
+      return { ok: false, status: 401, message: "Sign in required" };
     }
 
-    const { data: member, error: memberError } = await supabase
-      .from("team_members")
-      .select("role, is_active, is_admin")
-      .ilike("email", email)
-      .maybeSingle();
-
-    if (memberError) {
-      console.error("[admin-auth] team_members query error:", memberError.message);
-      return { ok: false, status: 500, message: "Access check failed" };
+    // Fallback: Auth.js (self-hosted credentials when Supabase not configured)
+    const session = await auth();
+    const user = session?.user;
+    if (!user) {
+      return { ok: false, status: 401, message: "Sign in required" };
+    }
+    const userId = (user as { id?: string }).id ?? "";
+    if (!userId) {
+      return { ok: false, status: 401, message: "Invalid user session" };
     }
 
-    if (!member) {
-      return { ok: false, status: 403, message: "Access denied. You are not authorized to access the admin panel." };
+    // Check if user has admin panel access permission
+    const hasAdminAccess = await hasPermission(userId, "admin.view");
+    if (!hasAdminAccess) {
+      return { ok: false, status: 403, message: "Access denied. Admin access required." };
     }
 
-    if (!member.is_active) {
-      return { ok: false, status: 403, message: "Access denied. Your account is inactive." };
-    }
-
-    const role = (member.role ?? "").toLowerCase();
-    const isAdmin = role === "admin" || role === "adm" || (member as { is_admin?: boolean }).is_admin === true;
-    if (!isAdmin) {
-      return { ok: false, status: 403, message: "Access denied. Admin role required." };
-    }
-
-    return { ok: true, userId: user.id, email: user.email ?? "" };
-  } catch (err) {
-    console.error("[admin-auth] Unexpected error:", err);
-    return { ok: false, status: 500, message: "Internal error" };
+    return {
+      ok: true,
+      userId,
+      email: user.email ?? "",
+    };
+  } catch {
+    return { ok: false, status: 500, message: "Authentication error" };
   }
+}
+
+export async function requirePermission(userId: string, permission: string): Promise<{ ok: boolean; status?: number; message?: string }> {
+  const hasPerm = await hasPermission(userId, permission);
+  if (!hasPerm) {
+    return { ok: false, status: 403, message: `Access denied. Permission '${permission}' required.` };
+  }
+  return { ok: true };
+}
+
+export async function requireAdminAuthAndPermission(permission: string): Promise<AdminAuthResult> {
+  const authResult = await requireAdminAuth();
+  if (!authResult.ok) {
+    return authResult;
+  }
+
+  const permResult = await requirePermission(authResult.userId, permission);
+  if (!permResult.ok) {
+    return { ok: false, status: (permResult.status ?? 403) as 401 | 403 | 500, message: permResult.message ?? "Access denied" };
+  }
+
+  return authResult;
 }

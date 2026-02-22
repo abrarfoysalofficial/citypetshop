@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/db";
 import { requireAdminAuth } from "@/lib/admin-auth";
+import { logAdminAction } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -8,50 +9,100 @@ export async function GET() {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("sort_order", { ascending: true });
+  try {
+    const categories = await prisma.category.findMany({
+      include: {
+        parent: { select: { id: true, nameEn: true, nameBn: true } },
+        children: { select: { id: true, nameEn: true, nameBn: true } },
+        _count: { select: { products: true } }
+      },
+      orderBy: { sortOrder: 'asc' }
+    });
 
-  if (error) {
-    console.error("[admin/categories] GET:", error.message);
+    return NextResponse.json(categories);
+  } catch (error) {
+    console.error("[admin/categories] GET:", error);
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
   }
-  return NextResponse.json(data ?? []);
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  const body = await request.json().catch(() => ({}));
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("categories").insert(body).select().single();
+  try {
+    const body = await request.json();
 
-  if (error) {
-    console.error("[admin/categories] POST:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!body.nameEn || !body.slug) {
+      return NextResponse.json({ error: "Name and slug are required" }, { status: 400 });
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        nameEn: body.nameEn,
+        nameBn: body.nameBn,
+        slug: body.slug,
+        descriptionEn: body.descriptionEn,
+        descriptionBn: body.descriptionBn,
+        imageUrl: body.imageUrl,
+        parentId: body.parentId,
+        sortOrder: body.sortOrder || 0,
+        isActive: body.isActive !== false
+      },
+      include: {
+        parent: { select: { nameEn: true, nameBn: true } }
+      }
+    });
+
+    await logAdminAction(auth.userId, "create", "category", category.id, undefined, { nameEn: category.nameEn, slug: category.slug }, { headers: request.headers });
+
+    return NextResponse.json(category);
+  } catch (error) {
+    console.error("[admin/categories] POST:", error);
+    return NextResponse.json({ error: "Failed to create category" }, { status: 500 });
   }
-  return NextResponse.json(data);
 }
 
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  const body = await request.json().catch(() => ({}));
-  const { id, ...updates } = body;
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  try {
+    const body = await request.json();
+    const { id, ...updates } = body;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("categories").update(updates).eq("id", id).select().single();
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
 
-  if (error) {
-    console.error("[admin/categories] PATCH:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const before = await prisma.category.findUnique({ where: { id } });
+    if (!before) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+
+    const category = await prisma.category.update({
+      where: { id },
+      data: {
+        nameEn: updates.nameEn,
+        nameBn: updates.nameBn,
+        slug: updates.slug,
+        descriptionEn: updates.descriptionEn,
+        descriptionBn: updates.descriptionBn,
+        imageUrl: updates.imageUrl,
+        parentId: updates.parentId,
+        sortOrder: updates.sortOrder,
+        isActive: updates.isActive
+      },
+      include: {
+        parent: { select: { nameEn: true, nameBn: true } }
+      }
+    });
+
+    await logAdminAction(auth.userId, "update", "category", id, before, category, { headers: request.headers });
+
+    return NextResponse.json(category);
+  } catch (error) {
+    console.error("[admin/categories] PATCH:", error);
+    return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
   }
-  return NextResponse.json(data);
 }
 
 export async function DELETE(request: NextRequest) {
@@ -62,12 +113,16 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("categories").delete().eq("id", id);
+  try {
+    const before = await prisma.category.findUnique({ where: { id } });
+    if (!before) return NextResponse.json({ error: "Category not found" }, { status: 404 });
 
-  if (error) {
-    console.error("[admin/categories] DELETE:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    await prisma.category.delete({ where: { id } });
+    await logAdminAction(auth.userId, "delete", "category", id, before, undefined, { headers: request.headers });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[admin/categories] DELETE:", error);
+    return NextResponse.json({ error: "Failed to delete category" }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
 }

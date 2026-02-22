@@ -164,7 +164,24 @@ export default function CheckoutPage() {
       });
       const json = await res.json().catch(() => ({}));
       const orderId = (json as { orderId?: string }).orderId;
+
       if (res.ok && orderId) {
+        const isOnline = data.paymentMethod === "sslcommerz" || data.paymentMethod === "online";
+        if (isOnline) {
+          const initRes = await fetch("/api/checkout/sslcommerz/init", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId }),
+          });
+          const initJson = await initRes.json().catch(() => ({}));
+          const redirectUrl = (initJson as { redirectUrl?: string }).redirectUrl;
+          if (redirectUrl) {
+            setPlaced(true);
+            clearCart();
+            window.location.href = redirectUrl;
+            return;
+          }
+        }
         captureEvent({ event_name: "Purchase", payload_summary: { transaction_id: orderId, value: orderTotal, content_ids: items.map((i) => i.id) } });
         setPlaced(true);
         clearCart();
@@ -225,19 +242,24 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-slate-900">Checkout</h1>
+    <div className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-8">
+      <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Checkout</h1>
 
       <form
+        id="checkout-form"
         onSubmit={handleSubmit(onSubmit)}
-        className="mt-8 grid gap-8 lg:grid-cols-5"
+        className="mt-6 grid gap-6 sm:mt-8 sm:gap-8 lg:grid-cols-5"
       >
-        <div className="space-y-6 lg:col-span-3">
-          {/* Coupon – before payment */}
+        {/* order-last on mobile: summary renders first (order-first below), form below */}
+        <div className="order-last space-y-6 lg:order-first lg:col-span-3">
+          {/* Step 1: Coupon */}
           <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800">
-              Have a coupon?
-            </h2>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">1</span>
+              <h2 className="text-sm font-semibold text-slate-800">
+                Have a coupon?
+              </h2>
+            </div>
             <div className="mt-3 flex gap-2">
               <input
                 type="text"
@@ -247,12 +269,12 @@ export default function CheckoutPage() {
                   setVoucherError("");
                 }}
                 placeholder="Enter voucher code"
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 text-sm"
               />
               <button
                 type="button"
                 onClick={handleApplyVoucher}
-                className="rounded-lg bg-slate-200 px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-300"
+                className="h-11 shrink-0 rounded-lg bg-slate-200 px-4 text-sm font-medium text-slate-800 hover:bg-slate-300"
               >
                 Apply
               </button>
@@ -267,11 +289,14 @@ export default function CheckoutPage() {
             )}
           </section>
 
-          {/* Payment method selection cards */}
+          {/* Step 2: Payment */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">
-              Payment method
-            </h2>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">2</span>
+              <h2 className="text-sm font-semibold text-slate-800">
+                Payment method
+              </h2>
+            </div>
             <div className={`grid gap-3 ${paymentGateways.length > 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'}`}>
               {paymentGateways.map((gateway) => (
                 <label key={gateway.gateway} className="cursor-pointer">
@@ -311,11 +336,14 @@ export default function CheckoutPage() {
             )}
           </section>
 
-          {/* Customer form */}
+          {/* Step 3: Shipping */}
           <section className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-800">
-              Shipping details
-            </h2>
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">3</span>
+              <h2 className="text-sm font-semibold text-slate-800">
+                Shipping details
+              </h2>
+            </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">
                 Name <span className="text-red-500">*</span>
@@ -323,7 +351,7 @@ export default function CheckoutPage() {
               <input
                 type="text"
                 {...register("name")}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
               {errors.name && (
                 <p className="mt-0.5 text-sm text-red-600">{errors.name.message}</p>
@@ -336,7 +364,7 @@ export default function CheckoutPage() {
               <input
                 type="tel"
                 {...register("phone")}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
               {errors.phone && (
                 <p className="mt-0.5 text-sm text-red-600">{errors.phone.message}</p>
@@ -349,7 +377,7 @@ export default function CheckoutPage() {
               <input
                 type="email"
                 {...register("email")}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 placeholder="Optional"
               />
               {errors.email && (
@@ -377,7 +405,7 @@ export default function CheckoutPage() {
               <select
                 {...register("district")}
                 onChange={(e) => onDistrictChange(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {ALL_DISTRICTS.map((d) => (
                   <option key={d.value} value={d.value}>
@@ -438,9 +466,9 @@ export default function CheckoutPage() {
           </section>
         </div>
 
-        {/* Order summary – right column */}
-        <div className="lg:col-span-2">
-          <div className="sticky top-24 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        {/* Order summary – first on mobile (order-first), right column on desktop */}
+        <div className="order-first lg:order-last lg:col-span-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-24 lg:p-6">
             <h2 className="font-semibold text-slate-900">Order summary</h2>
 
             <ul className="mt-4 max-h-48 space-y-3 overflow-y-auto border-b border-slate-200 pb-4">
@@ -500,13 +528,35 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={placing}
-              className="mt-6 w-full rounded-lg bg-primary py-3 font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-6 hidden h-12 w-full rounded-lg bg-primary text-base font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70 lg:block"
             >
               {placing ? "Placing order…" : "Place Order"}
             </button>
           </div>
         </div>
       </form>
+
+      {/* Mobile: sticky bottom bar — Total + Place Order, above MobileBottomNav */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-20 flex items-center justify-between gap-4 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:hidden"
+        style={{ bottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}
+      >
+        <div>
+          <p className="text-xs text-slate-500">Total</p>
+          <p className="text-lg font-bold text-slate-900">৳{total.toLocaleString("en-BD")}</p>
+        </div>
+        <button
+          type="submit"
+          form="checkout-form"
+          disabled={placing}
+          className="flex h-12 flex-1 items-center justify-center rounded-xl bg-primary font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {placing ? "Placing…" : "Place Order"}
+        </button>
+      </div>
+
+      {/* Mobile: spacer so form doesn't hide behind sticky bar */}
+      <div className="h-20 md:hidden" aria-hidden />
     </div>
   );
 }

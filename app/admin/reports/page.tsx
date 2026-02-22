@@ -1,9 +1,9 @@
+export const dynamic = "force-dynamic";
 import { getAdminDashboard } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
 import { DollarSign, ShoppingCart, TrendingUp, RotateCcw } from "lucide-react";
 
 export default async function AdminReportsPage() {
-  const dashboard = DATA_SOURCE === "local" ? await getAdminDashboard() : null;
+  const dashboard = await getAdminDashboard();
   const summary = dashboard?.summary ?? { sales: "৳0", profit: "৳0", orders: "0", returnRate: "0%", loss: "৳0" };
 
   return (

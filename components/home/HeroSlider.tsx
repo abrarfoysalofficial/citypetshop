@@ -41,8 +41,9 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
   }, [goNext]);
 
   return (
-    <section className="relative w-full overflow-hidden bg-slate-900">
-      <div className="relative aspect-[21/9] w-full min-h-[280px] sm:min-h-[320px] lg:min-h-[400px]">
+    <section className="relative w-full overflow-hidden rounded-xl bg-slate-900 md:rounded-none">
+      {/* aspect-[16/9] on mobile reserves space before images load → prevents CLS */}
+      <div className="relative w-full aspect-[16/9] min-h-[180px] sm:min-h-[220px] md:aspect-[21/9] md:min-h-[320px] lg:min-h-[400px]">
         {list.map((slide, i) => (
           <Link
             key={slide.id}
@@ -59,19 +60,19 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
-            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 md:px-16 lg:px-24">
+            <div className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 md:px-10 lg:px-24">
               {slide.discountText && (
-                <span className="mb-3 inline-block w-fit rounded-md bg-brand px-4 py-2 text-lg font-black uppercase tracking-wider text-white shadow-lg sm:text-xl">
+                <span className="mb-2 inline-block w-fit rounded-md bg-brand px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white shadow-lg sm:mb-3 sm:px-4 sm:py-2 sm:text-lg md:text-xl">
                   {slide.discountText}
                 </span>
               )}
-              <h2 className="max-w-xl text-3xl font-extrabold leading-tight drop-shadow-lg sm:text-4xl md:text-5xl lg:text-6xl">
+              <h2 className="max-w-sm text-xl font-extrabold leading-tight drop-shadow-lg sm:max-w-xl sm:text-3xl md:text-5xl lg:text-6xl">
                 <TwoToneText primary={slide.title} variant="on-dark" as="span" />
               </h2>
               {slide.subheadline && (
-                <p className="mt-2 max-w-md text-lg font-semibold text-white/95 sm:text-xl">{slide.subheadline}</p>
+                <p className="mt-1 max-w-xs text-sm font-semibold text-white/95 sm:mt-2 sm:max-w-md sm:text-lg md:text-xl">{slide.subheadline}</p>
               )}
-              <span className="mt-6 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-6 py-3 text-base font-bold text-slate-900 shadow-xl transition hover:bg-slate-100">
+              <span className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-xl transition hover:bg-slate-100 sm:mt-6 sm:px-6 sm:py-3 sm:text-base">
                 {slide.cta ?? "Shop Now"}
               </span>
             </div>
@@ -79,25 +80,25 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
         ))}
         <button
           onClick={(e) => { e.preventDefault(); goPrev(); }}
-          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 shadow-lg transition hover:bg-white md:left-6"
-          aria-label="Previous"
+          className="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition hover:bg-white md:left-6 md:p-2.5"
+          aria-label="Previous slide"
         >
-          <ChevronLeft className="h-6 w-6 text-slate-900" />
+          <ChevronLeft className="h-5 w-5 text-slate-900 md:h-6 md:w-6" />
         </button>
         <button
           onClick={(e) => { e.preventDefault(); goNext(); }}
-          className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 shadow-lg transition hover:bg-white md:right-6"
-          aria-label="Next"
+          className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition hover:bg-white md:right-6 md:p-2.5"
+          aria-label="Next slide"
         >
-          <ChevronRight className="h-6 w-6 text-slate-900" />
+          <ChevronRight className="h-5 w-5 text-slate-900 md:h-6 md:w-6" />
         </button>
-        <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center gap-2">
+        <div className="absolute bottom-2 left-0 right-0 z-20 flex justify-center gap-1.5 md:bottom-4 md:gap-2">
           {list.map((_, i) => (
             <button
               key={i}
               onClick={(e) => { e.preventDefault(); setCurrent(i); }}
-              className={`h-2 rounded-full transition-all ${i === current ? "w-8 bg-white" : "w-2 bg-white/60 hover:bg-white/80"}`}
-              aria-label={`Slide ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all md:h-2 ${i === current ? "w-6 bg-white md:w-8" : "w-1.5 bg-white/60 hover:bg-white/80 md:w-2"}`}
+              aria-label={`Go to slide ${i + 1}`}
             />
           ))}
         </div>

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getUserOrders } from "@/src/data/provider";
 import { PackageSearch } from "lucide-react";

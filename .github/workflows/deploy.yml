@@ -1,0 +1,149 @@
+name: Deploy — City Plus Pet Shop
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy target"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Run tests before any deployment
+  # ────────────────────────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test -- --passWithNoTests
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Deploy to staging (auto on develop push)
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy — Staging
+    runs-on: ubuntu-latest
+    needs: test
+    if: |
+      github.ref == 'refs/heads/develop' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'staging')
+    environment:
+      name: staging
+      url: https://staging.citypluspetshop.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: cityplus_staging
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          command_timeout: 15m
+          script: |
+            bash /var/www/cityplus-staging/app/deploy/deploy-staging.sh
+            exit $?
+
+      - name: Verify staging health
+        run: |
+          sleep 5
+          STATUS=$(curl -sf --max-time 15 "https://staging.citypluspetshop.com/api/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "fail")
+          if [ "$STATUS" != "ok" ]; then
+            echo "Staging health check failed (status=$STATUS)"
+            exit 1
+          fi
+          echo "Staging health check passed"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Deploy to production (manual only, requires approval)
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy — Production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'production'
+    environment:
+      name: production
+      url: https://www.citypluspetshop.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm deploying from main
+        run: |
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            echo "Production deploys must be triggered from main branch."
+            echo "Current branch: ${{ github.ref_name }}"
+            exit 1
+          fi
+
+      - name: Deploy to production via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: cityplus
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_SSH_PORT || 22 }}
+          command_timeout: 20m
+          script: |
+            bash /var/www/cityplus/app/deploy/deploy-production.sh
+            exit $?
+
+      - name: Verify production health
+        run: |
+          sleep 8
+          STATUS=$(curl -sf --max-time 15 "https://www.citypluspetshop.com/api/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "fail")
+          if [ "$STATUS" != "ok" ]; then
+            echo "Production health check failed (status=$STATUS)"
+            exit 1
+          fi
+          echo "Production health check passed"
+
+      - name: Tag successful production deploy
+        if: success()
+        run: |
+          TAG="deploy-$(date +%Y%m%d-%H%M%S)-${{ github.sha }}"
+          git config user.email "ci@citypluspetshop.com"
+          git config user.name "CI Deploy Bot"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Production deploy FAILED"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Check logs on server: pm2 logs cityplus --lines 100"

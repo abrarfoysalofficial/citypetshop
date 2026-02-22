@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { isPrismaConfigured, isSupabaseConfigured } from "@/src/config/env";
+import { checkFraud, recordFraudFlag } from "@/lib/fraud";
+import { rateLimit, getRateLimitKey } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
-import { isSupabaseConfigured } from "@/src/config/env";
+
+const CHECKOUT_ORDERS_PER_IP = 5;
 
 const orderItemSchema = z.object({
   productId: z.string().optional(),
@@ -28,63 +34,109 @@ const checkoutOrderSchema = z.object({
   voucherCode: z.string().optional(),
 });
 
-export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      { error: "Service unavailable" },
-      { status: 500 }
-    );
-  }
+/** Prisma: create order in Postgres */
+async function createOrderPrisma(body: z.infer<typeof checkoutOrderSchema>) {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string })?.id ?? null;
 
-  let body: unknown;
+  const shippingName = body.customerName.trim();
+  const shippingEmail =
+    typeof body.email === "string" && body.email.trim() ? body.email.trim() : "guest@checkout.local";
+  const shippingPhone = typeof body.phone === "string" ? body.phone.trim() || "N/A" : "N/A";
+  const shippingAddressText = typeof body.shippingAddress === "string" ? body.shippingAddress.trim() : "";
+  const shippingCityText = typeof body.shippingCity === "string" ? body.shippingCity.trim() : "N/A";
+  const paymentMethodValue =
+    typeof body.paymentMethod === "string" && body.paymentMethod ? body.paymentMethod : "cod";
+
+  const itemsSubtotal = body.items.reduce((s, i) => s + (i.qty ?? 1) * (i.price ?? 0), 0);
+  const orderSubtotal = typeof body.subtotal === "number" ? body.subtotal : itemsSubtotal;
+  const orderDeliveryCharge = typeof body.deliveryCharge === "number" ? body.deliveryCharge : 0;
+  const orderDiscountAmount = typeof body.discountAmount === "number" ? body.discountAmount : 0;
+
+  const order = await prisma.order.create({
+    data: {
+      userId,
+      guestEmail: userId ? null : shippingEmail,
+      guestPhone: userId ? null : shippingPhone,
+      guestName: userId ? null : shippingName,
+      status: "pending",
+      subtotal: orderSubtotal,
+      deliveryCharge: orderDeliveryCharge,
+      discountAmount: orderDiscountAmount,
+      total: body.total,
+      voucherCode: typeof body.voucherCode === "string" ? body.voucherCode.trim() || null : null,
+      paymentMethod: paymentMethodValue,
+      paymentStatus: "pending",
+      shippingName,
+      shippingPhone,
+      shippingEmail,
+      shippingAddress: shippingAddressText || "N/A",
+      shippingCity: shippingCityText || "N/A",
+    },
+  });
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const orderItems = body.items.map((item) => ({
+    orderId: order.id,
+    productId:
+      item.productId && uuidRegex.test(item.productId) ? item.productId : null,
+    productName: item.name ?? "Item",
+    quantity: item.qty ?? 1,
+    unitPrice: item.price ?? 0,
+    totalPrice: (item.qty ?? 1) * (item.price ?? 0),
+  }));
+
+  await prisma.orderItem.createMany({ data: orderItems });
+
+  // Send order confirmation notifications (non-blocking – failures don't abort order)
   try {
-    body = await request.json();
+    const { sendOrderConfirmationEmail, sendOrderStatusSms } = await import("@/lib/notifications");
+    const notifyPhone = shippingPhone && shippingPhone !== "N/A" ? shippingPhone : null;
+    const notifyEmail = shippingEmail && !shippingEmail.endsWith("@checkout.local") ? shippingEmail : null;
+
+    if (notifyPhone) {
+      sendOrderStatusSms(notifyPhone, order.id, "confirmed").catch(() => {});
+    }
+    if (notifyEmail) {
+      sendOrderConfirmationEmail({
+        to: notifyEmail,
+        orderId: order.id,
+        customerName: shippingName,
+        items: body.items.map((i) => ({ name: i.name, quantity: i.qty ?? 1, price: i.price })),
+        total: body.total,
+        shippingAddress: `${shippingAddressText}, ${shippingCityText}`,
+        paymentMethod: paymentMethodValue,
+      }).catch(() => {});
+    }
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    // Notification errors never block order creation
   }
 
-  const parsed = checkoutOrderSchema.safeParse(body);
-  if (!parsed.success) {
-    const msg = parsed.error.errors.map((e) => e.message).join("; ") || "Validation failed";
-    return NextResponse.json({ error: msg }, { status: 400 });
-  }
-  const input = parsed.data;
-  const {
-    customerName,
-    email,
-    phone,
-    subtotal,
-    deliveryCharge,
-    discountAmount,
-    total,
-    items,
-    shippingAddress,
-    shippingCity,
-    paymentMethod,
-    voucherCode,
-  } = input;
+  return { orderId: order.id };
+}
 
+/** Supabase: legacy create order */
+async function createOrderSupabase(body: z.infer<typeof checkoutOrderSchema>) {
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const userId = user?.id ?? null;
-  const shippingName = customerName.trim();
-  const shippingEmail = typeof email === "string" && email.trim() ? email.trim() : "guest@checkout.local";
-  const shippingPhone = typeof phone === "string" ? phone.trim() || "N/A" : "N/A";
-  const shippingAddressText =
-    typeof shippingAddress === "string" ? shippingAddress.trim() : "";
-  const shippingCityText = typeof shippingCity === "string" ? shippingCity.trim() : "N/A";
+  const shippingName = body.customerName.trim();
+  const shippingEmail =
+    typeof body.email === "string" && body.email.trim() ? body.email.trim() : "guest@checkout.local";
+  const shippingPhone = typeof body.phone === "string" ? body.phone.trim() || "N/A" : "N/A";
+  const shippingAddressText = typeof body.shippingAddress === "string" ? body.shippingAddress.trim() : "";
+  const shippingCityText = typeof body.shippingCity === "string" ? body.shippingCity.trim() : "N/A";
   const paymentMethodValue =
-    typeof paymentMethod === "string" && paymentMethod
-      ? paymentMethod
-      : "cod";
+    typeof body.paymentMethod === "string" && body.paymentMethod ? body.paymentMethod : "cod";
 
-  const itemsSubtotal = items.reduce((s, i) => s + (i.qty ?? 1) * (i.price ?? 0), 0);
-  const orderSubtotal = typeof subtotal === "number" ? subtotal : itemsSubtotal;
-  const orderDeliveryCharge = typeof deliveryCharge === "number" ? deliveryCharge : 0;
-  const orderDiscountAmount = typeof discountAmount === "number" ? discountAmount : 0;
+  const itemsSubtotal = body.items.reduce((s, i) => s + (i.qty ?? 1) * (i.price ?? 0), 0);
+  const orderSubtotal = typeof body.subtotal === "number" ? body.subtotal : itemsSubtotal;
+  const orderDeliveryCharge = typeof body.deliveryCharge === "number" ? body.deliveryCharge : 0;
+  const orderDiscountAmount = typeof body.discountAmount === "number" ? body.discountAmount : 0;
 
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
@@ -97,8 +149,8 @@ export async function POST(request: NextRequest) {
       subtotal: orderSubtotal,
       delivery_charge: orderDeliveryCharge,
       discount_amount: orderDiscountAmount,
-      total,
-      voucher_code: typeof voucherCode === "string" ? voucherCode.trim() || null : null,
+      total: body.total,
+      voucher_code: typeof body.voucherCode === "string" ? body.voucherCode.trim() || null : null,
       payment_method: paymentMethodValue,
       payment_status: "pending",
       shipping_name: shippingName,
@@ -113,15 +165,12 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (orderError || !orderRow?.id) {
-    return NextResponse.json(
-      { error: orderError?.message ?? "Failed to create order" },
-      { status: 500 }
-    );
+    throw new Error(orderError?.message ?? "Failed to create order");
   }
 
   const orderId = orderRow.id as string;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const orderItems = items.map((item) => ({
+  const orderItems = body.items.map((item) => ({
     order_id: orderId,
     product_id: item.productId && uuidRegex.test(item.productId) ? item.productId : null,
     product_name: item.name ?? "Item",
@@ -131,13 +180,74 @@ export async function POST(request: NextRequest) {
   }));
 
   const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+  if (itemsError) throw new Error(itemsError.message);
 
-  if (itemsError) {
+  return { orderId };
+}
+
+export async function POST(request: NextRequest) {
+  const rl = rateLimit(getRateLimitKey("checkout:order", request), CHECKOUT_ORDERS_PER_IP);
+  if (!rl.ok) {
     return NextResponse.json(
-      { error: itemsError.message ?? "Failed to create order items" },
-      { status: 500 }
+      { error: "Too many orders. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter ?? 60) } }
     );
   }
 
-  return NextResponse.json({ orderId });
+  if (!isPrismaConfigured() && !isSupabaseConfigured()) {
+    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const parsed = checkoutOrderSchema.safeParse(body);
+  if (!parsed.success) {
+    const msg = parsed.error.errors.map((e) => e.message).join("; ") || "Validation failed";
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? request.headers.get("x-real-ip")
+    ?? "unknown";
+
+  // Phase 10: Fraud check (Prisma only)
+  let fraudResult: Awaited<ReturnType<typeof checkFraud>> | null = null;
+  if (isPrismaConfigured()) {
+    fraudResult = await checkFraud({
+      phone: parsed.data.phone,
+      email: parsed.data.email,
+      ip,
+      address: parsed.data.shippingAddress,
+      orderTotal: parsed.data.total,
+    });
+    if (!fraudResult.passed) {
+      return NextResponse.json(
+        { error: fraudResult.blockReason ?? "Order blocked for security reasons" },
+        { status: 403 }
+      );
+    }
+  }
+
+  try {
+    const result = isPrismaConfigured()
+      ? await createOrderPrisma(parsed.data)
+      : await createOrderSupabase(parsed.data);
+    // Log borderline fraud flags (passed but had flags)
+    if (fraudResult && fraudResult.flags.length > 0 && result.orderId) {
+      await recordFraudFlag(result.orderId, fraudResult.flags.join(","), fraudResult.score, {
+        ip,
+        phone: parsed.data.phone,
+      });
+    }
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error("[checkout/order]:", err);
+    const msg = err instanceof Error ? err.message : "Failed to create order";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

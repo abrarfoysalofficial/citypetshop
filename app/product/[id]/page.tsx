@@ -1,12 +1,13 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
-import dynamic from "next/dynamic";
+import NextDynamic from "next/dynamic";
 import type { Metadata } from "next";
 import { getProductById, getRecommendedProducts } from "@/src/data/provider";
 import ProductDetailContent from "./ProductDetailContent";
 import LazyBelowFold from "@/components/ui/LazyBelowFold";
 
-const RecommendedProducts = dynamic(() => import("@/components/products/RecommendedProducts"), { ssr: true });
-const RecentlyViewedProducts = dynamic(() => import("@/components/products/RecentlyViewedProducts"), { ssr: true });
+const RecommendedProducts = NextDynamic(() => import("@/components/products/RecommendedProducts"), { ssr: true });
+const RecentlyViewedProducts = NextDynamic(() => import("@/components/products/RecentlyViewedProducts"), { ssr: true });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
 

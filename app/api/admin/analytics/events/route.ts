@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/admin-auth";
-import { getAdminAnalyticsEvents } from "@/src/data/supabase/adminData";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 const META_EVENT_NAMES = ["ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase"];
 
-/** GET: Fetch analytics events. Admin Supabase only. */
+/** GET: Fetch analytics events. */
 export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) {
@@ -14,17 +14,53 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const params = {
-    from: searchParams.get("from") ?? undefined,
-    to: searchParams.get("to") ?? undefined,
-    event: searchParams.get("event") ?? undefined,
-    source: searchParams.get("source") ?? undefined,
-  };
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+  const event = searchParams.get("event");
+  const source = searchParams.get("source");
 
   try {
-    const result = await getAdminAnalyticsEvents(params);
+    const where: any = {};
+    if (from) where.createdAt = { gte: new Date(from) };
+    if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
+    if (event) where.eventName = event;
+    if (source) where.source = source;
+
+    const events = await prisma.analyticsEvent.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    });
+
+    const counts: Record<string, number> = {};
+    const lastReceivedByEvent: Record<string, string> = {};
+
+    events.forEach(e => {
+      counts[e.eventName] = (counts[e.eventName] || 0) + 1;
+      if (!lastReceivedByEvent[e.eventName] || e.createdAt > new Date(lastReceivedByEvent[e.eventName])) {
+        lastReceivedByEvent[e.eventName] = e.createdAt.toISOString();
+      }
+    });
+
     return NextResponse.json({
-      ...result,
+      events: events.map(e => ({
+        id: e.id,
+        event_name: e.eventName,
+        event_id: e.eventId,
+        source: e.source,
+        page_url: e.pageUrl,
+        referrer: e.referrer,
+        user_id: e.userId,
+        payload_summary: e.payloadSummary,
+        created_at: e.createdAt.toISOString(),
+        has_email_hash: false,
+        has_phone_hash: false,
+        has_fbp: false,
+        has_fbc: false,
+      })),
+      counts,
+      lastReceivedByEvent,
+      diagnostics: { pixelConfigured: false, capiConfigured: false, warnings: [] },
       metaEventNames: META_EVENT_NAMES,
     });
   } catch (err) {

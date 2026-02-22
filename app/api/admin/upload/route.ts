@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
+import path from "path";
+import { promises as fs } from "fs";
 import { requireAdminAuth } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_BUCKETS = ["product-images", "banner-images", "store-assets"];
+const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "/var/www/city-plus/uploads";
+const APP_URL = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "";
 
-/** POST: Upload file to Supabase Storage. Uses service-role when available to bypass RLS. */
+const ALLOWED_BUCKETS = ["product-images", "banner-images", "store-assets"];
+const ALLOWED_EXT = new Set(["jpg", "jpeg", "png", "gif", "webp", "svg"]);
+
+/** POST: Upload file to local filesystem. No S3/Supabase. */
 export async function POST(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
@@ -19,36 +24,24 @@ export async function POST(request: NextRequest) {
 
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
-    // Use service-role client when available (bypasses RLS); otherwise use session client
-    let supabase: Awaited<ReturnType<typeof createClient>>;
-    try {
-      supabase = createServiceRoleClient();
-    } catch {
-      supabase = await createClient();
+    const fileExt = (file.name.split(".").pop() || "jpg").toLowerCase();
+    if (!ALLOWED_EXT.has(fileExt)) {
+      return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    const fileExt = file.name.split(".").pop() || "jpg";
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const key = `${bucket}/${fileName}`;
+    const fullPath = path.join(UPLOAD_DIR, key);
+    const dir = path.dirname(fullPath);
+
+    await fs.mkdir(dir, { recursive: true });
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    await fs.writeFile(fullPath, buffer);
 
-    const { data, error } = await supabase.storage.from(bucket).upload(fileName, buffer, {
-      contentType: file.type || `image/${fileExt}`,
-      upsert: false,
-    });
-
-    if (error) {
-      console.error("[admin/upload]:", error.message, { bucket, code: error.name });
-      const msg =
-        error.message?.includes("Bucket not found") || error.message?.includes("not found")
-          ? "Storage bucket not found. Create the bucket in Supabase Dashboard → Storage."
-          : error.message || "Failed to upload file";
-      return NextResponse.json({ error: msg }, { status: 500 });
-    }
-
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-    return NextResponse.json({ url: urlData.publicUrl, path: data.path });
+    const url = `${APP_URL}/api/media/${encodeURIComponent(key)}`;
+    return NextResponse.json({ url, path: key });
   } catch (err) {
     console.error("[admin/upload]:", err);
     const msg = err instanceof Error ? err.message : "Internal error";

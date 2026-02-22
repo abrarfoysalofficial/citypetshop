@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<Foundry>
-<VM>
-<VMId type="string">52 e8 2b b5 66 50 e1 1e-b1 b2 15 0c 5c 19 2d f0</VMId>
-<ClientMetaData>
-<clientMetaDataAttributes/>
-<HistoryEventList/></ClientMetaData>
-<vmxPathName type="string">abrar macOS 12.vmx</vmxPathName></VM><tools-install-info><installError>0</installError><updateCounter>6</updateCounter></tools-install-info></Foundry>

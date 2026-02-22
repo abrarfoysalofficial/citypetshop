@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import {
   getHomeData,
   getFeaturedProducts,
@@ -8,6 +10,7 @@ import {
 import { getStorefrontSettings } from "@/lib/storefront-settings-server";
 import HeroSlider from "@/components/home/HeroSlider";
 import CategoryMegaMenu from "@/components/home/CategoryMegaMenu";
+import CategoryChipsRow from "@/components/home/CategoryChipsRow";
 import TopSellerCard from "@/components/home/TopSellerCard";
 import PromoBanners from "@/components/home/PromoBanners";
 import PopularCategoryRow from "@/components/home/PopularCategoryRow";
@@ -21,7 +24,8 @@ const HomeReviewSection = nextDynamic(() => import("@/components/home/HomeReview
 import DiscountStrip from "@/components/home/DiscountStrip";
 import type { DisplayProduct } from "@/components/ProductCard";
 
-export const dynamic = "force-dynamic";
+// Phase 1: Intelligent caching – 2 min revalidate for homepage
+export const revalidate = 120;
 
 async function getHomepageData() {
   const [storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers] =
@@ -92,18 +96,25 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero row: Category sidebar + Slider + Top Seller card */}
+      {/* Hero row: Category sidebar + Slider + Top Seller card (desktop) | Slider only (mobile) */}
       <section className="border-b border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row">
-            <CategoryMegaMenu />
+        <div className="mx-auto max-w-7xl px-3 py-4 md:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+            <div className="hidden lg:block">
+              <CategoryMegaMenu />
+            </div>
             <div className="min-w-0 flex-1">
               <HeroSlider slides={heroSlides} />
             </div>
-            <TopSellerCard />
+            <div className="hidden lg:block">
+              <TopSellerCard />
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Mobile: horizontal category chips (Daraz/Shopee style) */}
+      <CategoryChipsRow />
 
       <PromoBanners />
       <PopularCategoryRow />

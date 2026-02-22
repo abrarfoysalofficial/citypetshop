@@ -1,61 +1,104 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@/lib/db";
+import { requireAdminAuthAndPermission } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
-/** GET: Dashboard stats from Supabase. No demo data. */
+/** GET: Dashboard stats from Prisma. No demo data. */
 export async function GET() {
-  const auth = await requireAdminAuth();
+  const auth = await requireAdminAuthAndPermission("analytics.view");
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  const supabase = await createClient();
+  try {
+    // Get basic stats
+    const [totalOrders, totalProducts, totalCustomers, totalRevenue] = await Promise.all([
+      prisma.order.count(),
+      prisma.product.count(),
+      prisma.user.count(),
+      prisma.order.aggregate({
+        _sum: { total: true }
+      })
+    ]);
 
-  const [ordersRes, productsRes, recentOrdersRes] = await Promise.all([
-    supabase.from("orders").select("total, created_at, status"),
-    supabase.from("products").select("id", { count: "exact", head: true }),
-    supabase.from("orders").select("id, shipping_name, total, status, created_at").order("created_at", { ascending: false }).limit(5),
-  ]);
+    // Get recent orders
+    const recentOrders = await prisma.order.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        shippingName: true,
+        total: true,
+        status: true,
+        createdAt: true
+      }
+    });
 
-  const orders = ordersRes.data ?? [];
-  const totalRevenue = orders.reduce((s: number, o: { total?: number }) => s + Number(o?.total ?? 0), 0);
-  const totalOrders = orders.length;
-  const totalProducts = productsRes.count ?? 0;
+    // Get sales data for last 6 months (simplified)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-  const salesData = months.map((name) => ({
-    name,
-    revenue: Math.floor(Math.random() * 3000) + 3000,
-    orders: Math.floor(Math.random() * 20) + 15,
-  }));
+    const salesData = await prisma.order.groupBy({
+      by: ['createdAt'],
+      where: {
+        createdAt: { gte: sixMonthsAgo }
+      },
+      _sum: { total: true },
+      _count: true,
+      orderBy: { createdAt: 'asc' }
+    });
 
-  const categoryData = [
-    { name: "Dog Food", value: 400, count: 45 },
-    { name: "Cat Food", value: 300, count: 38 },
-    { name: "Toys", value: 200, count: 52 },
-    { name: "Accessories", value: 278, count: 41 },
-    { name: "Healthcare", value: 189, count: 28 },
-  ];
+    // Group by month
+    const monthlyData = salesData.reduce((acc, order) => {
+      const month = new Date(order.createdAt).toLocaleString('default', { month: 'short' });
+      if (!acc[month]) {
+        acc[month] = { revenue: 0, orders: 0 };
+      }
+      acc[month].revenue += Number(order._sum.total || 0);
+      acc[month].orders += order._count;
+      return acc;
+    }, {} as Record<string, { revenue: number; orders: number }>);
 
-  const recentOrders = (recentOrdersRes.data ?? []).map((o: { id: string; shipping_name?: string; total?: number; status?: string; created_at: string }) => ({
-    id: o.id.slice(0, 8),
-    customer: o.shipping_name ?? "—",
-    total: Number(o.total ?? 0),
-    status: o.status ?? "pending",
-    date: new Date(o.created_at).toLocaleDateString(),
-  }));
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const chartData = months.map(month => ({
+      name: month,
+      revenue: monthlyData[month]?.revenue || 0,
+      orders: monthlyData[month]?.orders || 0
+    }));
 
-  return NextResponse.json({
-    stats: {
-      totalRevenue,
-      totalOrders,
-      totalProducts,
-      totalCustomers: 0,
-      revenueChange: 12.5,
-      ordersChange: 8.2,
-    },
-    salesData,
-    categoryData,
-    recentOrders,
-  });
+    // Category data (simplified)
+    const categoryStats = await prisma.product.groupBy({
+      by: ['categorySlug'],
+      _count: true,
+      where: { categorySlug: { not: "" } }
+    });
+
+    const categoryData = categoryStats.map(cat => ({
+      name: cat.categorySlug || 'Uncategorized',
+      value: cat._count,
+      count: cat._count
+    }));
+
+    return NextResponse.json({
+      stats: {
+        totalRevenue: Number(totalRevenue._sum.total || 0),
+        totalOrders,
+        totalProducts,
+        totalCustomers,
+        revenueChange: 0, // TODO: calculate from previous period
+        ordersChange: 0
+      },
+      salesData: chartData,
+      categoryData,
+      recentOrders: recentOrders.map(order => ({
+        id: order.id.slice(0, 8),
+        customer: order.shippingName || '—',
+        total: Number(order.total),
+        status: order.status,
+        date: order.createdAt.toLocaleDateString()
+      }))
+    });
+  } catch (error) {
+    console.error('Dashboard API error:', error);
+    return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });
+  }
 }

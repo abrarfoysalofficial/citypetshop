@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getProducts } from "@/src/data/provider";
 import CategoryClient from "./CategoryClient";

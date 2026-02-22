@@ -1,54 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
-import { isSupabaseConfigured } from "@/src/config/env";
+import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@/lib/db";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-/** GET: List notes for an order (admin). */
+/** GET /api/admin/order-notes?orderId=xxx */
 export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.message }, { status: auth.status });
-  }
+  if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
   const orderId = request.nextUrl.searchParams.get("orderId");
   if (!orderId) return NextResponse.json({ notes: [] });
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+  try {
+    const notes = await prisma.orderNote.findMany({
+      where: { orderId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        createdAt: true,
+        type: true,
+        visibility: true,
+        message: true,
+        createdBy: true,
+      },
+    });
+    return NextResponse.json({ notes });
+  } catch (err) {
+    console.error("order-notes GET error:", err);
     return NextResponse.json({ notes: [] });
   }
-
-  const supabase = await createClient();
-  const { data } = await supabase.from("order_notes").select("*").eq("order_id", orderId).order("created_at", { ascending: false });
-  return NextResponse.json({ notes: data || [] });
 }
 
-/** POST: Add an order note (admin). */
+const postSchema = z.object({
+  orderId: z.string().min(1),
+  type: z.enum(["admin", "courier", "system"]).default("admin"),
+  visibility: z.enum(["public", "internal", "admin"]).default("internal"),
+  message: z.string().min(1).max(2000),
+});
+
+/** POST /api/admin/order-notes */
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
-  const { orderId, type, visibility, message } = body as { orderId?: string; type?: string; visibility?: string; message?: string };
-  if (!orderId || !message?.trim()) {
-    return NextResponse.json({ error: "orderId and message required" }, { status: 400 });
-  }
-  const noteType = ["admin", "courier", "system"].includes(type || "") ? type : "admin";
-  const vis = visibility === "public" ? "public" : "internal";
-
   const auth = await requireAdminAuth();
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.message }, { status: auth.status });
-  }
+  if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Demo mode: add note not supported" }, { status: 400 });
-  }
+  try {
+    const body = postSchema.parse(await request.json());
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("order_notes")
-    .insert({ order_id: orderId, type: noteType, visibility: vis, message: message.trim(), created_by: "admin" })
-    .select("id, created_at")
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ id: data?.id, created_at: data?.created_at });
+    const note = await prisma.orderNote.create({
+      data: {
+        orderId: body.orderId,
+        type: body.type,
+        visibility: body.visibility,
+        message: body.message,
+        createdBy: auth.email,
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        type: true,
+        visibility: true,
+        message: true,
+        createdBy: true,
+      },
+    });
+
+    return NextResponse.json(note, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors[0].message }, { status: 400 });
+    console.error("order-notes POST error:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 }

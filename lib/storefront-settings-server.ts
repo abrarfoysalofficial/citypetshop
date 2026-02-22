@@ -1,8 +1,8 @@
 /**
- * Server-only: fetch storefront settings (e.g. homepage blocks) from Supabase.
- * No unstable_cache - avoids cookies-in-cache build error when Supabase is used.
+ * Server-only: fetch storefront settings from Postgres.
+ * Self-hosted: uses Prisma (replaces Supabase).
  */
-import { createAnonClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/db";
 import {
   getOrderedHomepageBlocks,
   type HomepageBlockConfig,
@@ -14,15 +14,10 @@ export interface StorefrontSettings {
 
 export async function getStorefrontSettings(): Promise<StorefrontSettings> {
   try {
-    const supabase = createAnonClient();
-    const { data } = await supabase
-      .from("site_settings")
-      .select("homepage_blocks")
-      .eq("id", "default")
-      .single();
-
-    const raw = (data as { homepage_blocks?: HomepageBlockConfig[] } | null)
-      ?.homepage_blocks;
+    const settings = await prisma.siteSettings.findUnique({
+      where: { id: "default" },
+    });
+    const raw = settings?.homepageBlocks as HomepageBlockConfig[] | null | undefined;
     const homepageBlocks = getOrderedHomepageBlocks(raw ?? null);
     return { homepageBlocks };
   } catch {

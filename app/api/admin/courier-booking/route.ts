@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@/lib/db";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
-import { z } from "zod";
 
 const schema = z.object({
   orderId: z.string().min(1),
   provider: z.enum(["pathao", "steadfast", "redx"]),
 });
 
-/** POST: Book courier for one order. Writes to courier_bookings; updates orders; inserts order_status_events. */
+/** POST: Book courier for one order. Adapter pattern – provider modules are stub until API keys set. */
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
   const body = await request.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -19,89 +24,71 @@ export async function POST(request: NextRequest) {
   }
   const { orderId, provider } = parsed.data;
 
-  const requestPayload = { orderId, provider };
-  const consignmentId = `book-${orderId.slice(0, 8)}-${Date.now()}`;
+  // Verify order exists
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  // Stub booking – real providers plug in here via adapter when API keys configured
+  const consignmentId = `BOOK-${orderId.slice(0, 8).toUpperCase()}-${Date.now()}`;
   const trackingCode = `TRK-${provider.toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-  const labelUrl = DATA_SOURCE === "local" ? undefined : `https://example.com/labels/${consignmentId}.pdf`;
-  const waybillUrl = labelUrl;
 
-  if (DATA_SOURCE === "local") {
+  // Upsert courier config check (warn if not configured)
+  const courierCfg = await prisma.courierConfig.findUnique({ where: { provider } });
+  if (!courierCfg?.isActive) {
     return NextResponse.json({
-      success: true,
-      trackingCode,
-      provider,
-      consignmentId,
-      labelUrl: undefined,
-      waybillUrl: undefined,
-    });
+      error: `Courier provider '${provider}' is not configured or not active. Add API key in Admin → Couriers.`,
+      providerNotConfigured: true,
+    }, { status: 422 });
   }
 
-  const supabase = await createClient();
-
-  const responsePayload = {
-    success: true,
-    tracking_code: trackingCode,
-    consignment_id: consignmentId,
-    label_url: labelUrl,
-  };
-
-  const { error: bookingError } = await supabase.from("courier_bookings").insert({
-    order_id: orderId,
-    provider,
-    consignment_id: consignmentId,
-    tracking_code: trackingCode,
-    label_url: labelUrl ?? null,
-    waybill_url: waybillUrl ?? null,
-    request_payload: requestPayload,
-    response_payload: responsePayload,
-    status: "booked",
-    updated_at: new Date().toISOString(),
-  });
-
-  if (bookingError) {
-    const errMsg = bookingError.message;
-    await supabase.from("courier_bookings").insert({
-      order_id: orderId,
-      provider,
-      request_payload: requestPayload,
-      response_payload: { error: errMsg },
-      status: "failed",
-      error_message: errMsg,
-      updated_at: new Date().toISOString(),
-    });
-    return NextResponse.json({ error: errMsg, success: false }, { status: 500 });
-  }
-
-  const { error: orderError } = await supabase
-    .from("orders")
-    .update({
-      courier_provider: provider,
-      courier_booking_id: consignmentId,
-      tracking_code: trackingCode,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", orderId);
-
-  if (orderError) {
-    return NextResponse.json(
-      { error: orderError.message, success: false, trackingCode, consignmentId },
-      { status: 500 }
-    );
-  }
-
-  await supabase.from("order_status_events").insert({
-    order_id: orderId,
-    provider,
-    status: "booked",
-    payload_summary: { tracking_code: trackingCode, consignment_id: consignmentId },
-  });
+  // Update order with courier details (atomic)
+  await prisma.$transaction([
+    prisma.order.update({
+      where: { id: orderId },
+      data: {
+        courierProvider: provider,
+        courierBookingId: consignmentId,
+        trackingCode,
+        status: "handed_to_courier",
+      },
+    }),
+    prisma.orderStatusEvent.create({
+      data: {
+        orderId,
+        provider,
+        status: "handed_to_courier",
+        payloadSummary: { tracking_code: trackingCode, consignment_id: consignmentId },
+      },
+    }),
+  ]);
 
   return NextResponse.json({
     success: true,
     trackingCode,
     provider,
     consignmentId,
-    labelUrl: labelUrl ?? undefined,
-    waybillUrl: waybillUrl ?? undefined,
   });
+}
+
+/** GET: List bookings for an order */
+export async function GET(request: NextRequest) {
+  const auth = await requireAdminAuth();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const orderId = searchParams.get("orderId");
+  if (!orderId) {
+    return NextResponse.json({ error: "orderId required" }, { status: 400 });
+  }
+
+  const events = await prisma.orderStatusEvent.findMany({
+    where: { orderId, provider: { not: null } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json({ events });
 }

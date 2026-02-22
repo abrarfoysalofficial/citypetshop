@@ -1,9 +1,9 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getUserInvoices } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
 
 export default async function AccountInvoicesPage() {
-  const invoices = DATA_SOURCE === "local" ? await getUserInvoices() : [];
+  const invoices = await getUserInvoices();
 
   return (
     <div className="space-y-4">

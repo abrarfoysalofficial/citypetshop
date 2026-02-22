@@ -1,16 +1,13 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getBlogPostBySlug, getBlogPosts } from "@/src/data/provider";
 import { isSupabaseConfigured } from "@/src/config/env";
 import SafeImage from "@/components/media/SafeImage";
 
 export async function generateStaticParams() {
-  if (!isSupabaseConfigured()) return [];
-  try {
-    const posts = await getBlogPosts();
-    return posts.map((p) => ({ slug: p.slug }));
-  } catch {
-    return [];
-  }
+  // Return empty array: all blog posts are dynamically rendered per force-dynamic above.
+  // This prevents Prisma DB calls during build which cause build hangs.
+  return [];
 }
 
 export async function generateMetadata({

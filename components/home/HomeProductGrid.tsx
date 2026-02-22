@@ -27,14 +27,14 @@ export default function HomeProductGrid({ products, title = "Most Popular Produc
   if (products.length === 0) return null;
 
   return (
-    <section className="py-12 sm:py-16">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="py-8 md:py-12 lg:py-16">
+      <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8">
         <div className="text-center">
-          <h2 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">{title}</h2>
-          {subtitle && <p className="mx-auto mt-2 max-w-xl text-slate-600">{subtitle}</p>}
+          <h2 className="text-xl font-extrabold text-slate-900 md:text-2xl lg:text-3xl">{title}</h2>
+          {subtitle && <p className="mx-auto mt-1 max-w-xl text-sm text-slate-600 md:mt-2 md:text-base">{subtitle}</p>}
         </div>
         <motion.div
-          className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4"
+          className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-3 md:gap-6 lg:grid-cols-4"
           variants={container}
           initial="hidden"
           whileInView="show"

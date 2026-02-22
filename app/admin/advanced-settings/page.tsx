@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Sliders } from "lucide-react";
+import { Save, Sliders, Loader2 } from "lucide-react";
 
 const STORAGE_KEY = "city-plus-pet-shop-advanced";
 
@@ -24,7 +24,7 @@ function loadStored(): Record<string, string | number | boolean> {
   }
 }
 
-function save(values: Record<string, string | number | boolean>) {
+function saveLocal(values: Record<string, string | number | boolean>) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
@@ -48,22 +48,65 @@ export default function AdminAdvancedSettingsPage() {
   const [settings, setSettings] = useState<AdvancedSetting[]>([]);
   const [saved, setSaved] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const stored = loadStored();
-    setSettings(
-      DEFAULT_SETTINGS.map((s) => {
-        let value: string | number | boolean = stored[s.key];
-        if (value === undefined) {
-          if (s.type === "boolean") value = false;
-          else if (s.type === "number") value = s.key === "low_stock_threshold" ? 5 : s.key === "max_cart_quantity" ? 0 : 60;
-          else value = "";
-        }
-        return { ...s, value };
-      })
-    );
-    setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (res.ok) {
+        const data = await res.json();
+        const stored = (data.advanced_settings as Record<string, string | number | boolean>) ?? loadStored();
+        setSettings(
+          DEFAULT_SETTINGS.map((s) => {
+            let value: string | number | boolean = stored[s.key];
+            if (value === undefined) {
+              if (s.type === "boolean") value = false;
+              else if (s.type === "number") value = s.key === "low_stock_threshold" ? 5 : s.key === "max_cart_quantity" ? 0 : 60;
+              else value = "";
+            }
+            return { ...s, value };
+          })
+        );
+        setLastUpdated(data.updated_at ?? localStorage.getItem(STORAGE_KEY + "-updated"));
+      } else {
+        const stored = loadStored();
+        setSettings(
+          DEFAULT_SETTINGS.map((s) => {
+            let value: string | number | boolean = stored[s.key];
+            if (value === undefined) {
+              if (s.type === "boolean") value = false;
+              else if (s.type === "number") value = s.key === "low_stock_threshold" ? 5 : s.key === "max_cart_quantity" ? 0 : 60;
+              else value = "";
+            }
+            return { ...s, value };
+          })
+        );
+        setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
+      }
+    } catch {
+      const stored = loadStored();
+      setSettings(
+        DEFAULT_SETTINGS.map((s) => {
+          let value: string | number | boolean = stored[s.key];
+          if (value === undefined) {
+            if (s.type === "boolean") value = false;
+            else if (s.type === "number") value = s.key === "low_stock_threshold" ? 5 : s.key === "max_cart_quantity" ? 0 : 60;
+            else value = "";
+          }
+          return { ...s, value };
+        })
+      );
+      setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (key: string, value: string | number | boolean) => {
     setSettings((prev) =>
@@ -71,16 +114,45 @@ export default function AdminAdvancedSettingsPage() {
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
     const values: Record<string, string | number | boolean> = {};
     settings.forEach((s) => {
       values[s.key] = s.value;
     });
-    save(values);
-    setSaved(true);
-    setLastUpdated(new Date().toISOString());
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ advanced_settings: values }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setLastUpdated(new Date().toISOString());
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        saveLocal(values);
+        setSaved(true);
+        setLastUpdated(new Date().toISOString());
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch {
+      saveLocal(values);
+      setSaved(true);
+      setLastUpdated(new Date().toISOString());
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -95,9 +167,10 @@ export default function AdminAdvancedSettingsPage() {
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+          disabled={saving}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
         >
-          <Save className="h-4 w-4" />
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saved ? "Saved" : "Save"}
         </button>
       </div>

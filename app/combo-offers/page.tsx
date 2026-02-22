@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { Package } from "lucide-react";
 import { getComboOffers } from "@/src/data/provider";

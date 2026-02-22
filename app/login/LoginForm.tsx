@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { createClient } from "@/lib/supabase/client";
 import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
 import { AUTH_MODE } from "@/src/config/runtime";
@@ -38,6 +39,29 @@ export default function LoginForm() {
         .catch(() => setProviders({ google: false, facebook: false, phone: false }));
     }
   }, []);
+
+  const handlePrismaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
+      if (res?.error) {
+        setError("Invalid email or password");
+        setLoading(false);
+        return;
+      }
+      router.push("/account");
+      router.refresh();
+    } catch {
+      setError("Login failed. Try again.");
+    }
+    setLoading(false);
+  };
 
   const handleDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,8 +265,8 @@ export default function LoginForm() {
         </div>
       )}
 
-      {AUTH_MODE === "demo" && (
-        <form onSubmit={handleDemoSubmit} className="mt-6 space-y-4">
+      {(AUTH_MODE === "prisma" || AUTH_MODE === "demo") && (
+        <form onSubmit={AUTH_MODE === "prisma" ? handlePrismaSubmit : handleDemoSubmit} className="mt-6 space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email</label>
             <input

@@ -85,6 +85,7 @@ function ProductImageGallery({
 
   return (
     <div className="space-y-4">
+      {/* Magnifier interactions are mouse-only; suppress on touch via CSS media query */}
       <div
         ref={containerRef}
         className="relative aspect-square cursor-zoom-in overflow-hidden rounded-xl bg-gray-100"
@@ -96,6 +97,7 @@ function ProductImageGallery({
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        style={{ touchAction: "manipulation" }}
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -117,13 +119,14 @@ function ProductImageGallery({
             />
           </motion.div>
         </AnimatePresence>
+        {/* Magnifier: rendered only when mouse hover is active (no-op on touch) */}
         {isHovering && mousePos && containerRef.current && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.15 }}
-            className="pointer-events-none absolute z-10 rounded-full border-2 border-white/80 bg-white shadow-xl"
+            className="pointer-events-none absolute z-10 hidden rounded-full border-2 border-white/80 bg-white shadow-xl md:block"
             style={{
               width: MAGNIFIER_SIZE,
               height: MAGNIFIER_SIZE,
@@ -288,18 +291,18 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   const faqJsonLd = richContent?.faq?.length ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: richContent.faq.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) } : null;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 lg:px-8 lg:pb-8">
+    <div className="mx-auto max-w-7xl px-3 py-5 pb-28 sm:px-6 lg:px-8 lg:py-8 lg:pb-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
-      <nav className="mb-8 text-sm text-gray-500" aria-label="Breadcrumb">
+      <nav className="mb-4 lg:mb-8 text-xs text-gray-400 sm:text-sm sm:text-gray-500" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-primary">Home</Link>
-        <span className="mx-2">/</span>
+        <span className="mx-1.5">/</span>
         <Link href="/shop" className="hover:text-primary">Shop</Link>
-        <span className="mx-2">/</span>
+        <span className="mx-1.5">/</span>
         <Link href={`/category/${product.categorySlug}`} className="hover:text-primary">{category.name}</Link>
-        <span className="mx-2">/</span>
-        <span className="text-gray-900">{product.name}</span>
+        <span className="mx-1.5">/</span>
+        <span className="truncate text-gray-700">{product.name}</span>
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">
@@ -345,7 +348,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
 
         <div>
           <span className="rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">{category.name}</span>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">{product.name}</h1>
+          <h1 className="mt-3 text-xl font-bold text-gray-900 sm:text-2xl lg:text-3xl">{product.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <p className="text-2xl font-bold text-secondary">৳{displayPrice.toLocaleString("en-BD")}</p>
             {displayComparePrice != null && displayComparePrice > displayPrice && (
@@ -393,28 +396,38 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
             </ul>
           )}
 
-          <div className="mt-6 flex items-center gap-4">
+          <div className="mt-5 flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700">Quantity:</span>
             <div className="flex items-center rounded-lg border border-gray-300">
-              <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="rounded-l-lg p-3 hover:bg-gray-100" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
-              <span className="w-12 text-center font-medium">{quantity}</span>
-              <button onClick={() => setQuantity((q) => q + 1)} className="rounded-r-lg p-3 hover:bg-gray-100" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
+              <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="flex h-11 w-11 items-center justify-center rounded-l-lg hover:bg-gray-100" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
+              <span className="w-10 text-center text-sm font-semibold">{quantity}</span>
+              <button onClick={() => setQuantity((q) => q + 1)} className="flex h-11 w-11 items-center justify-center rounded-r-lg hover:bg-gray-100" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
             </div>
           </div>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button onClick={handleAddToCart} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary py-3 px-6 font-semibold text-white hover:bg-primary/90">
+          {/* Compare – compact, visible on all sizes (doesn't need to be in sticky bar) */}
+          <div className="mt-4 lg:hidden">
+            <button
+              onClick={() => isInCompare(product.id) ? removeFromCompare(product.id) : addToCompare(cartProduct)}
+              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition ${isInCompare(product.id) ? "border-accent bg-accent/10 text-accent" : "border-slate-300 hover:bg-slate-100"}`}
+            >
+              <GitCompare className="h-4 w-4" /> {isInCompare(product.id) ? "In Compare" : "Compare"}
+            </button>
+          </div>
+          {/* Desktop/tablet inline CTAs – hidden on mobile (mobile uses sticky bar below) */}
+          <div className="mt-5 hidden flex-wrap gap-3 lg:flex">
+            <button onClick={handleAddToCart} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-white transition hover:bg-primary/90">
               <ShoppingCart className="h-5 w-5" /> Add to Cart
             </button>
             <button
               type="button"
               onClick={handleBuyNow}
               disabled={!canBuyNow || buyNowProcessing}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-primary py-3 px-6 font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-primary px-6 font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
             >
               {buyNowProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
               Buy Now
             </button>
-            <button onClick={() => isInCompare(product.id) ? removeFromCompare(product.id) : addToCompare(cartProduct)} className={`flex items-center justify-center gap-2 rounded-lg border py-3 px-4 font-medium ${isInCompare(product.id) ? "border-accent bg-accent/10 text-accent" : "border-slate-300 hover:bg-slate-100"}`}>
+            <button onClick={() => isInCompare(product.id) ? removeFromCompare(product.id) : addToCompare(cartProduct)} className={`flex h-12 items-center justify-center gap-2 rounded-lg border px-4 font-medium transition ${isInCompare(product.id) ? "border-accent bg-accent/10 text-accent" : "border-slate-300 hover:bg-slate-100"}`}>
               <GitCompare className="h-5 w-5" /> {isInCompare(product.id) ? "In Compare" : "Compare"}
             </button>
           </div>
@@ -499,16 +512,19 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
           {toast}
         </div>
       )}
-      {/* Mobile-first sticky CTA – z-30 so FloatingUI (z-40) stays above on overlap; FloatingUI raises on product page */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 flex gap-2 border-t border-slate-200 bg-white p-3 shadow-lg lg:hidden">
-        <button onClick={handleAddToCart} className="flex-1 rounded-lg bg-primary py-3 font-semibold text-white hover:bg-primary/90">
+      {/* Mobile sticky CTA – z-30 so FloatingUI (z-40) floats above; safe-area-inset clears iPhone home bar */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-30 flex gap-2 border-t border-slate-200 bg-white px-3 pt-3 shadow-lg lg:hidden"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+      >
+        <button onClick={handleAddToCart} className="h-12 flex-1 rounded-lg bg-primary font-semibold text-white transition hover:bg-primary/90">
           Add to Cart
         </button>
         <button
           type="button"
           onClick={handleBuyNow}
           disabled={!canBuyNow || buyNowProcessing}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-primary py-3 font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-primary font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {buyNowProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
           Buy Now

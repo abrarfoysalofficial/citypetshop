@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
-import { getAdminOrders, getAdminCustomers } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -31,110 +29,76 @@ export async function GET(request: NextRequest) {
 
   const otpToken = searchParams.get("otp_token")?.trim();
 
-  if (DATA_SOURCE === "local") {
-    const orders = await getAdminOrders();
-    const customers = await getAdminCustomers();
-    let matches: { id: string; status: string; total: number; createdAt: string; customerName?: string; phone?: string }[] = [];
-
-    if (isPhone) {
-      const norm = normalizeBdPhone(q).replace(/\D/g, "").slice(-10);
-      const cust = (customers as { phone?: string; name: string; email?: string }[]).find(
-        (c) => (c.phone || "").replace(/\D/g, "").slice(-10) === norm
-      );
-      if (cust) {
-        matches = orders
-          .filter((o) => o.customerName === cust.name || (cust.email && o.email?.includes(cust.email)))
-          .map((o) => ({ id: o.id, status: o.status, total: o.total, createdAt: o.createdAt, customerName: o.customerName }));
+  // Enforce OTP when requireOtpPhoneTracking is true and query is by phone
+  if (isPhone && process.env.DATABASE_URL) {
+    const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+    const requireOtp = settings?.requireOtpPhoneTracking ?? false;
+    if (requireOtp) {
+      if (!otpToken) {
+        return NextResponse.json({
+          orders: [],
+          requiresOtp: true,
+          message: "Phone verification required. Request OTP first.",
+        });
       }
-    } else {
-      const o = orders.find((x) => x.id === q || x.id.toLowerCase() === q.toLowerCase());
-      if (o) matches = [{ id: o.id, status: o.status, total: o.total, createdAt: o.createdAt, customerName: o.customerName }];
+      const phoneNormalized = normalizeBdPhone(q).replace(/\D/g, "").slice(-10);
+      const tokenRow = await prisma.trackVerifiedToken.findFirst({
+        where: {
+          token: otpToken,
+          phoneNormalized,
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (!tokenRow) {
+        return NextResponse.json({
+          orders: [],
+          requiresOtp: true,
+          error: "Invalid or expired verification. Please request a new OTP.",
+        }, { status: 401 });
+      }
     }
-
-    return NextResponse.json({
-      orders: matches,
-      notes: [],
-      events: [],
-      source: "local",
-    });
   }
 
-  const supabase = await createClient();
-  const { data: settingsRow } = await supabase.from("site_settings").select("require_otp_phone_tracking").eq("id", "default").single();
-  const requireOtp = (settingsRow as { require_otp_phone_tracking?: boolean } | null)?.require_otp_phone_tracking === true;
-
-  let otpVerified = false;
-  if (isPhone && requireOtp && otpToken) {
-    const { data: tokenRow } = await supabase
-      .from("track_verified_tokens")
-      .select("phone_normalized")
-      .eq("token", otpToken)
-      .gt("expires_at", new Date().toISOString())
-      .single();
-    const phoneNormalized = normalizeBdPhone(q).replace(/\D/g, "").slice(-10);
-    otpVerified = !!(tokenRow && (tokenRow as { phone_normalized: string }).phone_normalized === phoneNormalized);
-  }
-
-  if (isPhone && requireOtp && !otpVerified) {
-    const normalized = normalizeBdPhone(q).replace(/\D/g, "").slice(-10);
-    const { data: ordersDataMask } = await supabase.from("orders").select("id, status, total, created_at, shipping_phone, guest_phone");
-    const list = (ordersDataMask || []) as { id: string; status: string; total: number; created_at: string; shipping_phone?: string; guest_phone?: string }[];
-    const maskedOrders = list
-      .filter((o) => (o.shipping_phone || o.guest_phone || "").replace(/\D/g, "").slice(-10) === normalized)
-      .map((o) => ({ id: o.id, status: o.status, total: o.total, createdAt: o.created_at }));
-    return NextResponse.json({
-      orders: maskedOrders,
-      notes: [],
-      events: [],
-      source: "supabase",
-      requiresOtp: true,
-    });
-  }
-
-  const { data: ordersData } = await supabase.from("orders").select("id, status, total, created_at, shipping_name, shipping_phone, guest_phone");
-
-  if (!ordersData || ordersData.length === 0) {
-    return NextResponse.json({ orders: [], notes: [], events: [], source: "supabase" });
-  }
-
-  let orderIds: string[] = [];
+  let where: Record<string, unknown> = {};
   if (isPhone) {
     const normalized = normalizeBdPhone(q).replace(/\D/g, "").slice(-10);
-    orderIds = (ordersData as { id: string; shipping_phone?: string; guest_phone?: string }[])
-      .filter((o) => {
-        const p = (o.shipping_phone || o.guest_phone || "").replace(/\D/g, "").slice(-10);
-        return p === normalized;
-      })
-      .map((o) => o.id);
+    where.OR = [
+      { shippingPhone: { contains: normalized } },
+      { guestPhone: { contains: normalized } }
+    ];
   } else {
-    const found = (ordersData as { id: string }[]).find((o) => o.id === q || String(o.id).toLowerCase().includes(q.toLowerCase()));
-    if (found) orderIds = [found.id];
+    where.id = q;
   }
 
-  if (orderIds.length === 0) {
-    return NextResponse.json({ orders: [], notes: [], events: [], source: "supabase" });
-  }
+  const orders = await prisma.order.findMany({
+    where,
+    select: {
+      id: true,
+      status: true,
+      total: true,
+      createdAt: true,
+      shippingName: true,
+      shippingPhone: true,
+      guestName: true,
+      guestPhone: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
 
-  const ordersList = (ordersData as { id: string; status: string; total: number; created_at: string; shipping_name?: string; shipping_phone?: string }[])
-    .filter((o) => orderIds.includes(o.id))
-    .map((o) => ({
-      id: o.id,
-      status: o.status,
-      total: o.total,
-      createdAt: o.created_at,
-      customerName: o.shipping_name,
-      phone: o.shipping_phone,
-    }));
-
-  const [{ data: notes }, { data: events }] = await Promise.all([
-    supabase.from("order_notes").select("*").in("order_id", orderIds).order("created_at", { ascending: false }),
-    supabase.from("order_status_events").select("*").in("order_id", orderIds).order("created_at", { ascending: false }),
-  ]);
+  const matches = orders.map(o => ({
+    id: o.id,
+    status: o.status,
+    total: Number(o.total),
+    createdAt: o.createdAt.toISOString(),
+    customerName: o.shippingName || o.guestName,
+    phone: o.shippingPhone || o.guestPhone,
+  }));
 
   return NextResponse.json({
-    orders: ordersList,
-    notes: notes || [],
-    events: events || [],
-    source: "supabase",
+    orders: matches,
+    notes: [],
+    events: [],
+    source: "prisma",
   });
 }

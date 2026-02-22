@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useVouchers } from "@/context/VouchersContext";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import type { Voucher } from "@/lib/types";
 
 export default function AdminVouchersPage() {
-  const { vouchers, addVoucher, updateVoucher, deleteVoucher, getVoucher, lastUpdated } =
-    useVouchers();
+  const { vouchers: contextVouchers, addVoucher, updateVoucher, deleteVoucher, getVoucher } = useVouchers();
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [useApi, setUseApi] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Voucher>>({
@@ -20,6 +22,30 @@ export default function AdminVouchersPage() {
     validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
     active: true,
   });
+
+  useEffect(() => {
+    fetchVouchers();
+  }, []);
+
+  const fetchVouchers = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/vouchers");
+      if (res.ok) {
+        const data = await res.json();
+        setVouchers(Array.isArray(data) ? data : []);
+        setUseApi(true);
+      } else {
+        setVouchers(contextVouchers);
+        setUseApi(false);
+      }
+    } catch {
+      setVouchers(contextVouchers);
+      setUseApi(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const resetForm = () => {
     setForm({
@@ -37,7 +63,7 @@ export default function AdminVouchersPage() {
   };
 
   const handleEdit = (id: string) => {
-    const v = getVoucher(id);
+    const v = useApi ? vouchers.find((x) => x.id === id) : getVoucher(id);
     if (!v) return;
     setForm({
       code: v.code,
@@ -45,37 +71,93 @@ export default function AdminVouchersPage() {
       value: v.value,
       minSpend: v.minSpend,
       maxUses: v.maxUses,
-      validFrom: v.validFrom.slice(0, 10),
-      validTo: v.validTo.slice(0, 10),
+      validFrom: v.validFrom?.slice(0, 10),
+      validTo: v.validTo?.slice(0, 10),
       active: v.active,
     });
     setEditingId(id);
     setShowForm(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.code || form.value == null) return;
-    if (editingId) {
-      updateVoucher(editingId, {
-        ...form,
-        validFrom: form.validFrom!,
-        validTo: form.validTo!,
-      });
+
+    if (useApi) {
+      if (editingId) {
+        const res = await fetch(`/api/admin/vouchers/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            discountType: form.discountType,
+            value: form.value,
+            minSpend: form.minSpend,
+            maxUses: form.maxUses,
+            validTo: form.validTo,
+            active: form.active,
+          }),
+        });
+        if (res.ok) await fetchVouchers();
+      } else {
+        const res = await fetch("/api/admin/vouchers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: form.code.toUpperCase().trim(),
+            discountType: form.discountType ?? "percent",
+            value: Number(form.value) || 0,
+            minSpend: Number(form.minSpend) || 0,
+            maxUses: Number(form.maxUses) || 1,
+            validTo: form.validTo,
+            active: form.active ?? true,
+          }),
+        });
+        if (res.ok) await fetchVouchers();
+      }
     } else {
-      addVoucher({
-        code: form.code!.toUpperCase().trim(),
-        discountType: (form.discountType as "percent" | "fixed") ?? "percent",
-        value: Number(form.value) || 0,
-        minSpend: Number(form.minSpend) || 0,
-        maxUses: Number(form.maxUses) || 1,
-        validFrom: form.validFrom!,
-        validTo: form.validTo!,
-        active: form.active ?? true,
-      });
+      if (editingId) {
+        updateVoucher(editingId, {
+          ...form,
+          validFrom: form.validFrom!,
+          validTo: form.validTo!,
+        });
+      } else {
+        addVoucher({
+          code: form.code!.toUpperCase().trim(),
+          discountType: (form.discountType as "percent" | "fixed") ?? "percent",
+          value: Number(form.value) || 0,
+          minSpend: Number(form.minSpend) || 0,
+          maxUses: Number(form.maxUses) || 1,
+          validFrom: form.validFrom!,
+          validTo: form.validTo!,
+          active: form.active ?? true,
+        });
+      }
+      setVouchers(contextVouchers);
     }
     resetForm();
   };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this voucher?")) return;
+    if (useApi) {
+      const res = await fetch(`/api/admin/vouchers/${id}`, { method: "DELETE" });
+      if (res.ok) await fetchVouchers();
+    } else {
+      deleteVoucher(id);
+      setVouchers((prev) => prev.filter((v) => v.id !== id));
+    }
+  };
+
+  const displayVouchers = useApi ? vouchers : contextVouchers;
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,8 +165,8 @@ export default function AdminVouchersPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Vouchers</h1>
           <p className="mt-1 text-slate-600">
-            Create voucher codes: fixed/percent, min spend, usage limits, validity. Last updated:{" "}
-            {lastUpdated ? new Date(lastUpdated).toLocaleString() : "—"}
+            Create voucher codes: fixed/percent, min spend, usage limits, validity.
+            {useApi ? " Stored in database." : " Stored locally (demo mode)."}
           </p>
         </div>
         <button
@@ -227,25 +309,25 @@ export default function AdminVouchersPage() {
             </tr>
           </thead>
           <tbody>
-            {vouchers.length === 0 ? (
+            {displayVouchers.length === 0 ? (
               <tr>
                 <td colSpan={7} className="p-6 text-center text-slate-500">
                   No vouchers yet. Create one above.
                 </td>
               </tr>
             ) : (
-              vouchers.map((v) => (
+              displayVouchers.map((v) => (
                 <tr key={v.id} className="border-b border-slate-100">
                   <td className="p-3 font-mono font-medium text-slate-900">{v.code}</td>
                   <td className="p-3">
                     {v.discountType === "percent" ? `${v.value}%` : `৳${v.value}`}
                   </td>
-                  <td className="p-3">৳{v.minSpend}</td>
+                  <td className="p-3">৳{v.minSpend ?? 0}</td>
                   <td className="p-3">
-                    {v.usedCount} / {v.maxUses}
+                    {v.usedCount ?? 0} / {v.maxUses ?? 1}
                   </td>
                   <td className="p-3 text-slate-600">
-                    {v.validFrom.slice(0, 10)} – {v.validTo.slice(0, 10)}
+                    {v.validFrom?.slice(0, 10) ?? "—"} – {v.validTo?.slice(0, 10) ?? "—"}
                   </td>
                   <td className="p-3">{v.active ? "Yes" : "No"}</td>
                   <td className="p-3">
@@ -260,9 +342,7 @@ export default function AdminVouchersPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (confirm("Delete this voucher?")) deleteVoucher(v.id);
-                        }}
+                        onClick={() => handleDelete(v.id)}
                         className="rounded p-2 text-red-600 hover:bg-red-50"
                         aria-label="Delete"
                       >

@@ -1,24 +1,36 @@
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/src/config/env";
+export const dynamic = "force-dynamic";
+import { prisma } from "@/lib/db";
 import AdminReviewsClient from "./AdminReviewsClient";
 
 export default async function AdminReviewsPage() {
-  let reviews: { id: string; product_id: string; order_id: string; rating: number; comment: string; status: string; created_at: string }[] = [];
+  const reviews = await prisma.productReview.findMany({
+    select: {
+      id: true,
+      productId: true,
+      orderId: true,
+      rating: true,
+      comment: true,
+      status: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
-  if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("product_reviews")
-      .select("id, product_id, order_id, rating, comment, status, created_at")
-      .order("created_at", { ascending: false });
-    reviews = (data || []) as typeof reviews;
-  }
+  const formattedReviews = reviews.map(review => ({
+    id: review.id,
+    product_id: review.productId || "",
+    order_id: review.orderId,
+    rating: review.rating,
+    comment: review.comment,
+    status: review.status,
+    created_at: review.createdAt.toISOString(),
+  }));
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-slate-900">Review Moderation</h1>
-      <p className="text-slate-600">Approve or reject product reviews. Connect Supabase to see pending reviews.</p>
-      <AdminReviewsClient reviews={reviews} />
+      <p className="text-slate-600">Approve or reject product reviews.</p>
+      <AdminReviewsClient reviews={formattedReviews} />
     </div>
   );
 }

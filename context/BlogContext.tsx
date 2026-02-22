@@ -1,10 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import type { BlogPost } from "@/lib/content";
 import { blogPosts as initialPosts } from "@/lib/content";
-
-const STORAGE_KEY = "city-plus-pet-shop-blog";
 
 interface BlogContextValue {
   posts: BlogPost[];
@@ -18,42 +16,12 @@ interface BlogContextValue {
 
 const BlogContext = createContext<BlogContextValue | null>(null);
 
-function loadStored(): BlogPost[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as BlogPost[];
-  } catch {
-    return null;
-  }
-}
-
-function save(posts: BlogPost[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-    localStorage.setItem(STORAGE_KEY + "-updated", new Date().toISOString());
-  } catch {
-    //
-  }
-}
-
 export function BlogProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<BlogPost[]>(initialPosts);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = loadStored();
-    if (stored && stored.length > 0) {
-      setPosts(stored);
-      setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
-    }
-  }, []);
-
   const persist = useCallback((next: BlogPost[]) => {
     setPosts(next);
-    save(next);
     setLastUpdated(new Date().toISOString());
   }, []);
 

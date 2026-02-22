@@ -1,21 +1,23 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Loader2, Search, ArrowUpDown, Eye, Download } from "lucide-react";
+import { Loader2, Search, ArrowUpDown, Eye, Download, Plus } from "lucide-react";
 import type { OrderStatus } from "@/lib/schema";
 
-type Order = { 
-  id: string; 
-  customerName?: string; 
-  email?: string; 
-  total: number; 
-  status: string; 
-  createdAt: string 
+type Order = {
+  id: string;
+  customerName?: string;
+  email?: string;
+  phone?: string;
+  total: number;
+  status: string;
+  createdAt: string;
+  courierBookingId?: string | null;
 };
 
-const STATUS_OPTIONS = ["All Status", "Pending", "Processing", "Shipped", "Handed to Courier", "Delivered", "Cancelled"];
+type TabItem = { key: string; label: string };
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -27,13 +29,33 @@ const STATUS_COLORS: Record<string, string> = {
   returned: "bg-slate-100 text-slate-700",
 };
 
-export default function AdminOrdersClient({ orders: initialOrders }: { orders: Order[] }) {
+interface AdminOrdersClientProps {
+  orders: Order[];
+  tabs?: TabItem[];
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+  search?: string;
+  onSearchChange?: (v: string) => void;
+  onRefresh?: () => void;
+}
+
+export default function AdminOrdersClient({
+  orders: initialOrders,
+  tabs = [],
+  activeTab = "all",
+  onTabChange,
+  search: searchProp = "",
+  onSearchChange,
+  onRefresh,
+}: AdminOrdersClientProps) {
   const [orders, setOrders] = useState(initialOrders);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All Status");
   const [sortBy, setSortBy] = useState<"createdAt" | "total">("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     setUpdatingStatus(orderId);
@@ -57,35 +79,15 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
     }
   };
 
-  // Filter and sort
   const filteredOrders = useMemo(() => {
-    let filtered = orders.filter(o => {
-      const matchesSearch = 
-        o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.email?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = 
-        statusFilter === "All Status" || 
-        o.status?.toLowerCase() === statusFilter.toLowerCase().replace(/ /g, "_");
-      
-      return matchesSearch && matchesStatus;
+    const sorted = [...orders];
+    sorted.sort((a, b) => {
+      const aVal = sortBy === "createdAt" ? new Date(a.createdAt).getTime() : a.total;
+      const bVal = sortBy === "createdAt" ? new Date(b.createdAt).getTime() : b.total;
+      return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
     });
-
-    // Sort
-    filtered.sort((a, b) => {
-      let aVal: any = sortBy === "createdAt" ? new Date(a.createdAt).getTime() : a.total;
-      let bVal: any = sortBy === "createdAt" ? new Date(b.createdAt).getTime() : b.total;
-      
-      if (sortOrder === "asc") {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    return filtered;
-  }, [orders, searchQuery, statusFilter, sortBy, sortOrder]);
+    return sorted;
+  }, [orders, sortBy, sortOrder]);
 
   const toggleSort = (field: "createdAt" | "total") => {
     if (sortBy === field) {
@@ -99,46 +101,58 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
-        <p className="mt-1 text-slate-600">{filteredOrders.length} of {orders.length} orders</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
+          <p className="mt-1 text-slate-600">{filteredOrders.length} orders</p>
+        </div>
+        <Link
+          href="/admin/orders/create"
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" />
+          Create Order
+        </Link>
       </div>
 
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-white p-4 shadow-lg shadow-slate-200/50 border border-slate-100"
-      >
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* Search */}
-          <div className="md:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by order ID, customer name, or email..."
-                className="w-full rounded-lg border border-slate-200 pl-10 pr-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+      {/* Tabs */}
+      {tabs.length > 0 && (
+        <div className="flex flex-wrap gap-2 border-b border-slate-200">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => onTabChange?.(t.key)}
+              className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === t.key
+                  ? "border-b-2 border-blue-600 bg-blue-50 text-blue-700"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
             >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+              {t.label}
+            </button>
+          ))}
         </div>
-      </motion.div>
+      )}
+
+      {/* Search */}
+      {onSearchChange && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-white p-4 shadow-lg shadow-slate-200/50 border border-slate-100"
+        >
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchProp}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search by name, phone, or email..."
+              className="w-full rounded-lg border border-slate-200 pl-10 pr-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+        </motion.div>
+      )}
 
       {/* Orders Table */}
       <motion.div
@@ -230,12 +244,19 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+                          title="View order"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                        <Link
                           href={`/track-order?orderId=${order.id}`}
                           target="_blank"
                           className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
-                          title="Track Order"
+                          title="Track Order (storefront)"
                         >
-                          <Eye className="h-4 w-4" />
+                          Track
                         </Link>
                         {!order.id.startsWith("ORD-") && (
                           <a

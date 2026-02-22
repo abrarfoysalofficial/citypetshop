@@ -486,6 +486,21 @@ model AnalyticsEvent {
 // =============================================================================
 // CMS PAGES (Blog, About, Legal)
 // =============================================================================
+model BlogCategory {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  slug      String   @unique
+  nameEn    String   @map("name_en")
+  nameBn    String?  @map("name_bn")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  posts CmsPage[]
+
+  @@map("blog_categories")
+}
+
 model CmsPage {
   id             String    @id @default(uuid())
   createdAt      DateTime  @default(now()) @map("created_at")
@@ -503,6 +518,9 @@ model CmsPage {
   seoTitle       String?   @map("seo_title")
   seoDescription String?   @map("seo_description")
   ogImageUrl     String?   @map("og_image_url")
+  blogCategoryId String?   @map("blog_category_id")
+
+  blogCategory BlogCategory? @relation(fields: [blogCategoryId], references: [id], onDelete: SetNull)
 
   @@map("cms_pages")
 }
@@ -755,8 +773,41 @@ model ProductTagOnProduct {
 }
 
 // =============================================================================
+// PRODUCT FILTERS (configurable storefront filters)
+// =============================================================================
+model ProductFilter {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  key       String   @unique // e.g. brand, price_range, category
+  labelEn   String   @map("label_en")
+  labelBn   String?  @map("label_bn")
+  type      String   // select | range | checkbox
+  config    Json?    // type-specific config (options, min/max, etc.)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("product_filters")
+}
+
+// =============================================================================
 // ROLES & PERMISSIONS
 // =============================================================================
+model PermissionGroup {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  name      String   // e.g. "Order Management"
+  slug      String   @unique // e.g. "order-management"
+  icon      String?  // Lucide icon name
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  permissions Permission[]
+
+  @@map("permission_groups")
+}
+
 model Role {
   id          String   @id @default(uuid())
   createdAt   DateTime @default(now()) @map("created_at")
@@ -772,14 +823,19 @@ model Role {
 }
 
 model Permission {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  name        String   @unique
-  resource    String // e.g., "products", "orders"
-  action      String // e.g., "read", "write", "delete"
-  description String?
+  id             String   @id @default(uuid())
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  name           String   @unique
+  resource       String // e.g., "products", "orders"
+  action         String // e.g., "view", "create", "edit", "delete"
+  description    String?
+  groupId        String?  @map("group_id")
+  menuLabel      String?  @map("menu_label") // Display in sidebar
+  menuHref       String?  @map("menu_href") // e.g. /admin/products
+  menuSortOrder  Int?     @default(0) @map("menu_sort_order")
 
+  group PermissionGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   roles RolePermission[]
 
   @@unique([resource, action])
@@ -1040,10 +1096,24 @@ model Customer {
   metadata   Json?    @default("{}")
 
   reminders Reminder[]
+  notes     CustomerNote[]
 
   @@index([email])
   @@index([phone])
   @@map("customers")
+}
+
+model CustomerNote {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  customerId String   @map("customer_id")
+  message    String   @db.Text
+  createdBy  String?  @map("created_by")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_notes")
 }
 
 model Reminder {
@@ -1095,6 +1165,20 @@ model ConversionTracking {
 // =============================================================================
 // PHASE 6: Catalog ad manager
 // =============================================================================
+model Expense {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  category    String   // rent | utilities | inventory | marketing | payroll | other
+  amount      Decimal  @db.Decimal(12, 2)
+  description String?  @db.Text
+  date        DateTime @db.Date
+  createdBy   String?  @map("created_by")
+
+  @@index([category])
+  @@index([date])
+  @@map("expenses")
+}
+
 model CampaignPerformance {
   id         String   @id @default(uuid())
   createdAt  DateTime @default(now()) @map("created_at")

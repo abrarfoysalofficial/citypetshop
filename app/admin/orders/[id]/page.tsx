@@ -1,9 +1,8 @@
-import Link from "next/link";
+export const dynamic = "force-dynamic";
 import { getAdminOrderById } from "@/src/data/provider";
 import { notFound } from "next/navigation";
 import OrderNotesBlock from "./OrderNotesBlock";
-
-export const dynamic = "force-dynamic";
+import OrderActions from "./OrderActions";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -20,8 +19,9 @@ export default async function AdminOrderDetailPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Order {order.id}</h1>
-        <Link href="/admin/orders" className="text-primary hover:underline">← Back to Orders</Link>
+        <a href="/admin/orders" className="text-primary hover:underline">← Back to Orders</a>
       </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold text-slate-900">Details</h2>
@@ -38,11 +38,18 @@ export default async function AdminOrderDetailPage({
           <p className="text-sm text-slate-700">{order.shippingAddress ?? "—"}</p>
         </div>
       </div>
+
       {order.items && order.items.length > 0 && (
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold text-slate-900">Items</h2>
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-slate-200"><th className="p-2 text-left font-medium text-slate-900">Product</th><th className="p-2 text-right font-medium text-slate-900">Qty</th><th className="p-2 text-right font-medium text-slate-900">Price</th></tr></thead>
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="p-2 text-left font-medium text-slate-900">Product</th>
+                <th className="p-2 text-right font-medium text-slate-900">Qty</th>
+                <th className="p-2 text-right font-medium text-slate-900">Price</th>
+              </tr>
+            </thead>
             <tbody>
               {order.items.map((item, i) => (
                 <tr key={i} className="border-b border-slate-100">
@@ -55,11 +62,12 @@ export default async function AdminOrderDetailPage({
           </table>
         </div>
       )}
-      <div className="flex gap-3">
-        <button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Print invoice (mock)</button>
-        <button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Courier booking (mock)</button>
-      </div>
-      {process.env.NEXT_PUBLIC_SUPABASE_URL && <OrderNotesBlock orderId={order.id} />}
+
+      {/* Live order actions — confirm, dispatch, cancel, invoice */}
+      <OrderActions orderId={order.id} currentStatus={order.status} />
+
+      {/* Notes always shown (Prisma-backed) */}
+      <OrderNotesBlock orderId={order.id} />
     </div>
   );
 }

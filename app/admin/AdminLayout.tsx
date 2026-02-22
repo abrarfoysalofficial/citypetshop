@@ -4,13 +4,52 @@ import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Store, Bell, Search, LogOut, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Menu,
+  X,
+  Store,
+  Bell,
+  Search,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  FileText,
+  Users,
+  Activity,
+  Settings,
+  Image,
+  FolderTree,
+  ImageIcon,
+  PanelLeft,
+  LayoutGrid,
+} from "lucide-react";
 import { adminSidebarConfig, StoreIcon } from "@/lib/admin-config";
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  FileText,
+  Users,
+  Activity,
+  Settings,
+  Image,
+  FolderTree,
+  ImageIcon,
+  PanelLeft,
+  LayoutGrid,
+};
+
+type MenuItem = { name: string; href: string; icon?: string; children?: { name: string; href: string }[] };
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(true);
+  const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["Products", "Settings & More"]));
 
   useEffect(() => {
@@ -20,6 +59,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     mq.addEventListener("change", fn);
     return () => mq.removeEventListener("change", fn);
   }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/menu")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.menu) && d.menu.length > 0) {
+          setMenuItems(d.menu);
+        }
+      })
+      .catch(() => setMenuItems(null));
+  }, []);
+
+  const navItems: MenuItem[] = menuItems ?? adminSidebarConfig.map((c) => ({
+    name: c.name,
+    href: c.href,
+    icon: (c.icon as { name?: string })?.name ?? "LayoutDashboard",
+    children: c.children,
+  }));
 
   if (pathname === "/admin/login") {
     return (
@@ -71,10 +128,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-0.5 px-3 py-4">
-          {adminSidebarConfig.map((item) => {
+          {navItems.map((item) => {
             const hasChildren = item.children && item.children.length > 0;
             const isExpanded = expandedItems.has(item.name);
             const isActive = pathname === item.href || (hasChildren && item.children?.some((c) => pathname === c.href));
+            const IconComponent = (item.icon && iconMap[item.icon]) ?? LayoutDashboard;
 
             if (hasChildren) {
               return (
@@ -86,7 +144,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <item.icon className="h-5 w-5 text-slate-400 group-hover:text-slate-600" />
+                      <IconComponent className="h-5 w-5 text-slate-400 group-hover:text-slate-600" />
                       {item.name}
                     </div>
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -130,7 +188,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   isActive ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md" : "text-slate-700 hover:bg-slate-100"
                 }`}
               >
-                <item.icon className={`h-5 w-5 ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
+                <IconComponent className={`h-5 w-5 ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
                 {item.name}
               </Link>
             );

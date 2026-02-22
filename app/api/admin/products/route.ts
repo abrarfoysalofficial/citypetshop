@@ -1,35 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@/lib/db";
+import { requireAdminAuthAndPermission, requireAdminAuth } from "@/lib/admin-auth";
+import { logAdminAction } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 /** GET: List products with optional search, category filter, pagination */
 export async function GET(request: NextRequest) {
-  const auth = await requireAdminAuth();
+  const auth = await requireAdminAuthAndPermission("products.view");
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? "";
   const category = searchParams.get("category") ?? "";
   const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 500);
   const offset = (page - 1) * limit;
 
-  const supabase = await createClient();
-  let q = supabase.from("products").select("*", { count: "exact" }).order("created_at", { ascending: false });
+  try {
+    const where: any = {};
 
-  if (search) q = q.or(`name_en.ilike.%${search}%,slug.ilike.%${search}%`);
-  if (category) q = q.eq("category_slug", category);
+    if (search) {
+      where.OR = [
+        { nameEn: { contains: search, mode: 'insensitive' } },
+        { nameBn: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } }
+      ];
+    }
 
-  const { data, error, count } = await q.range(offset, offset + limit - 1);
+    if (category && category !== "all") {
+      where.categorySlug = category;
+    }
 
-  if (error) {
-    console.error("[admin/products] GET:", error.message);
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: {
+          category: { select: { nameEn: true, nameBn: true } },
+          brand: { select: { name: true } },
+          variants: { select: { id: true, sku: true, stock: true, price: true } },
+          images: { select: { url: true, isPrimary: true }, orderBy: { sortOrder: 'asc' } },
+          tags: { include: { tag: { select: { name: true } } } }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.product.count({ where })
+    ]);
+
+    return NextResponse.json({ products, total, page, limit });
+  } catch (error) {
+    console.error("[admin/products] GET:", error);
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
   }
-
-  return NextResponse.json({ products: data ?? [], total: count ?? 0, page, limit });
 }
 
 /** POST: Create product */
@@ -37,15 +61,51 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  const body = await request.json().catch(() => ({}));
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("products").insert(body).select().single();
+  try {
+    const body = await request.json();
 
-  if (error) {
-    console.error("[admin/products] POST:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Validate required fields
+    if (!body.nameEn || !body.slug) {
+      return NextResponse.json({ error: "Name and slug are required" }, { status: 400 });
+    }
+
+    const product = await prisma.product.create({
+      data: {
+        nameEn: body.nameEn,
+        nameBn: body.nameBn,
+        slug: body.slug,
+        descriptionEn: body.descriptionEn,
+        descriptionBn: body.descriptionBn,
+        buyingPrice: body.buyingPrice ? parseFloat(body.buyingPrice) : 0,
+        sellingPrice: parseFloat(body.sellingPrice),
+        stock: parseInt(body.stock) || 0,
+        weightKg: body.weightKg ? parseFloat(body.weightKg) : null,
+        sku: body.sku,
+        categorySlug: body.categorySlug,
+        categoryId: body.categoryId,
+        isFeatured: body.isFeatured || false,
+        isActive: body.isActive !== false,
+        brandId: body.brandId,
+        rating: body.rating ? parseFloat(body.rating) : null,
+        discountPercent: body.discountPercent ? parseFloat(body.discountPercent) : null,
+        seoTitle: body.seoTitle,
+        seoDescription: body.seoDescription,
+        seoTags: body.seoTags || [],
+        metaOgImage: body.metaOgImage
+      },
+      include: {
+        category: { select: { nameEn: true, nameBn: true } },
+        brand: { select: { name: true } }
+      }
+    });
+
+    await logAdminAction(auth.userId, "create", "product", product.id, undefined, { nameEn: product.nameEn, slug: product.slug }, { headers: request.headers });
+
+    return NextResponse.json(product);
+  } catch (error) {
+    console.error("[admin/products] POST:", error);
+    return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
   }
-  return NextResponse.json(data);
 }
 
 /** PATCH: Update product */
@@ -57,14 +117,33 @@ export async function PATCH(request: NextRequest) {
   const { id, ...updates } = body;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("products").update(updates).eq("id", id).select().single();
+  try {
+    const before = await prisma.product.findUnique({ where: { id } });
+    if (!before) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-  if (error) {
-    console.error("[admin/products] PATCH:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        ...(updates.nameEn !== undefined && { nameEn: updates.nameEn }),
+        ...(updates.nameBn !== undefined && { nameBn: updates.nameBn }),
+        ...(updates.slug !== undefined && { slug: updates.slug }),
+        ...(updates.descriptionEn !== undefined && { descriptionEn: updates.descriptionEn }),
+        ...(updates.sellingPrice !== undefined && { sellingPrice: updates.sellingPrice }),
+        ...(updates.buyingPrice !== undefined && { buyingPrice: updates.buyingPrice }),
+        ...(updates.stock !== undefined && { stock: updates.stock }),
+        ...(updates.isActive !== undefined && { isActive: updates.isActive }),
+        ...(updates.isFeatured !== undefined && { isFeatured: updates.isFeatured }),
+        ...(updates.categorySlug !== undefined && { categorySlug: updates.categorySlug }),
+      },
+    });
+
+    await logAdminAction(auth.userId, "update", "product", id, before, product, { headers: request.headers });
+
+    return NextResponse.json(product);
+  } catch (error) {
+    console.error("[admin/products] PATCH:", error);
+    return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
   }
-  return NextResponse.json(data);
 }
 
 /** DELETE: Delete product */
@@ -76,12 +155,16 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  try {
+    const before = await prisma.product.findUnique({ where: { id } });
+    if (!before) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-  if (error) {
-    console.error("[admin/products] DELETE:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    await prisma.product.delete({ where: { id } });
+    await logAdminAction(auth.userId, "delete", "product", id, before, undefined, { headers: request.headers });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[admin/products] DELETE:", error);
+    return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
 }

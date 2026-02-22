@@ -1,0 +1,61 @@
+# City Plus Pet Shop - Self-hosted (Prisma + local uploads)
+# Usage: docker compose up -d --build
+# Connect to Nginx Proxy Manager: add nginx-proxy_default as external network
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks:
+      - appnet
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cityplus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cityplus_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-cityplus}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cityplus}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cityplus}:${POSTGRES_PASSWORD:-cityplus_secret}@postgres:5432/${POSTGRES_DB:-cityplus}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://citypetshopbd.com}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://citypetshopbd.com}
+      NEXT_PUBLIC_PRODUCTS_SOURCE: prisma
+      NEXT_PUBLIC_AUTH_SOURCE: prisma
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - appnet
+      - nginx-proxy_default
+
+networks:
+  appnet:
+    driver: bridge
+  nginx-proxy_default:
+    external: true
+
+volumes:
+  postgres_data:
+  uploads_data:

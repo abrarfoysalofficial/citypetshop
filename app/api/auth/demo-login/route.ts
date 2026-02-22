@@ -6,10 +6,11 @@ export const dynamic = "force-dynamic";
 const DEMO_ADMIN = { email: "admin@cityplus.local", password: "Admin@12345" };
 const DEMO_USER = { email: "user@cityplus.local", password: "User@12345" };
 
-/** Demo login is only available when AUTH_MODE=demo. In production/Supabase mode, return 404. */
+/** Demo login is only available when AUTH_MODE=demo. In production/Prisma mode, return 404. */
 export async function POST(request: NextRequest) {
-  if (AUTH_MODE !== "demo") {
-    return NextResponse.json({ error: "Demo login is not available. Use Supabase Auth." }, { status: 404 });
+  const mode: string = AUTH_MODE;
+  if (mode !== "demo") {
+    return NextResponse.json({ error: "Demo login is not available in production." }, { status: 404 });
   }
   const body = await request.json().catch(() => ({}));
   const { email, password, type } = body as { email?: string; password?: string; type?: "admin" | "user" };

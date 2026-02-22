@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle } from "lucide-react";
-import { useProducts } from "@/context/ProductsContext";
-import { categories } from "@/lib/data";
-import type { Product } from "@/lib/types";
+import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { MASTER_CATEGORIES } from "@/lib/categories-master";
+
+type PreviewRow = { name: string; price: number; description: string; categorySlug: string; image?: string; inStock: boolean };
 
 const TEMPLATE_URL = "/templates/products_template.csv";
-const CSV_HEADERS = ["name", "price", "description", "categorySlug", "image", "inStock"];
+const categorySlugs = MASTER_CATEGORIES.flatMap((c) => [c.slug, ...c.subcategories.map((s) => s.fullSlug)]);
 
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split(/\r?\n/);
@@ -26,28 +26,38 @@ function parseCSV(text: string): Record<string, string>[] {
   return rows;
 }
 
-function parseRow(row: Record<string, string>): Omit<Product, "id"> | null {
+function parseRow(row: Record<string, string>, validSlugs: string[]): PreviewRow | null {
   const name = (row.name ?? row.Name ?? "").trim();
   const price = parseInt((row.price ?? row.Price ?? "0").trim(), 10);
   const categorySlug = (row.categoryslug ?? row.category_slug ?? row.categorySlug ?? "").trim();
   if (!name || Number.isNaN(price) || price < 0 || !categorySlug) return null;
-  const validSlug = categories.some((c) => c.slug === categorySlug) ? categorySlug : categories[0].slug;
+  const slug = validSlugs.includes(categorySlug) ? categorySlug : validSlugs[0];
   return {
     name,
     price,
     description: (row.description ?? "").trim() || name,
-    categorySlug: validSlug,
-    image: (row.image ?? "").trim() || "https://placehold.co/400x400/f1f5f9/1e3a8a?text=Product",
+    categorySlug: slug,
+    image: (row.image ?? "").trim() || undefined,
     inStock: (row.instock ?? row.inStock ?? "true").trim().toLowerCase() !== "false",
   };
 }
 
 export default function AdminBulkProductsPage() {
-  const { products, addProducts, resetToDefault } = useProducts();
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<Omit<Product, "id">[]>([]);
+  const [preview, setPreview] = useState<PreviewRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [categories, setCategories] = useState<{ slug: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/categories")
+      .then((r) => r.json())
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => setCategories([]));
+  }, []);
+
+  const validSlugs = categories.length > 0 ? categories.map((c) => c.slug) : categorySlugs;
 
   const handleDownloadTemplate = useCallback(() => {
     window.open(TEMPLATE_URL, "_blank");
@@ -72,33 +82,58 @@ export default function AdminBulkProductsPage() {
     reader.onload = () => {
       const text = String(reader.result);
       const rows = parseCSV(text);
-      const parsed: Omit<Product, "id">[] = [];
+      const parsed: PreviewRow[] = [];
       for (const row of rows) {
-        const p = parseRow(row);
+        const p = parseRow(row, validSlugs);
         if (p) parsed.push(p);
       }
       setPreview(parsed);
       if (parsed.length === 0) setError("No valid rows found. Check CSV headers: name, price, description, categorySlug, image, inStock.");
     };
     reader.readAsText(f);
-  }, []);
+  }, [validSlugs]);
 
-  const handleAddToCatalog = useCallback(() => {
+  const handleAddToCatalog = useCallback(async () => {
     setError(null);
     setSuccess(null);
     if (preview.length === 0) {
       setError("No rows to add. Upload a CSV first.");
       return;
     }
-    addProducts(preview);
-    setSuccess(`Added ${preview.length} product(s) to catalog. Total products: ${products.length + preview.length}`);
-    setPreview([]);
-    setFile(null);
-  }, [preview, addProducts, products.length]);
+    setImporting(true);
+    try {
+      const res = await fetch("/api/admin/products/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          products: preview.map((p) => ({
+            name: p.name,
+            price: p.price,
+            description: p.description,
+            categorySlug: p.categorySlug,
+            image: p.image,
+            inStock: p.inStock,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Import failed");
+        return;
+      }
+      setSuccess(`Imported ${data.created} of ${data.total} product(s) to database.${data.errors?.length ? ` ${data.errors.length} row(s) had errors.` : ""}`);
+      setPreview([]);
+      setFile(null);
+    } catch {
+      setError("Import request failed");
+    } finally {
+      setImporting(false);
+    }
+  }, [preview]);
 
   const handleGoogleSheet = useCallback(() => {
     setError(null);
-    setSuccess("Google Sheet connection: paste your sheet URL or export as CSV and upload above. (Direct API connection can be added when backend is connected.)");
+    setSuccess("Export your Google Sheet as CSV and upload above.");
   }, []);
 
   return (
@@ -111,8 +146,18 @@ export default function AdminBulkProductsPage() {
       </div>
 
       <p className="text-slate-600">
-        Upload a CSV file or use the template below. Products will be added to the catalog (stored locally until database is connected).
+        Upload a CSV file or use the template below. Products will be imported into the database.
       </p>
+
+      <div className="flex gap-2">
+        <a
+          href="/api/admin/products/export"
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          <Download className="h-4 w-4" />
+          Export CSV
+        </a>
+      </div>
 
       {/* Download Template */}
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -124,7 +169,7 @@ export default function AdminBulkProductsPage() {
           Download the template, fill in your products (name, price, description, categorySlug, image URL, inStock), and upload below.
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          Required columns: name, price, categorySlug. Optional: description, image, inStock. Category slugs: {categories.map((c) => c.slug).join(", ")}
+          Required columns: name, price, categorySlug. Optional: description, image, inStock. Valid slugs: {validSlugs.slice(0, 10).join(", ")}{validSlugs.length > 10 ? "…" : ""}
         </p>
         <a
           href={TEMPLATE_URL}
@@ -201,20 +246,17 @@ export default function AdminBulkProductsPage() {
           <button
             type="button"
             onClick={handleAddToCatalog}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+            disabled={importing}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
           >
-            <CheckCircle className="h-4 w-4" />
-            Add {preview.length} product(s) to catalog
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+            {importing ? "Importing…" : `Import ${preview.length} product(s)`}
           </button>
         </div>
       )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-        <strong>Current catalog:</strong> {products.length} products. (Reset to default:{" "}
-        <button type="button" onClick={resetToDefault} className="font-medium text-primary hover:underline">
-          Reset to default list
-        </button>
-        )
+        <strong>Import:</strong> Products are saved to the database. Use valid category slugs from your catalog.
       </div>
     </div>
   );

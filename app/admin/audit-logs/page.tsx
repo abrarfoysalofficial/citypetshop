@@ -1,8 +1,8 @@
+export const dynamic = "force-dynamic";
 import { getAdminAuditLogs } from "@/src/data/provider";
-import { DATA_SOURCE } from "@/src/config/runtime";
 
 export default async function AdminAuditLogsPage() {
-  const logs = DATA_SOURCE === "local" ? await getAdminAuditLogs() : [];
+  const logs = await getAdminAuditLogs();
 
   return (
     <div className="space-y-4">

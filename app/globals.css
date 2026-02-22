@@ -37,6 +37,11 @@
   }
 }
 
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Utility: brand-aware primary color (Tailwind can reference via theme) */
 @layer utilities {
   .text-brand { color: var(--brand); }
@@ -44,4 +49,24 @@
   .bg-brand { background-color: var(--brand); }
   .bg-brand-muted { background-color: var(--brand-muted); }
   .border-brand { border-color: var(--brand); }
+
+  /* Hide scrollbar while keeping scroll (mobile category chips) */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* iPhone home bar clearance for floating elements */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Consistent 8pt tap target minimum */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

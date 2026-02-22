@@ -1,7 +1,6 @@
 /**
- * Data provider: switches on NEXT_PUBLIC_DATA_SOURCE (local | supabase | sanity).
- * Sanity: products, categories, home, combo offers from Sanity CMS; blog/admin fallback to local.
- * Admin data: branches on AUTH_MODE (demo | supabase). Demo = no Supabase calls.
+ * Data provider: Prisma/PostgreSQL as single source of truth.
+ * When DATABASE_URL is set, uses provider-db only. No Supabase/Sanity/local imports at runtime.
  */
 import type {
   Product,
@@ -20,33 +19,34 @@ import type {
 import type { ProductRow, SiteSettingsRow, PaymentGatewayRow } from "@/lib/schema";
 import type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 import { DATA_SOURCE, AUTH_MODE } from "@/src/config/runtime";
+import { isPrismaConfigured, isSupabaseConfigured } from "@/src/config/env";
 
 export type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 
+/** Prisma as single source of truth when DATABASE_URL set. */
+function shouldUsePrisma() {
+  return isPrismaConfigured() || DATA_SOURCE === "prisma";
+}
+
+/** Use Supabase only when explicitly configured; prevents import of non-existent modules. */
+function shouldUseSupabase() {
+  return AUTH_MODE === "supabase" && isSupabaseConfigured();
+}
+
 export async function getProducts(): Promise<Product[]> {
-  if (DATA_SOURCE === "local") {
-    const { getProducts: getLocal } = await import("./local/products");
-    return getLocal();
+  if (shouldUsePrisma()) {
+    const { getProducts: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getProducts: getSanity } = await import("./sanity/products");
-    return getSanity();
-  }
-  const { getProducts: getSupabase } = await import("./supabase/products");
-  return getSupabase();
+  return [];
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
-  if (DATA_SOURCE === "local") {
-    const { getFeaturedProducts: getLocal } = await import("./local/products");
-    return getLocal();
+  if (shouldUsePrisma()) {
+    const { getFeaturedProducts: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getFeaturedProducts: getSanity } = await import("./sanity/products");
-    return getSanity();
-  }
-  const { getFeaturedProducts: getSupabase } = await import("./supabase/products");
-  return getSupabase();
+  return [];
 }
 
 export async function getRecommendedProducts(
@@ -54,206 +54,184 @@ export async function getRecommendedProducts(
   excludeId: string,
   limit = 4
 ): Promise<Product[]> {
-  if (DATA_SOURCE === "local") {
-    const { getRecommendedProducts: getLocal } = await import("./local/products");
-    return getLocal(categorySlug, excludeId, limit);
+  if (shouldUsePrisma()) {
+    const { getRecommendedProducts: getPrisma } = await import("./provider-db");
+    return getPrisma(categorySlug, excludeId, limit);
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getRecommendedProducts: getSanity } = await import("./sanity/products");
-    return getSanity(categorySlug, excludeId, limit);
-  }
-  const { getRecommendedProducts: getSupabase } = await import("./supabase/products");
-  return getSupabase(categorySlug, excludeId, limit);
+  return [];
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  if (DATA_SOURCE === "local") {
-    const { getProductById: getLocal } = await import("./local/products");
-    return getLocal(id);
+  if (shouldUsePrisma()) {
+    const { getProductById: getPrisma } = await import("./provider-db");
+    return getPrisma(id);
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getProductById: getSanity } = await import("./sanity/products");
-    return getSanity(id);
-  }
-  const { getProductById: getSupabase } = await import("./supabase/products");
-  return getSupabase(id);
+  return null;
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  if (DATA_SOURCE === "local") {
-    const { getProductBySlug: getLocal } = await import("./local/products");
-    return getLocal(slug);
+  if (shouldUsePrisma()) {
+    const { getProductBySlug: getPrisma } = await import("./provider-db");
+    return getPrisma(slug);
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getProductBySlug: getSanity } = await import("./sanity/products");
-    return getSanity(slug);
-  }
-  const { getProductBySlug: getSupabase } = await import("./supabase/products");
-  return getSupabase(slug);
+  return null;
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  if (DATA_SOURCE === "local" || DATA_SOURCE === "sanity") {
-    const { getBlogPosts: getLocal } = await import("./local/blog");
-    return getLocal();
+  if (shouldUsePrisma()) {
+    const { getBlogPosts: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getBlogPosts: getSupabase } = await import("./supabase/blog");
-  return getSupabase();
+  const { getBlogPosts: getLocal } = await import("./local/blog");
+  return getLocal();
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
-  if (DATA_SOURCE === "local" || DATA_SOURCE === "sanity") {
-    const { getBlogPostBySlug: getLocal } = await import("./local/blog");
-    return getLocal(slug);
+  if (shouldUsePrisma()) {
+    const { getBlogPostBySlug: getPrisma } = await import("./provider-db");
+    return getPrisma(slug);
   }
-  const { getBlogPostBySlug: getSupabase } = await import("./supabase/blog");
-  return getSupabase(slug);
+  const { getBlogPostBySlug: getLocal } = await import("./local/blog");
+  return getLocal(slug);
 }
 
 export async function getHomeData(): Promise<HomeSection> {
-  if (DATA_SOURCE === "local") {
-    const { getHomeData: getLocal } = await import("./local/home");
-    return getLocal();
+  if (shouldUsePrisma()) {
+    const { getHomeData: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getHomeData: getSanity } = await import("./sanity/home");
-    return getSanity();
-  }
-  const { getHomeData: getSupabase } = await import("./supabase/home");
-  return getSupabase();
+  return {
+    heroSlides: [{ id: "1", title: "Welcome", subheadline: "", image: "/placeholder.jpg", href: "/shop", cta: "Shop Now" }],
+    featuredCategories: [],
+    featuredBrands: [],
+    flashSale: null,
+    sideBanners: [],
+  };
 }
 
 export async function getComboOffers(): Promise<ComboOffer[]> {
-  if (DATA_SOURCE === "local") {
-    const { getComboOffers: getLocal } = await import("./local/comboOffers");
-    return getLocal();
+  if (shouldUsePrisma()) {
+    const { getComboOffers: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getComboOffers: getSanity } = await import("./sanity/comboOffers");
-    return getSanity();
-  }
-  const { getComboOffers: getSupabase } = await import("./supabase/comboOffers");
-  return getSupabase();
+  return [];
 }
 
 export async function getFlashSaleProducts(limit = 8): Promise<Product[]> {
-  if (DATA_SOURCE === "local") {
-    const { getFlashSaleProducts: getLocal } = await import("./local/products");
-    return getLocal(limit);
+  if (shouldUsePrisma()) {
+    const { getFlashSaleProducts: getPrisma } = await import("./provider-db");
+    return getPrisma(limit);
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getFlashSaleProducts: getSanity } = await import("./sanity/products");
-    return getSanity(limit);
-  }
-  const { getFlashSaleProducts: getSupabase } = await import("./supabase/products");
-  return getSupabase(limit);
+  return [];
 }
 
 export async function getClearanceProducts(limit = 8): Promise<Product[]> {
-  if (DATA_SOURCE === "local") {
-    const { getClearanceProducts: getLocal } = await import("./local/products");
-    return getLocal(limit);
+  if (shouldUsePrisma()) {
+    const { getClearanceProducts: getPrisma } = await import("./provider-db");
+    return getPrisma(limit);
   }
-  if (DATA_SOURCE === "sanity") {
-    const { getClearanceProducts: getSanity } = await import("./sanity/products");
-    return getSanity(limit);
-  }
-  const { getClearanceProducts: getSupabase } = await import("./supabase/products");
-  return getSupabase(limit);
+  return [];
 }
 
-// Admin / user data: use AUTH_MODE (Supabase vs demo). Orders = Supabase when configured, else local.
+// Admin / user data: Prisma first; demo/fallback returns empty. No local/supabase imports.
 export async function getAdminDashboard(): Promise<DemoDashboard> {
-  if (AUTH_MODE === "supabase") {
-    const { getAdminDashboard: getSupabase } = await import("./supabase/adminDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminDashboard: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getAdminDashboard: getLocal } = await import("./local/adminDemo");
-  return getLocal();
+  return { summary: { sales: "0", profit: "0", orders: "0", returnRate: "0", loss: "0" }, salesData: [], activity: [] };
 }
 
 export async function getAdminOrders(): Promise<DemoOrder[]> {
-  if (AUTH_MODE === "supabase") {
-    const { getAdminOrders: getSupabase } = await import("./supabase/adminDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminOrders: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getAdminOrders: getLocal } = await import("./local/adminDemo");
-  return getLocal();
+  return [];
 }
 
 export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
-  if (AUTH_MODE === "supabase") {
-    const { getAdminOrderById: getSupabase } = await import("./supabase/adminDemo");
-    return getSupabase(id);
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminOrderById: getPrisma } = await import("./provider-db");
+    return getPrisma(id);
   }
-  const { getAdminOrderById: getLocal } = await import("./local/adminDemo");
-  return getLocal(id);
+  return null;
 }
 
 export async function getAdminCustomers(): Promise<DemoCustomer[]> {
-  if (AUTH_MODE === "supabase") {
-    const { getAdminCustomers: getSupabase } = await import("./supabase/adminDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminCustomers: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getAdminCustomers: getLocal } = await import("./local/adminDemo");
-  return getLocal();
+  return [];
 }
 
 export async function getAdminVouchers(): Promise<DemoVoucher[]> {
-  if (AUTH_MODE === "supabase") {
-    const { getAdminVouchers: getSupabase } = await import("./supabase/adminDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminVouchers: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getAdminVouchers: getLocal } = await import("./local/adminDemo");
-  return getLocal();
+  return [];
 }
 
 export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
-  if (AUTH_MODE === "supabase") {
-    const { getAdminAuditLogs: getSupabase } = await import("./supabase/adminDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminAuditLogs: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getAdminAuditLogs: getLocal } = await import("./local/adminDemo");
-  return getLocal();
+  return [];
 }
 
-/** Admin products list. Demo mode: no Supabase. */
+/** Admin products list. */
 export async function getAdminProducts(): Promise<ProductRow[]> {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminProducts: getPrisma } = await import("./provider-db");
+    return getPrisma();
+  }
   if (AUTH_MODE === "demo") {
     const { DEMO_PRODUCTS } = await import("@/lib/demo-data");
     return DEMO_PRODUCTS;
   }
-  const { getAdminProducts: getSupabase } = await import("./supabase/adminData");
-  return getSupabase();
+  return [];
 }
 
-/** Admin site settings. Demo mode: no Supabase. */
+/** Admin site settings. */
 export async function getAdminSettings(): Promise<Partial<SiteSettingsRow> | null> {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminSettings: getPrisma } = await import("./provider-db");
+    return getPrisma();
+  }
   if (AUTH_MODE === "demo") {
     const { DEMO_SITE_SETTINGS } = await import("@/lib/demo-data");
     return DEMO_SITE_SETTINGS;
   }
-  const { getAdminSettings: getSupabase } = await import("./supabase/adminData");
-  return getSupabase();
+  return null;
 }
 
-/** Admin payment gateways. Demo mode: no Supabase. */
+/** Admin payment gateways. */
 export async function getAdminPaymentGateways(): Promise<PaymentGatewayRow[]> {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminPaymentGateways: getPrisma } = await import("./provider-db");
+    return getPrisma();
+  }
   if (AUTH_MODE === "demo") {
     const { DEMO_PAYMENT_GATEWAYS } = await import("@/lib/demo-data");
     return DEMO_PAYMENT_GATEWAYS;
   }
-  const { getAdminPaymentGateways: getSupabase } = await import("./supabase/adminData");
-  return getSupabase();
+  return [];
 }
 
-/** Admin analytics events. Demo mode: no Supabase. */
+/** Admin analytics events. */
 export async function getAdminAnalyticsEvents(params: {
   from?: string;
   to?: string;
   event?: string;
   source?: string;
 }): Promise<AdminAnalyticsResult> {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminAnalyticsEvents: getPrisma } = await import("./provider-db");
+    return getPrisma(params);
+  }
   if (AUTH_MODE === "demo") {
     const { DEMO_ANALYTICS_EVENTS } = await import("@/lib/demo-data");
     return {
@@ -263,12 +241,15 @@ export async function getAdminAnalyticsEvents(params: {
       diagnostics: DEMO_ANALYTICS_EVENTS.diagnostics,
     };
   }
-  const { getAdminAnalyticsEvents: getSupabase } = await import("./supabase/adminData");
-  return getSupabase(params);
+  return { events: [], counts: {}, lastReceivedByEvent: {}, diagnostics: { pixelConfigured: false, capiConfigured: false, warnings: [] } };
 }
 
-/** Admin dashboard stats (KPIs, charts, recent orders). Demo mode: no Supabase. */
+/** Admin dashboard stats (KPIs, charts, recent orders). */
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getAdminDashboardStats: getPrisma } = await import("./provider-db");
+    return getPrisma();
+  }
   if (AUTH_MODE === "demo") {
     return {
       stats: {
@@ -303,8 +284,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       ],
     };
   }
-  const { getAdminDashboardStats: getSupabase } = await import("./supabase/adminData");
-  return getSupabase();
+  return { stats: { totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0 }, salesData: [], categoryData: [], recentOrders: [] };
 }
 
 export async function getUserAccountOverview(): Promise<{
@@ -312,46 +292,41 @@ export async function getUserAccountOverview(): Promise<{
   recentOrders: DemoOrder[];
   orderCount: number;
 }> {
-  if (AUTH_MODE === "supabase") {
-    const { getUserAccountOverview: getSupabase } = await import("./supabase/userDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getUserAccountOverview: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getUserAccountOverview: getLocal } = await import("./local/userDemo");
-  return getLocal();
+  return { profile: { id: "", email: "", name: "" }, recentOrders: [], orderCount: 0 };
 }
 
 export async function getUserOrders(): Promise<DemoOrder[]> {
-  if (AUTH_MODE === "supabase") {
-    const { getUserOrders: getSupabase } = await import("./supabase/userDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getUserOrders: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getUserOrders: getLocal } = await import("./local/userDemo");
-  return getLocal();
+  return [];
 }
 
 export async function getUserOrderById(id: string): Promise<DemoOrder | null> {
-  if (AUTH_MODE === "supabase") {
-    const { getUserOrderById: getSupabase } = await import("./supabase/userDemo");
-    return getSupabase(id);
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getUserOrderById: getPrisma } = await import("./provider-db");
+    return getPrisma(id);
   }
-  const { getUserOrderById: getLocal } = await import("./local/userDemo");
-  return getLocal(id);
+  return null;
 }
 
 export async function getUserInvoices(): Promise<DemoInvoice[]> {
-  if (AUTH_MODE === "supabase") {
-    const { getUserInvoices: getSupabase } = await import("./supabase/userDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getUserInvoices: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getUserInvoices: getLocal } = await import("./local/userDemo");
-  return getLocal();
+  return [];
 }
 
 export async function getUserReturns(): Promise<DemoReturn[]> {
-  if (AUTH_MODE === "supabase") {
-    const { getUserReturns: getSupabase } = await import("./supabase/userDemo");
-    return getSupabase();
+  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+    const { getUserReturns: getPrisma } = await import("./provider-db");
+    return getPrisma();
   }
-  const { getUserReturns: getLocal } = await import("./local/userDemo");
-  return getLocal();
+  return [];
 }

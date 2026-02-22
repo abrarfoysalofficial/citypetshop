@@ -17,22 +17,22 @@ interface VouchersContextValue {
 
 const VouchersContext = createContext<VouchersContextValue | null>(null);
 
-function loadStored(): Voucher[] {
+function loadFromStorage(): Voucher[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as Voucher[];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
 }
 
-function save(vouchers: Voucher[]) {
+function saveToStorage(vouchers: Voucher[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(vouchers));
-    localStorage.setItem(STORAGE_KEY + "-updated", new Date().toISOString());
   } catch {
     //
   }
@@ -43,13 +43,12 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   useEffect(() => {
-    setVouchers(loadStored());
-    setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
+    setVouchers(loadFromStorage());
   }, []);
 
   const persist = useCallback((next: Voucher[]) => {
     setVouchers(next);
-    save(next);
+    saveToStorage(next);
     setLastUpdated(new Date().toISOString());
   }, []);
 

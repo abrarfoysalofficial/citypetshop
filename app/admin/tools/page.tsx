@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Plug } from "lucide-react";
+import { Save, Plug, Loader2 } from "lucide-react";
 
 const STORAGE_KEY = "city-plus-pet-shop-tools";
 
@@ -24,6 +24,13 @@ const DEFAULT_CONNECTIONS: Omit<ToolConnection, "value">[] = [
   { id: "custom_script_body", name: "Custom script (body)", description: "Optional script before </body>", placeholder: "Paste script or leave empty" },
 ];
 
+const TOOL_TO_SETTINGS: Record<string, string> = {
+  facebook_pixel: "facebook_pixel_id",
+  facebook_capi: "facebook_capi_token",
+  google_analytics: "google_analytics_id",
+  google_tag_manager: "google_tag_manager_id",
+};
+
 function loadStored(): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
@@ -35,7 +42,7 @@ function loadStored(): Record<string, string> {
   }
 }
 
-function save(values: Record<string, string>) {
+function saveLocal(values: Record<string, string>) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
@@ -49,33 +56,114 @@ export default function AdminToolsPage() {
   const [connections, setConnections] = useState<ToolConnection[]>([]);
   const [saved, setSaved] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const stored = loadStored();
-    setConnections(
-      DEFAULT_CONNECTIONS.map((c) => ({
-        ...c,
-        value: stored[c.id] ?? "",
-        type: c.type ?? "text",
-      }))
-    );
-    setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (res.ok) {
+        const data = await res.json();
+        const extras = (data.tools_extras as Record<string, string>) ?? {};
+        const stored = loadStored();
+        setConnections(
+          DEFAULT_CONNECTIONS.map((c) => {
+            let value = extras[c.id] ?? stored[c.id];
+            if (value === undefined && TOOL_TO_SETTINGS[c.id]) {
+              value = data[TOOL_TO_SETTINGS[c.id]] ?? "";
+            }
+            return { ...c, value: value ?? "", type: c.type ?? "text" };
+          })
+        );
+        setLastUpdated(data.updated_at ?? localStorage.getItem(STORAGE_KEY + "-updated"));
+      } else {
+        const stored = loadStored();
+        setConnections(
+          DEFAULT_CONNECTIONS.map((c) => ({
+            ...c,
+            value: stored[c.id] ?? "",
+            type: c.type ?? "text",
+          }))
+        );
+        setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
+      }
+    } catch {
+      const stored = loadStored();
+      setConnections(
+        DEFAULT_CONNECTIONS.map((c) => ({
+          ...c,
+          value: stored[c.id] ?? "",
+          type: c.type ?? "text",
+        }))
+      );
+      setLastUpdated(localStorage.getItem(STORAGE_KEY + "-updated"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (id: string, value: string) => {
     setConnections((prev) => prev.map((c) => (c.id === id ? { ...c, value } : c)));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
     const values: Record<string, string> = {};
     connections.forEach((c) => {
       if (c.value.trim()) values[c.id] = c.value.trim();
     });
-    save(values);
-    setSaved(true);
-    setLastUpdated(new Date().toISOString());
-    setTimeout(() => setSaved(false), 2000);
+    const toolsExtras: Record<string, string> = {};
+    const settingsUpdate: Record<string, string> = {};
+    connections.forEach((c) => {
+      if (c.value.trim()) {
+        if (TOOL_TO_SETTINGS[c.id]) {
+          settingsUpdate[TOOL_TO_SETTINGS[c.id]] = c.value.trim();
+        } else {
+          toolsExtras[c.id] = c.value.trim();
+        }
+      }
+    });
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...settingsUpdate,
+          tools_extras: toolsExtras,
+        }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setLastUpdated(new Date().toISOString());
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        saveLocal(values);
+        setSaved(true);
+        setLastUpdated(new Date().toISOString());
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch {
+      saveLocal(values);
+      setSaved(true);
+      setLastUpdated(new Date().toISOString());
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -90,9 +178,10 @@ export default function AdminToolsPage() {
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+          disabled={saving}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
         >
-          <Save className="h-4 w-4" />
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saved ? "Saved" : "Save"}
         </button>
       </div>

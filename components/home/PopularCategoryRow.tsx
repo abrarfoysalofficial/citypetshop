@@ -9,10 +9,10 @@ export default function PopularCategoryRow() {
   const popularCategories = MASTER_CATEGORIES.slice(0, 8);
 
   return (
-    <section className="border-y border-slate-200 bg-slate-50 py-6">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="border-y border-slate-200 bg-slate-50 py-4 md:py-6">
+      <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8">
         <h2 className="mb-4 text-center text-lg font-bold text-slate-900 sm:text-xl">Popular Categories</h2>
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-slate-100 scrollbar-thumb-slate-300">
+        <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
           {popularCategories.map((cat) => (
             <Link
               key={cat.slug}

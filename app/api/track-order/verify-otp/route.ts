@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/db";
 import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
-
-export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+
+export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({ phone: z.string().min(10), code: z.string().length(6) });
 
@@ -22,33 +22,34 @@ export async function POST(request: NextRequest) {
 
   const phoneNormalized = normalizeBdPhone(phone).replace(/\D/g, "").slice(-10);
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!process.env.DATABASE_URL) {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Order tracking is temporarily unavailable" }, { status: 503 });
+    }
     return NextResponse.json({ token: "demo-token", message: "Demo: use this token with ?otp_token=demo-token" });
   }
 
-  const supabase = await createClient();
-  const { data: row } = await supabase
-    .from("track_otp_verification")
-    .select("id")
-    .eq("phone_normalized", phoneNormalized)
-    .eq("code", code)
-    .gt("expires_at", new Date().toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+  const row = await prisma.trackOtpVerification.findFirst({
+    where: {
+      phoneNormalized,
+      code,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   if (!row) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
   }
 
   const token = randomUUID();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  await supabase.from("track_verified_tokens").insert({
-    token,
-    phone_normalized: phoneNormalized,
-    expires_at: expiresAt,
-  });
-  await supabase.from("track_otp_verification").delete().eq("id", (row as { id: string }).id);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await prisma.$transaction([
+    prisma.trackVerifiedToken.create({
+      data: { token, phoneNormalized, expiresAt },
+    }),
+    prisma.trackOtpVerification.delete({ where: { id: row.id } }),
+  ]);
 
   return NextResponse.json({ token });
 }
