@@ -4,6 +4,7 @@ import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import {
   Menu,
   X,
@@ -28,7 +29,7 @@ import {
 } from "lucide-react";
 import { adminSidebarConfig, StoreIcon } from "@/lib/admin-config";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
   ShoppingCart,
   Package,
@@ -42,6 +43,13 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   PanelLeft,
   LayoutGrid,
 };
+
+const DEFAULT_ICON: LucideIcon = LayoutDashboard;
+
+function getIconComponent(iconName: string | undefined): LucideIcon {
+  if (typeof iconName !== "string" || !iconName.trim()) return DEFAULT_ICON;
+  return iconMap[iconName] ?? DEFAULT_ICON;
+}
 
 type MenuItem = { name: string; href: string; icon?: string; children?: { name: string; href: string }[] };
 
@@ -132,7 +140,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             const hasChildren = item.children && item.children.length > 0;
             const isExpanded = expandedItems.has(item.name);
             const isActive = pathname === item.href || (hasChildren && item.children?.some((c) => pathname === c.href));
-            const IconComponent = (item.icon && iconMap[item.icon]) ?? LayoutDashboard;
+            const Icon = getIconComponent(item.icon);
 
             if (hasChildren) {
               return (
@@ -144,7 +152,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <IconComponent className="h-5 w-5 text-slate-400 group-hover:text-slate-600" />
+                      <Icon className="h-5 w-5 text-slate-400 group-hover:text-slate-600" />
                       {item.name}
                     </div>
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -188,7 +196,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   isActive ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md" : "text-slate-700 hover:bg-slate-100"
                 }`}
               >
-                <IconComponent className={`h-5 w-5 ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
+                <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
                 {item.name}
               </Link>
             );

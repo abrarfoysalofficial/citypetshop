@@ -3,10 +3,16 @@
  * Order report with date range, status filters, CSV export.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminAuth } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
+
+const VALID_ORDER_STATUSES: OrderStatus[] = [
+  "draft", "pending", "processing", "shipped", "handed_to_courier",
+  "delivered", "cancelled", "returned", "refund_requested", "refunded", "failed",
+];
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();
@@ -15,13 +21,17 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
-  const status = searchParams.get("status");
+  const statusParam = searchParams.get("status");
   const format = searchParams.get("format"); // csv | json
 
-  const where: { createdAt?: { gte?: Date; lte?: Date }; status?: string } = {};
-  if (from) where.createdAt = { ...where.createdAt, gte: new Date(from) };
-  if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
-  if (status) where.status = status;
+  const dateFilter: { gte?: Date; lte?: Date } = {};
+  if (from) dateFilter.gte = new Date(from);
+  if (to) dateFilter.lte = new Date(to);
+  const where: Prisma.OrderWhereInput = {};
+  if (Object.keys(dateFilter).length > 0) where.createdAt = dateFilter;
+  if (statusParam && VALID_ORDER_STATUSES.includes(statusParam as OrderStatus)) {
+    where.status = statusParam as OrderStatus;
+  }
 
   const orders = await prisma.order.findMany({
     where,

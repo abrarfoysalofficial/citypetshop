@@ -3,6 +3,7 @@
  * DELETE /api/admin/product-filters/[id]
  */
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminAuth } from "@/lib/admin-auth";
 import { z } from "zod";
@@ -29,9 +30,16 @@ export async function PATCH(
   const parsed = patchSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
+  const data: Prisma.ProductFilterUpdateInput = {
+    ...parsed.data,
+    config:
+      parsed.data.config !== undefined
+        ? (parsed.data.config as Prisma.InputJsonValue)
+        : undefined,
+  };
   const filter = await prisma.productFilter.update({
     where: { id },
-    data: parsed.data,
+    data,
   });
   return NextResponse.json(filter);
 }
