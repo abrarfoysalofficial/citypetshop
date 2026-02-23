@@ -26,18 +26,21 @@ export default function SlidingSalesBar() {
 
   return (
     <div
-      className="relative overflow-hidden border-b border-slate-200 bg-slate-50 py-2 text-sm font-medium text-slate-700"
+      className="relative w-full overflow-hidden border-b border-slate-200 bg-slate-50 py-2 text-sm font-medium text-slate-700"
       style={{ minHeight: 40 }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
       <div
-        className={`flex whitespace-nowrap ${isPaused ? "" : "animate-slide-sales"}`}
+        className={`inline-flex w-max whitespace-nowrap ${isPaused ? "" : "animate-slide-sales"}`}
       >
-        <span className="inline-block px-4" aria-live="polite">
+        <span className="shrink-0 px-8" aria-live="polite">
           {text}
         </span>
-        <span className="inline-block px-4" aria-hidden>
+        <span className="shrink-0 px-8" aria-hidden>
+          {text}
+        </span>
+        <span className="shrink-0 px-8" aria-hidden>
           {text}
         </span>
       </div>

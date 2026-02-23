@@ -7,7 +7,7 @@ import SearchStrip from "./SearchStrip";
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-50 bg-white">
+    <header className="sticky top-0 z-50 w-full bg-white">
       <SlidingSalesBar />
       <HeaderTopBar />
       <MainNavbar />

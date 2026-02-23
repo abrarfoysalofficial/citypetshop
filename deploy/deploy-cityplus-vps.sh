@@ -40,6 +40,21 @@ sudo chown "$APP_USER:$APP_USER" "$LOG_FILE" 2>/dev/null || true
 section "PHASE A — SAFETY PRECHECK"
 # ─────────────────────────────────────────────────────────────────────────────
 info "Current user: $(whoami)"
+
+# Validate required env vars before proceeding
+section "Environment validation"
+[ -f "$APP_DIR/.env.production.local" ] || error ".env.production.local not found at $APP_DIR"
+set -a
+# shellcheck source=/dev/null
+source "$APP_DIR/.env.production.local"
+set +a
+for var in DATABASE_URL NEXTAUTH_SECRET NEXTAUTH_URL NEXT_PUBLIC_SITE_URL; do
+  if [ -z "${!var:-}" ]; then
+    error "Missing required env var: $var (check .env.production.local)"
+  fi
+done
+[ ${#NEXTAUTH_SECRET} -ge 32 ] || error "NEXTAUTH_SECRET must be at least 32 characters"
+info "Environment validation OK"
 info "Working directory: $(pwd)"
 [ -d "$APP_DIR" ] || error "App directory not found: $APP_DIR"
 info "App dir contents:"
