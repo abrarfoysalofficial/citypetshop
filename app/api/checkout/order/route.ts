@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { isPrismaConfigured, isSupabaseConfigured } from "@/src/config/env";
+import { isPrismaConfigured } from "@/src/config/env";
 import { checkFraud, recordFraudFlag } from "@/lib/fraud";
 import { rateLimit, getRateLimitKey } from "@/lib/rate-limit";
 
@@ -115,76 +115,6 @@ async function createOrderPrisma(body: z.infer<typeof checkoutOrderSchema>) {
   return { orderId: order.id };
 }
 
-/** Supabase: legacy create order */
-async function createOrderSupabase(body: z.infer<typeof checkoutOrderSchema>) {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const userId = user?.id ?? null;
-  const shippingName = body.customerName.trim();
-  const shippingEmail =
-    typeof body.email === "string" && body.email.trim() ? body.email.trim() : "guest@checkout.local";
-  const shippingPhone = typeof body.phone === "string" ? body.phone.trim() || "N/A" : "N/A";
-  const shippingAddressText = typeof body.shippingAddress === "string" ? body.shippingAddress.trim() : "";
-  const shippingCityText = typeof body.shippingCity === "string" ? body.shippingCity.trim() : "N/A";
-  const paymentMethodValue =
-    typeof body.paymentMethod === "string" && body.paymentMethod ? body.paymentMethod : "cod";
-
-  const itemsSubtotal = body.items.reduce((s, i) => s + (i.qty ?? 1) * (i.price ?? 0), 0);
-  const orderSubtotal = typeof body.subtotal === "number" ? body.subtotal : itemsSubtotal;
-  const orderDeliveryCharge = typeof body.deliveryCharge === "number" ? body.deliveryCharge : 0;
-  const orderDiscountAmount = typeof body.discountAmount === "number" ? body.discountAmount : 0;
-
-  const { data: orderRow, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      user_id: userId,
-      guest_email: userId ? null : shippingEmail,
-      guest_phone: userId ? null : shippingPhone,
-      guest_name: userId ? null : shippingName,
-      status: "pending",
-      subtotal: orderSubtotal,
-      delivery_charge: orderDeliveryCharge,
-      discount_amount: orderDiscountAmount,
-      total: body.total,
-      voucher_code: typeof body.voucherCode === "string" ? body.voucherCode.trim() || null : null,
-      payment_method: paymentMethodValue,
-      payment_status: "pending",
-      shipping_name: shippingName,
-      shipping_phone: shippingPhone,
-      shipping_email: shippingEmail,
-      shipping_address: shippingAddressText || "N/A",
-      shipping_city: shippingCityText || "N/A",
-      shipping_area: null,
-      shipping_notes: null,
-    })
-    .select("id")
-    .single();
-
-  if (orderError || !orderRow?.id) {
-    throw new Error(orderError?.message ?? "Failed to create order");
-  }
-
-  const orderId = orderRow.id as string;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const orderItems = body.items.map((item) => ({
-    order_id: orderId,
-    product_id: item.productId && uuidRegex.test(item.productId) ? item.productId : null,
-    product_name: item.name ?? "Item",
-    quantity: item.qty ?? 1,
-    unit_price: item.price ?? 0,
-    total_price: (item.qty ?? 1) * (item.price ?? 0),
-  }));
-
-  const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-  if (itemsError) throw new Error(itemsError.message);
-
-  return { orderId };
-}
-
 export async function POST(request: NextRequest) {
   const rl = rateLimit(getRateLimitKey("checkout:order", request), CHECKOUT_ORDERS_PER_IP);
   if (!rl.ok) {
@@ -194,7 +124,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!isPrismaConfigured() && !isSupabaseConfigured()) {
+  if (!isPrismaConfigured()) {
     return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
   }
 
@@ -234,9 +164,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = isPrismaConfigured()
-      ? await createOrderPrisma(parsed.data)
-      : await createOrderSupabase(parsed.data);
+    const result = await createOrderPrisma(parsed.data);
     // Log borderline fraud flags (passed but had flags)
     if (fraudResult && fraudResult.flags.length > 0 && result.orderId) {
       await recordFraudFlag(result.orderId, fraudResult.flags.join(","), fraudResult.score, {

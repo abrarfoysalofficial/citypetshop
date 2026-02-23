@@ -1,72 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserOrders, getUserOrderById } from "@/src/data/provider";
-import { createClient } from "@/lib/supabase/server";
-import { DATA_SOURCE } from "@/src/config/runtime";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { isPrismaConfigured } from "@/src/config/env";
+import { AUTH_MODE } from "@/src/config/runtime";
 
 export const dynamic = "force-dynamic";
 
-async function getUserId(request: NextRequest): Promise<string | null> {
-  const AUTH_MODE = (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "supabase") ?? "demo";
-  if (AUTH_MODE === "demo") {
-    const session = request.cookies.get("demo_session")?.value;
-    return session === "user" || session === "admin" ? "demo-user" : null;
-  }
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
-}
-
 /** Returns delivered orders with items for the logged-in user (for review order dropdown). */
 export async function GET(request: NextRequest) {
-  const userId = await getUserId(request);
+  let userId: string | null = null;
+
+  if (AUTH_MODE === "demo") {
+    const session = request.cookies.get("demo_session")?.value;
+    if (session === "user" || session === "admin") {
+      return NextResponse.json({ orders: [] });
+    }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (isPrismaConfigured()) {
+    const session = await getServerSession(authOptions);
+    userId = (session?.user as { id?: string })?.id ?? null;
+  }
+
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (DATA_SOURCE === "local") {
-    const orders = await getUserOrders();
-    const delivered = orders.filter((o) => o.status === "delivered");
-    const withItems = await Promise.all(
-      delivered.map(async (o) => {
-        const full = await getUserOrderById(o.id);
-        return {
-          id: o.id,
-          total: o.total,
-          createdAt: o.createdAt,
-          items: full?.items ?? [],
-        };
-      })
-    );
-    return NextResponse.json({ orders: withItems });
+  if (!isPrismaConfigured()) {
+    return NextResponse.json({ orders: [] });
   }
 
-  const supabase = await createClient();
-  const { data: settings } = await supabase.from("site_settings").select("review_eligible_days").eq("id", "default").single();
-  const days = (settings as { review_eligible_days?: number } | null)?.review_eligible_days ?? 90;
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+  const days = (settings?.reviewEligibleDays as number | null) ?? 90;
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const { data: ordersData } = await supabase
-    .from("orders")
-    .select("id, total, created_at, status")
-    .eq("user_id", userId === "demo-user" ? "" : userId)
-    .eq("status", "delivered")
-    .gte("created_at", since.toISOString());
+  const ordersData = await prisma.order.findMany({
+    where: {
+      userId,
+      status: "delivered",
+      createdAt: { gte: since },
+    },
+    select: { id: true, total: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
 
-  if (!ordersData?.length) return NextResponse.json({ orders: [] });
+  if (ordersData.length === 0) return NextResponse.json({ orders: [] });
 
   const orders = await Promise.all(
-    (ordersData as { id: string; total: number; created_at: string }[]).map(async (o) => {
-      const { data: items } = await supabase.from("order_items").select("product_id, product_name, quantity, unit_price").eq("order_id", o.id);
+    ordersData.map(async (o) => {
+      const items = await prisma.orderItem.findMany({
+        where: { orderId: o.id },
+        select: { productId: true, productName: true, quantity: true, unitPrice: true },
+      });
       return {
         id: o.id,
-        total: o.total,
-        createdAt: o.created_at,
-        items: (items || []).map((i: { product_id: string; product_name: string; quantity: number; unit_price: number }) => ({
-          productId: i.product_id,
-          name: i.product_name,
+        total: Number(o.total),
+        createdAt: o.createdAt.toISOString(),
+        items: items.map((i) => ({
+          productId: i.productId,
+          name: i.productName,
           qty: i.quantity,
-          price: i.unit_price,
+          price: Number(i.unitPrice),
         })),
       };
     })

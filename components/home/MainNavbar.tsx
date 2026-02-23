@@ -35,42 +35,50 @@ export default function MainNavbar() {
 
   return (
     <div className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 py-3 md:px-6 lg:px-8">
-        {/* Mobile: hamburger left | Logo center | Cart right */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="order-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:order-2 md:hidden"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          aria-expanded={mobileOpen}
-        >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+      {/* Desktop: [Logo left] [Nav center] [Actions right] | Mobile: [Hamburger] [Logo center] [Cart] */}
+      <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-3 py-3 md:grid-cols-[auto_1fr_auto] md:px-6 lg:px-8">
+        {/* Left: Hamburger (mobile) | Logo (desktop) */}
+        <div className="flex items-center justify-start">
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+          <Link
+            href="/"
+            className="hidden items-center gap-2 md:flex"
+          >
+            <Image src="/brand/logo.png" alt="City Plus Pet Shop" width={44} height={44} className="h-10 w-10 shrink-0 object-contain" />
+            <span className="text-lg font-bold text-slate-900">City Plus</span>
+          </Link>
+        </div>
 
-        {/* Logo - center on mobile (flex-1), left on desktop */}
-        <Link href="/" className="order-2 flex min-w-0 flex-1 justify-center md:order-1 md:flex-none md:justify-start">
-          <div className="flex min-w-0 items-center gap-2">
-            <Image src="/brand/logo.png" alt="City Plus Pet Shop" width={44} height={44} className="h-9 w-9 shrink-0 object-contain md:h-10 md:w-10" />
-            <span className="truncate text-sm font-bold text-slate-900 xs:text-base md:text-lg">City Plus</span>
-          </div>
-        </Link>
+        {/* Center: Logo (mobile) | Nav (desktop) */}
+        <div className="flex justify-center">
+          <Link href="/" className="flex items-center gap-2 md:hidden">
+            <Image src="/brand/logo.png" alt="City Plus Pet Shop" width={44} height={44} className="h-9 w-9 shrink-0 object-contain" />
+            <span className="text-base font-bold text-slate-900">City Plus</span>
+          </Link>
+          <nav className="hidden gap-1 lg:flex" aria-label="Main navigation">
+            {MAIN_NAV.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`rounded px-3 py-2 text-sm font-semibold transition-colors ${
+                  isActive(href, pathname) ? "text-primary" : "text-slate-700 hover:text-primary"
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
-        {/* Desktop nav */}
-        <nav className="hidden flex-1 justify-center gap-1 lg:flex" aria-label="Main navigation">
-          {MAIN_NAV.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`rounded px-3 py-2 text-sm font-semibold transition-colors ${
-                isActive(href, pathname) ? "text-primary" : "text-slate-700 hover:text-primary"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Right actions: desktop shows all, mobile shows cart only */}
-        <div className="order-3 flex shrink-0 items-center gap-2">
+        {/* Right: Track Order, Offers, Wishlist, Cart */}
+        <div className="flex items-center justify-end gap-2">
           <Link
             href="/track-order"
             className="hidden items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 md:flex"

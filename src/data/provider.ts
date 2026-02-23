@@ -19,18 +19,13 @@ import type {
 import type { ProductRow, SiteSettingsRow, PaymentGatewayRow } from "@/lib/schema";
 import type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 import { DATA_SOURCE, AUTH_MODE } from "@/src/config/runtime";
-import { isPrismaConfigured, isSupabaseConfigured } from "@/src/config/env";
+import { isPrismaConfigured } from "@/src/config/env";
 
 export type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 
 /** Prisma as single source of truth when DATABASE_URL set. */
 function shouldUsePrisma() {
   return isPrismaConfigured() || DATA_SOURCE === "prisma";
-}
-
-/** Use Supabase only when explicitly configured; prevents import of non-existent modules. */
-function shouldUseSupabase() {
-  return AUTH_MODE === "supabase" && isSupabaseConfigured();
 }
 
 export async function getProducts(): Promise<Product[]> {
@@ -135,7 +130,7 @@ export async function getClearanceProducts(limit = 8): Promise<Product[]> {
 
 // Admin / user data: Prisma first; demo/fallback returns empty. No local/supabase imports.
 export async function getAdminDashboard(): Promise<DemoDashboard> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminDashboard: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -143,7 +138,7 @@ export async function getAdminDashboard(): Promise<DemoDashboard> {
 }
 
 export async function getAdminOrders(): Promise<DemoOrder[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminOrders: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -151,7 +146,7 @@ export async function getAdminOrders(): Promise<DemoOrder[]> {
 }
 
 export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminOrderById: getPrisma } = await import("./provider-db");
     return getPrisma(id);
   }
@@ -159,7 +154,7 @@ export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
 }
 
 export async function getAdminCustomers(): Promise<DemoCustomer[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminCustomers: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -167,7 +162,7 @@ export async function getAdminCustomers(): Promise<DemoCustomer[]> {
 }
 
 export async function getAdminVouchers(): Promise<DemoVoucher[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminVouchers: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -175,7 +170,7 @@ export async function getAdminVouchers(): Promise<DemoVoucher[]> {
 }
 
 export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminAuditLogs: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -184,7 +179,7 @@ export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
 
 /** Admin products list. */
 export async function getAdminProducts(): Promise<ProductRow[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminProducts: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -197,7 +192,7 @@ export async function getAdminProducts(): Promise<ProductRow[]> {
 
 /** Admin site settings. */
 export async function getAdminSettings(): Promise<Partial<SiteSettingsRow> | null> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminSettings: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -210,7 +205,7 @@ export async function getAdminSettings(): Promise<Partial<SiteSettingsRow> | nul
 
 /** Admin payment gateways. */
 export async function getAdminPaymentGateways(): Promise<PaymentGatewayRow[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminPaymentGateways: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -228,7 +223,7 @@ export async function getAdminAnalyticsEvents(params: {
   event?: string;
   source?: string;
 }): Promise<AdminAnalyticsResult> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminAnalyticsEvents: getPrisma } = await import("./provider-db");
     return getPrisma(params);
   }
@@ -246,7 +241,7 @@ export async function getAdminAnalyticsEvents(params: {
 
 /** Admin dashboard stats (KPIs, charts, recent orders). */
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getAdminDashboardStats: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -292,7 +287,7 @@ export async function getUserAccountOverview(): Promise<{
   recentOrders: DemoOrder[];
   orderCount: number;
 }> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getUserAccountOverview: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -300,7 +295,7 @@ export async function getUserAccountOverview(): Promise<{
 }
 
 export async function getUserOrders(): Promise<DemoOrder[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getUserOrders: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -308,7 +303,7 @@ export async function getUserOrders(): Promise<DemoOrder[]> {
 }
 
 export async function getUserOrderById(id: string): Promise<DemoOrder | null> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getUserOrderById: getPrisma } = await import("./provider-db");
     return getPrisma(id);
   }
@@ -316,7 +311,7 @@ export async function getUserOrderById(id: string): Promise<DemoOrder | null> {
 }
 
 export async function getUserInvoices(): Promise<DemoInvoice[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getUserInvoices: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -324,7 +319,7 @@ export async function getUserInvoices(): Promise<DemoInvoice[]> {
 }
 
 export async function getUserReturns(): Promise<DemoReturn[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma() || shouldUseSupabase()) {
+  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
     const { getUserReturns: getPrisma } = await import("./provider-db");
     return getPrisma();
   }

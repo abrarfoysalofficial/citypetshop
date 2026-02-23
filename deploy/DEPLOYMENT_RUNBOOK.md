@@ -9,7 +9,7 @@
 | Requirement | Min Version |
 |-------------|-------------|
 | VPS RAM | 2 GB (4 GB recommended for 4–5 sites) |
-| OS | Ubuntu 22.04 LTS |
+| OS | Ubuntu 24.04 LTS (22.04 also supported) |
 | Node.js | 18.x LTS (use nvm) |
 | CyberPanel | 2.3+ |
 | PostgreSQL | 14+ |

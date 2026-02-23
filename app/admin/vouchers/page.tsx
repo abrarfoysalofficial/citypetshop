@@ -25,6 +25,7 @@ export default function AdminVouchersPage() {
 
   useEffect(() => {
     fetchVouchers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch on mount only
   }, []);
 
   const fetchVouchers = async () => {

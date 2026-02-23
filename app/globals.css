@@ -42,6 +42,21 @@
   100% { background-position: -200% 0; }
 }
 
+@keyframes slide-sales-text {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-slide-sales {
+  animation: slide-sales-text 25s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-sales {
+    animation: none !important;
+  }
+}
+
 /* Utility: brand-aware primary color (Tailwind can reference via theme) */
 @layer utilities {
   .text-brand { color: var(--brand); }

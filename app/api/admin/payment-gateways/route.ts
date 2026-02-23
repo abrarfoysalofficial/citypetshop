@@ -43,22 +43,7 @@ export async function GET() {
     return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
   }
 
-  try {
-    const { createClient } = await import("@/lib/supabase/server");
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("payment_gateways")
-      .select("*")
-      .order("gateway", { ascending: true });
-
-    if (error || !data || data.length === 0) {
-      return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
-    }
-    return NextResponse.json(data);
-  } catch (err) {
-    console.error("[api/admin/payment-gateways] GET error:", err);
-    return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
-  }
+  return NextResponse.json(DEMO_PAYMENT_GATEWAYS);
 }
 
 /**
@@ -103,19 +88,7 @@ export async function PATCH(request: Request) {
       });
     }
 
-    const { createClient } = await import("@/lib/supabase/server");
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("payment_gateways")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: "Failed to update payment gateway" }, { status: 500 });
-    }
-    return NextResponse.json(data);
+    return NextResponse.json({ error: "Update not available in demo mode" }, { status: 403 });
   } catch (err) {
     console.error("[api/admin/payment-gateways] PATCH unexpected:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

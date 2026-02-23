@@ -109,7 +109,7 @@ async function main() {
         sellingPrice: 500,
         buyingPrice: 400,
         stock: 10,
-        images: { create: [{ url: "/products/placeholder.webp", sortOrder: 0, isPrimary: true }] },
+        images: { create: [{ url: "/ui/product-4x3.svg", sortOrder: 0, isPrimary: true }] },
         isActive: true,
         isFeatured: true,
       },

@@ -33,26 +33,5 @@ export async function GET() {
     }
   }
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.json(DEFAULTS, { headers: cacheHeaders("PRODUCT_LIST") });
-  }
-
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("site_settings")
-    .select("delivery_inside_dhaka, delivery_outside_dhaka, free_delivery_threshold, terms_url, privacy_url")
-    .eq("id", "default")
-    .single();
-  const row = data as { delivery_inside_dhaka?: number; delivery_outside_dhaka?: number; free_delivery_threshold?: number; terms_url?: string; privacy_url?: string } | null;
-  return NextResponse.json(
-    {
-      deliveryInsideDhaka: row?.delivery_inside_dhaka ?? DEFAULTS.deliveryInsideDhaka,
-      deliveryOutsideDhaka: row?.delivery_outside_dhaka ?? DEFAULTS.deliveryOutsideDhaka,
-      freeDeliveryThreshold: row?.free_delivery_threshold ?? DEFAULTS.freeDeliveryThreshold,
-      termsUrl: row?.terms_url || DEFAULTS.termsUrl,
-      privacyUrl: row?.privacy_url || DEFAULTS.privacyUrl,
-    },
-    { headers: cacheHeaders("PRODUCT_LIST") }
-  );
+  return NextResponse.json(DEFAULTS, { headers: cacheHeaders("PRODUCT_LIST") });
 }

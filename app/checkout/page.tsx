@@ -480,7 +480,7 @@ export default function CheckoutPage() {
                       alt={item.name}
                       fill
                       className="object-cover"
-                      fallbackSrc="/products/placeholder.webp"
+                      fallbackSrc="/ui/product-4x3.svg"
                     />
                   </div>
                   <div className="min-w-0 flex-1">

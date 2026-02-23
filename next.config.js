@@ -11,6 +11,7 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
       { protocol: "https", hostname: "placehold.co", pathname: "/**" },
       { protocol: "http", hostname: "localhost", pathname: "/**" },
+      { protocol: "http", hostname: "127.0.0.1", pathname: "/**" },
       { protocol: "https", hostname: "citypetshopbd.com", pathname: "/**" },
       { protocol: "https", hostname: "www.citypetshopbd.com", pathname: "/**" },
       { protocol: "https", hostname: "**.citypluspetshop.com", pathname: "/**" },

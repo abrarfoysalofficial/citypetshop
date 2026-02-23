@@ -1,47 +1,7 @@
 /**
- * Auth service implementations: Supabase (real) and Demo (cookie-based).
+ * Auth service implementations: Prisma/NextAuth (production) and Demo (cookie-based).
  */
 import type { AuthService, AuthSession } from "./types";
-import { createClient } from "@/lib/supabase/client";
-
-/** Supabase Auth: uses browser client. When env missing, client is stub (no crash). */
-export function createSupabaseAuthService(): AuthService {
-  const getSupabase = () => createClient();
-  return {
-    async signIn(email, password) {
-      const { error } = await getSupabase().auth.signInWithPassword({ email, password });
-      return { error: error?.message };
-    },
-    async signOut() {
-      await getSupabase().auth.signOut();
-    },
-    async signUp(email, password, options) {
-      const { error } = await getSupabase().auth.signUp({
-        email,
-        password,
-        options: options?.name ? { data: { name: options.name } } : undefined,
-      });
-      return { error: error?.message };
-    },
-    async otpSignIn(phone) {
-      const { error } = await getSupabase().auth.signInWithOtp({ phone });
-      return { error: error?.message };
-    },
-    async getSession(): Promise<AuthSession | null> {
-      const { data } = await getSupabase().auth.getSession();
-      const session = data?.session;
-      const user = session?.user;
-      if (!user) return null;
-      return {
-        user: {
-          id: user.id,
-          email: user.email ?? undefined,
-          role: (user as { role?: string }).role,
-        },
-      };
-    },
-  };
-}
 
 /** Demo auth: cookie-based via /api/auth/demo-login and /api/auth/session. */
 export function createDemoAuthService(): AuthService {

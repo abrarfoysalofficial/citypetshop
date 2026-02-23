@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
-import { AUTH_MODE } from "@/src/config/runtime";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -15,7 +13,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handlePrismaSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -44,92 +42,6 @@ export default function AdminLoginPage() {
     }
     setLoading(false);
   };
-
-  const handleSupabaseSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const supabase = createClient();
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        const msg = authError.message || "";
-        setError(
-          msg.toLowerCase().includes("supabase not connected")
-            ? "Login failed. Please try again later."
-            : msg || "Invalid email or password."
-        );
-        setLoading(false);
-        return;
-      }
-
-      if (!authData?.session?.user) {
-        setError("Sign in failed. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      const userEmail = authData.user.email;
-      if (!userEmail) {
-        setError("Access denied. You are not authorized to access the admin panel.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      const normalizedEmail = userEmail.toLowerCase();
-      const { data: teamMember, error: teamError } = await supabase
-        .from("team_members")
-        .select("role, is_active, is_admin")
-        .ilike("email", normalizedEmail)
-        .maybeSingle();
-
-      if (teamError) {
-        setError("Access check failed. Please contact support.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      if (!teamMember) {
-        setError("Access denied. You are not authorized to access the admin panel.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      if (!teamMember.is_active) {
-        setError("Your account is inactive. Please contact administrator.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      const role = (teamMember.role ?? "").toLowerCase();
-      const isAdmin = role === "admin" || role === "adm" || (teamMember as { is_admin?: boolean }).is_admin === true;
-      if (!isAdmin) {
-        setError("Access denied. You are not authorized to access the admin panel.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      router.replace("/admin");
-      router.refresh();
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = AUTH_MODE === "prisma" ? handlePrismaSubmit : handleSupabaseSubmit;
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">

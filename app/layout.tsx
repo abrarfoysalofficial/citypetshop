@@ -13,7 +13,7 @@ import StoreLayout from "@/components/StoreLayout";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
 import { PreloadLinks, PreloadCriticalRoutes } from "@/components/PreloadLinks";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshopbd.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

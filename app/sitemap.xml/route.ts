@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { categories, products } from "@/lib/data";
 import { prisma } from "@/lib/db";
 
-const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
+const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshopbd.com";
 
 function url(path: string) {
   return `${BASE.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;

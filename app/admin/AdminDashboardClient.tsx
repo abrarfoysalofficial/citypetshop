@@ -34,7 +34,6 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { createClient } from "@/lib/supabase/client";
 import type { DemoDashboard } from "@/src/data/types";
 
 const DASHBOARD_LAYOUT_KEY = "city-plus-dashboard-layout";
@@ -133,27 +132,34 @@ export function AdminDashboardClient({ initialData }: AdminDashboardClientProps)
     }
     async function load() {
       try {
-        const supabase = createClient();
-        const { data: orders } = await supabase.from("orders").select("id, total, status, created_at");
-        type OrderRow = { id?: string; total?: number; status?: string; created_at?: string };
-        const list = (Array.isArray(orders) ? orders : []) as OrderRow[];
-        if (list.length > 0) {
-          const totalSales = list.reduce((s: number, o: OrderRow) => s + Number(o.total ?? 0), 0);
-          const returned = list.filter((o) => o.status === "returned").length;
-          setSummary({
-            sales: `৳${totalSales.toLocaleString("en-BD")}`,
-            profit: "৳0",
-            orders: String(list.length),
-            returnRate: list.length ? `${((returned / list.length) * 100).toFixed(1)}%` : "0%",
-            loss: "৳0",
-          });
-          setActivity(
-            list.slice(0, 5).map((o, i) => ({
-              id: i + 1,
-              text: `Order #${String(o.id).slice(0, 8)} placed — ৳${Number(o.total).toLocaleString("en-BD")}`,
-              time: new Date(o.created_at ?? 0).toLocaleString(),
-            }))
-          );
+        const res = await fetch("/api/admin/dashboard");
+        if (res.ok) {
+          const data = await res.json();
+          const stats = data.stats ?? {};
+          const recent = (data.recentOrders ?? []) as { id?: string; total?: number; status?: string; customer?: string; date?: string }[];
+          const apiSalesData = (data.salesData ?? []) as { name?: string; revenue?: number; orders?: number }[];
+          if (apiSalesData.length > 0) {
+            setSalesData(apiSalesData.map((d) => ({ name: d.name ?? "—", sales: d.revenue ?? 0 })));
+          }
+          if (stats.totalOrders != null || recent.length > 0) {
+            const orders = stats.totalOrders ?? recent.length;
+            const totalSales = stats.totalRevenue ?? recent.reduce((s: number, o) => s + Number(o.total ?? 0), 0);
+            const returned = recent.filter((o) => o.status === "returned").length;
+            setSummary({
+              sales: `৳${Number(totalSales).toLocaleString("en-BD")}`,
+              profit: "৳0",
+              orders: String(orders),
+              returnRate: orders ? `${((returned / orders) * 100).toFixed(1)}%` : "0%",
+              loss: "৳0",
+            });
+            setActivity(
+              recent.slice(0, 5).map((o, i) => ({
+                id: i + 1,
+                text: `Order #${String(o.id ?? "").slice(0, 8)} placed — ৳${Number(o.total ?? 0).toLocaleString("en-BD")}`,
+                time: o.date ?? "—",
+              }))
+            );
+          }
         }
       } catch {
         // keep defaults
@@ -186,6 +192,9 @@ export function AdminDashboardClient({ initialData }: AdminDashboardClientProps)
         </Link>
         <Link href="/admin/tools" className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200">
           <Plug className="h-4 w-4" /> Tools & Plugins
+        </Link>
+        <Link href="/admin/about" className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200">
+          <FileText className="h-4 w-4" /> About Page
         </Link>
         <Link href="/admin/advanced-settings" className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200">
           <Sliders className="h-4 w-4" /> Advanced Settings

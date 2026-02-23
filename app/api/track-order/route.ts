@@ -86,7 +86,50 @@ export async function GET(request: NextRequest) {
     take: 10,
   });
 
-  const matches = orders.map(o => ({
+  const orderIds = orders.map((o) => o.id);
+  const [notesRows, statusEvents, trackingEvents] = await Promise.all([
+    prisma.orderNote.findMany({
+      where: { orderId: { in: orderIds } },
+      select: { id: true, orderId: true, type: true, visibility: true, message: true, createdAt: true },
+    }),
+    prisma.orderStatusEvent.findMany({
+      where: { orderId: { in: orderIds } },
+      select: { id: true, orderId: true, status: true, provider: true, createdAt: true, payloadSummary: true },
+    }),
+    prisma.trackingEvent.findMany({
+      where: { orderId: { in: orderIds } },
+      select: { id: true, orderId: true, status: true, description: true, createdAt: true },
+    }),
+  ]);
+
+  const notes = notesRows.map((n) => ({
+    id: n.id,
+    order_id: n.orderId,
+    type: n.type,
+    visibility: n.visibility,
+    message: n.message,
+    created_at: n.createdAt.toISOString(),
+  }));
+  const events = [
+    ...statusEvents.map((e) => ({
+      id: e.id,
+      order_id: e.orderId,
+      status: e.status,
+      provider: e.provider,
+      created_at: e.createdAt.toISOString(),
+      payload_summary: e.payloadSummary,
+    })),
+    ...trackingEvents.map((e) => ({
+      id: e.id,
+      order_id: e.orderId,
+      status: e.status,
+      provider: null,
+      created_at: (e.createdAt as Date).toISOString(),
+      payload_summary: e.description,
+    })),
+  ];
+
+  const matches = orders.map((o) => ({
     id: o.id,
     status: o.status,
     total: Number(o.total),
@@ -97,8 +140,8 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     orders: matches,
-    notes: [],
-    events: [],
+    notes,
+    events,
     source: "prisma",
   });
 }

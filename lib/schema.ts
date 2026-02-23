@@ -43,6 +43,8 @@ export interface SiteSettingsRow {
   phone: string | null;
   email: string | null;
   whatsapp_number: string | null;
+  sales_top_bar_text?: string | null;
+  sales_top_bar_enabled?: boolean;
 
   // Homepage Builder (CMS-style)
   hero_slider: HeroSlide[];    // JSONB: { image_url, title_en, title_bn, link, order }

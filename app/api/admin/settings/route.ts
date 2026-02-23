@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { createClient } from "@/lib/supabase/server";
 import { requireAdminAuth } from "@/lib/admin-auth";
 import { DEMO_SITE_SETTINGS } from "@/lib/demo-data";
-import { AUTH_MODE } from "@/src/config/runtime";
 import { isPrismaConfigured } from "@/src/config/env";
-import { isSupabaseConfigured } from "@/src/config/env";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +16,7 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (AUTH_MODE === "prisma" && isPrismaConfigured()) {
+  if (isPrismaConfigured()) {
     try {
       const s = await prisma.siteSettings.findUnique({
         where: { id: "default" },
@@ -50,6 +47,8 @@ export async function GET() {
         phone: s.phone,
         email: s.email,
         whatsapp_number: s.whatsappNumber,
+        sales_top_bar_text: s.salesTopBarText,
+        sales_top_bar_enabled: s.salesTopBarEnabled,
         hero_slider: s.heroSlider,
         side_banners: s.sideBanners,
         cta_buttons: s.ctaButtons,
@@ -83,25 +82,6 @@ export async function GET() {
     }
   }
 
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await createClient();
-      const { data, error } = await supabase
-        .from("site_settings")
-        .select("*")
-        .eq("id", "default")
-        .single();
-
-      if (error || !data) {
-        return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
-      }
-      return NextResponse.json(data);
-    } catch (err) {
-      console.error("[api/admin/settings] GET error:", err);
-      return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
-    }
-  }
-
   return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
 }
 
@@ -119,7 +99,7 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { id: _id, updated_at: _ua, ...updates } = body;
 
-    if (AUTH_MODE === "prisma" && isPrismaConfigured()) {
+    if (isPrismaConfigured()) {
       const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
       const map: Record<string, string> = {
         logo_url: "logoUrl", logo_dark_url: "logoDarkUrl", site_name_en: "siteNameEn",
@@ -129,7 +109,7 @@ export async function PATCH(request: Request) {
         footer_text_en: "footerTextEn", footer_text_bn: "footerTextBn", footer_links: "footerLinks",
         copyright_text: "copyrightText", social_links: "socialLinks", address_en: "addressEn",
         address_bn: "addressBn", phone: "phone", email: "email", whatsapp_number: "whatsappNumber",
-        hero_slider: "heroSlider", side_banners: "sideBanners", cta_buttons: "ctaButtons",
+        sales_top_bar_text: "salesTopBarText", sales_top_bar_enabled: "salesTopBarEnabled", hero_slider: "heroSlider", side_banners: "sideBanners", cta_buttons: "ctaButtons",
         popup_enabled: "popupEnabled", popup_content_en: "popupContentEn", popup_content_bn: "popupContentBn",
         popup_image_url: "popupImageUrl", facebook_pixel_id: "facebookPixelId", facebook_capi_token: "facebookCapiToken",
         google_analytics_id: "googleAnalyticsId", google_tag_manager_id: "googleTagManagerId",
@@ -157,22 +137,6 @@ export async function PATCH(request: Request) {
         out[snake] = v instanceof Date ? v.toISOString() : v;
       }
       return NextResponse.json(out);
-    }
-
-    if (isSupabaseConfigured()) {
-      const supabase = await createClient();
-      const { data, error } = await supabase
-        .from("site_settings")
-        .update(updates)
-        .eq("id", "default")
-        .select()
-        .single();
-
-      if (error) {
-        console.error("[api/admin/settings] PATCH error:", error.message);
-        return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
-      }
-      return NextResponse.json(data);
     }
 
     return NextResponse.json({ error: "No database configured" }, { status: 500 });

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/db";
 import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
-import { isSupabaseConfigured } from "@/src/config/env";
+import { isPrismaConfigured } from "@/src/config/env";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -18,41 +19,45 @@ const defaults = {
   sandbox: true,
 };
 
-/** GET: Courier provider list. Returns demo data when Supabase not configured. */
+/** GET: Courier provider list. Prisma only. */
 export async function GET() {
   const auth = await requireAdminAuth();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+  if (isDemoAuth(auth) || !isPrismaConfigured()) {
     return NextResponse.json(defaults);
   }
-  const supabase = await createClient();
-  const [configsRes, settingsRes] = await Promise.all([
-    supabase.from("courier_configs").select("provider, is_active").in("provider", ["pathao", "steadfast", "redx"]),
-    supabase.from("site_settings").select("courier_default_provider, courier_sandbox").eq("id", "default").single(),
-  ]);
 
-  const configs = (configsRes.data || []) as { provider: string; is_active: boolean }[];
-  const settings = settingsRes.data as { courier_default_provider?: string; courier_sandbox?: boolean } | null;
+  try {
+    const configs = await prisma.courierConfig.findMany({
+      where: { provider: { in: ["pathao", "steadfast", "redx"] } },
+    });
+    const settings = await prisma.siteSettings.findUnique({
+      where: { id: "default" },
+    });
 
-  const providerMap: Record<string, boolean> = { pathao: true, steadfast: true, redx: true };
-  configs.forEach((c) => { providerMap[c.provider] = c.is_active; });
+    const adv = (settings?.advancedSettings ?? {}) as { courier_default_provider?: string; courier_sandbox?: boolean };
+    const providerMap: Record<string, boolean> = { pathao: true, steadfast: true, redx: true };
+    configs.forEach((c) => { providerMap[c.provider] = c.isActive; });
 
-  const defaultProvider = providerSchema.safeParse(settings?.courier_default_provider).success
-    ? settings!.courier_default_provider
-    : defaults.defaultProvider;
+    const defaultProvider = providerSchema.safeParse(adv.courier_default_provider).success
+      ? adv.courier_default_provider
+      : defaults.defaultProvider;
 
-  return NextResponse.json({
-    providers: [
-      { id: "pathao", name: "Pathao", enabled: providerMap.pathao !== false },
-      { id: "steadfast", name: "Steadfast", enabled: providerMap.steadfast !== false },
-      { id: "redx", name: "RedX", enabled: providerMap.redx !== false },
-    ],
-    defaultProvider,
-    sandbox: settings?.courier_sandbox ?? defaults.sandbox,
-  });
+    return NextResponse.json({
+      providers: [
+        { id: "pathao", name: "Pathao", enabled: providerMap.pathao !== false },
+        { id: "steadfast", name: "Steadfast", enabled: providerMap.steadfast !== false },
+        { id: "redx", name: "RedX", enabled: providerMap.redx !== false },
+      ],
+      defaultProvider: defaultProvider ?? defaults.defaultProvider,
+      sandbox: adv.courier_sandbox ?? defaults.sandbox,
+    });
+  } catch {
+    return NextResponse.json(defaults);
+  }
 }
 
 const patchSchema = z.object({
@@ -68,7 +73,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isSupabaseConfigured()) {
+  if (isDemoAuth(auth) || !isPrismaConfigured()) {
     return NextResponse.json(defaults);
   }
 
@@ -78,27 +83,33 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = await createClient();
-
-  if (parsed.data.defaultProvider != null || parsed.data.sandbox != null) {
-    const update: { courier_default_provider?: string; courier_sandbox?: boolean; updated_at?: string } = {
-      updated_at: new Date().toISOString(),
-    };
-    if (parsed.data.defaultProvider != null) update.courier_default_provider = parsed.data.defaultProvider;
-    if (parsed.data.sandbox != null) update.courier_sandbox = parsed.data.sandbox;
-    const { error } = await supabase.from("site_settings").update(update).eq("id", "default");
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (parsed.data.providers?.length) {
-    for (const p of parsed.data.providers) {
-      const { error } = await supabase
-        .from("courier_configs")
-        .update({ is_active: p.enabled, updated_at: new Date().toISOString() })
-        .eq("provider", p.id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    if (parsed.data.defaultProvider != null || parsed.data.sandbox != null) {
+      const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+      const adv = (settings?.advancedSettings ?? {}) as Record<string, unknown>;
+      if (parsed.data.defaultProvider != null) adv.courier_default_provider = parsed.data.defaultProvider;
+      if (parsed.data.sandbox != null) adv.courier_sandbox = parsed.data.sandbox;
+      const jsonAdv = adv as Prisma.InputJsonValue;
+      await prisma.siteSettings.upsert({
+        where: { id: "default" },
+        create: { id: "default", advancedSettings: jsonAdv },
+        update: { advancedSettings: jsonAdv },
+      });
     }
-  }
 
-  return NextResponse.json({ ok: true });
+    if (parsed.data.providers?.length) {
+      for (const p of parsed.data.providers) {
+        await prisma.courierConfig.upsert({
+          where: { provider: p.id },
+          create: { provider: p.id, isActive: p.enabled },
+          update: { isActive: p.enabled },
+        });
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[courier-settings] PATCH error:", err);
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
 }

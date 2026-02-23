@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, useCallback } from "react";
 
 const DEFAULT_FALLBACK = "/ui/product-4x3.svg";
-export const PRODUCT_PLACEHOLDER = "/products/placeholder.webp";
+export const PRODUCT_PLACEHOLDER = "/ui/product-4x3.svg";
 
 export interface SafeImageProps {
   src: string | undefined | null;

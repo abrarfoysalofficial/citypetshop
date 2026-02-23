@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     id: p.id,
     name: p.name,
     price: p.price,
-    image: p.images?.[0] ?? p.image ?? "/products/placeholder.webp",
+    image: p.images?.[0] ?? p.image ?? "/ui/product-4x3.svg",
     slug: (p as { slug?: string }).slug ?? p.id,
   }));
   return NextResponse.json({ products });

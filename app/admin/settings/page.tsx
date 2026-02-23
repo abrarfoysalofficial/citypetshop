@@ -23,6 +23,8 @@ export default function AdminSettingsPage() {
     address_en: null,
     phone: null,
     email: null,
+    sales_top_bar_text: "City Plus Pet Shop — 100% Authentic Pet Supplies • Fast Delivery • Best Price Guarantee • Hotline: 01643-390045",
+    sales_top_bar_enabled: true,
     delivery_inside_dhaka: 70,
     delivery_outside_dhaka: 130,
     primary_color: "#0f172a",
@@ -251,6 +253,31 @@ export default function AdminSettingsPage() {
 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-2">
+              Sliding Top Bar Text
+            </label>
+            <div className="flex items-center gap-3 mb-2">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={settings.sales_top_bar_enabled !== false}
+                  onChange={(e) => setSettings({ ...settings, sales_top_bar_enabled: e.target.checked })}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-slate-600">Enable announcement bar</span>
+              </label>
+            </div>
+            <textarea
+              value={settings.sales_top_bar_text ?? ""}
+              onChange={(e) => setSettings({ ...settings, sales_top_bar_text: e.target.value })}
+              rows={2}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="City Plus Pet Shop — 100% Authentic Pet Supplies • Fast Delivery • Best Price Guarantee • Hotline: 01643-390045"
+            />
+            <p className="mt-1 text-xs text-slate-500">Shown as sliding text at the top of every page. Use • to separate items.</p>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Store Address
             </label>
             <textarea
@@ -336,6 +363,96 @@ export default function AdminSettingsPage() {
                 className="w-full rounded-lg border border-slate-200 pl-8 pr-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* SEO Defaults */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="rounded-2xl bg-white p-6 shadow-lg shadow-slate-200/50 border border-slate-100"
+      >
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 p-3 text-white">
+            <Store className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">SEO Defaults</h3>
+            <p className="text-sm text-slate-500">Default meta title and description for pages</p>
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Default Meta Title</label>
+            <input
+              type="text"
+              value={settings.default_meta_title || ""}
+              onChange={(e) => setSettings({ ...settings, default_meta_title: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="City Plus Pet Shop — Best Pet Supplies in Bangladesh"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Default Meta Description</label>
+            <textarea
+              value={settings.default_meta_description || ""}
+              onChange={(e) => setSettings({ ...settings, default_meta_description: e.target.value })}
+              rows={2}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="Quality pet food, toys, and accessories. Fast delivery across Bangladesh."
+            />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Analytics (GA4, GTM, Pixel) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.26 }}
+        className="rounded-2xl bg-white p-6 shadow-lg shadow-slate-200/50 border border-slate-100"
+      >
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-3 text-white">
+            <Store className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Analytics</h3>
+            <p className="text-sm text-slate-500">GA4, GTM, Facebook Pixel IDs (no secrets stored)</p>
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Google Analytics ID</label>
+            <input
+              type="text"
+              value={settings.google_analytics_id || ""}
+              onChange={(e) => setSettings({ ...settings, google_analytics_id: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="G-XXXXXXXXXX"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Google Tag Manager ID</label>
+            <input
+              type="text"
+              value={settings.google_tag_manager_id || ""}
+              onChange={(e) => setSettings({ ...settings, google_tag_manager_id: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="GTM-XXXXXXX"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Facebook Pixel ID</label>
+            <input
+              type="text"
+              value={settings.facebook_pixel_id || ""}
+              onChange={(e) => setSettings({ ...settings, facebook_pixel_id: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="123456789012345"
+            />
           </div>
         </div>
       </motion.div>

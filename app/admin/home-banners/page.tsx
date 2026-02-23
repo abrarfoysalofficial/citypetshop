@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -151,7 +152,7 @@ export default function HomeBannersPage() {
             {items.map((r) => (
               <tr key={r.id} className="border-t border-slate-100">
                 <td className="p-3">
-                  <img src={r.image_url} alt="" className="h-12 w-20 rounded object-cover" />
+                  <Image src={r.image_url} alt="" width={80} height={48} className="h-12 w-20 rounded object-cover" />
                 </td>
                 <td className="p-3">{r.title_en ?? "—"}</td>
                 <td className="p-3 text-right">

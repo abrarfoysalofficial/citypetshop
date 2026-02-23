@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "/var/www/city-plus/uploads";
 const APP_URL = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "";
 
-const ALLOWED_BUCKETS = ["product-images", "banner-images", "store-assets"];
+const ALLOWED_BUCKETS = ["product-images", "banner-images", "store-assets", "about-images"];
 const ALLOWED_EXT = new Set(["jpg", "jpeg", "png", "gif", "webp", "svg"]);
 
 /** POST: Upload file to local filesystem. No S3/Supabase. */

@@ -1,6 +1,6 @@
 import { CategoryItem, Product } from "./types";
 
-const PLACEHOLDER = "/products/placeholder.webp";
+const PLACEHOLDER = "/ui/product-4x3.svg";
 
 /** JustPetBD-style categories with subcategories */
 export const categories: CategoryItem[] = [

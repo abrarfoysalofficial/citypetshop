@@ -209,7 +209,7 @@ export default function AdminProductsPage() {
     });
 
     return filtered;
-  }, [products, searchQuery, categoryFilter, statusFilter, sortBy, sortOrder]);
+  }, [products, statusFilter, sortBy, sortOrder]);
 
   const toggleSort = (field: string) => {
     if (sortBy === field) {

@@ -5,8 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PackageSearch, MessageSquare, Truck, User } from "lucide-react";
 import { isValidBdPhone } from "@/lib/phone-bd";
-import { createClient } from "@/lib/supabase/client";
-
 type OrderSummary = { id: string; status: string; total: number; createdAt: string; customerName?: string; phone?: string };
 type Note = { id: string; type: string; visibility: string; message: string; created_at: string };
 type Event = { id: string; status: string; provider?: string; created_at: string; payload_summary?: unknown };
@@ -21,7 +19,6 @@ export default function TrackOrderPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [source, setSource] = useState<"local" | "supabase">("local");
   const [requiresOtp, setRequiresOtp] = useState(false);
   const [otpToken, setOtpToken] = useState<string | null>(null);
   const [otpStep, setOtpStep] = useState<"idle" | "sent" | "verified">("idle");
@@ -51,7 +48,6 @@ export default function TrackOrderPage() {
         setOrders(data.orders || []);
         setNotes(data.notes || []);
         setEvents(data.events || []);
-        setSource(data.source || "local");
         setRequiresOtp(!!data.requiresOtp);
         setSelectedOrderId(data.orders?.[0]?.id || null);
         if (data.requiresOtp && !token) setOtpStep("idle");
@@ -79,32 +75,13 @@ export default function TrackOrderPage() {
   }, [orderIdFromUrl, fetchTrack, otpToken]);
 
   useEffect(() => {
-    if (source !== "supabase" || !selectedOrderId || orders.length === 0 || requiresOtp) return;
-    const orderIds = orders.map((o) => o.id);
-    const supabase = createClient();
-    const onInsert = () => fetchTrack(query, otpToken);
-    let sub: { unsubscribe?: () => void } | null = null;
-    if ("channel" in supabase && typeof (supabase as { channel: (n: string) => unknown }).channel === "function") {
-      const ch = (supabase as {
-        channel: (n: string) => {
-          on: (ev: string, opts: Record<string, string>, cb: () => void) => unknown;
-          subscribe: () => { unsubscribe?: () => void };
-        };
-      }).channel("track-order-timeline");
-      orderIds.forEach((orderId) => {
-        ch.on("postgres_changes", { event: "INSERT", schema: "public", table: "order_notes", filter: `order_id=eq.${orderId}` }, onInsert);
-        ch.on("postgres_changes", { event: "INSERT", schema: "public", table: "order_status_events", filter: `order_id=eq.${orderId}` }, onInsert);
-      });
-      sub = ch.subscribe?.() ?? null;
-    }
+    if (!selectedOrderId || orders.length === 0 || requiresOtp) return;
     pollIntervalRef.current = setInterval(() => fetchTrack(query, otpToken), POLL_FALLBACK_MS);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
-      sub?.unsubscribe?.();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- orders, fetchTrack, query, otpToken included; full deps intentional
-  }, [source, selectedOrderId, query, fetchTrack, orders, requiresOtp, otpToken]);
+  }, [selectedOrderId, orders.length, requiresOtp, query, fetchTrack, otpToken]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

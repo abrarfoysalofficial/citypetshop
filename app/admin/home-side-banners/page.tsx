@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -107,7 +108,9 @@ export default function HomeSideBannersPage() {
           <tbody>
             {items.map((r) => (
               <tr key={r.id} className="border-t border-slate-100">
-                <td className="p-3"><img src={r.image_url} alt="" className="h-12 w-20 rounded object-cover" /></td>
+                <td className="p-3">
+                  <Image src={r.image_url} alt="" width={80} height={48} className="h-12 w-20 rounded object-cover" />
+                </td>
                 <td className="p-3">{r.title_en ?? "—"}</td>
                 <td className="p-3 text-right">
                   <button onClick={() => { setEditing(r.id); setValue("image_url", r.image_url); setValue("title_en", r.title_en ?? ""); setValue("sort_order", r.sort_order); setValue("is_active", r.is_active); }} className="text-blue-600 hover:underline mr-2">Edit</button>

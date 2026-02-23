@@ -64,7 +64,7 @@ export default function TopSellerCard() {
             src={item.image}
             alt={item.name}
             fill
-            fallbackSrc="/products/placeholder.webp"
+            fallbackSrc="/ui/product-4x3.svg"
             className="object-cover"
             sizes="288px"
           />

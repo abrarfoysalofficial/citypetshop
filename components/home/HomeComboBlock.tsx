@@ -49,7 +49,7 @@ export default function HomeComboBlock({
                   src={combo.image}
                   alt={combo.title}
                   fill
-                  fallbackSrc="/products/placeholder.webp"
+                  fallbackSrc="/ui/product-4x3.svg"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition group-hover:scale-105"
                 />

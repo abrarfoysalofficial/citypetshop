@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Upload } from "lucide-react";
 
@@ -149,7 +150,7 @@ export default function ProductUploadPage() {
           <label className="block text-sm font-medium text-slate-700">Images</label>
           <div className="mt-2 flex flex-wrap gap-2">
             {images.map((url) => (
-              <img key={url} src={url} alt="" className="h-20 w-20 rounded-lg object-cover border" />
+              <Image key={url} src={url} alt="" width={80} height={80} className="h-20 w-20 rounded-lg object-cover border" />
             ))}
             <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-500">
               <input type="file" accept="image/*" onChange={onFileChange} disabled={uploading} className="hidden" />

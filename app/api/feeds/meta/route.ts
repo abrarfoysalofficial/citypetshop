@@ -21,7 +21,7 @@ export async function GET() {
     const description = (p.descriptionEn ?? "").slice(0, 5000);
     const link = `${baseUrl}/product/${p.id}`;
     const firstImg = p.images[0];
-    const imageLink = p.metaOgImage || (firstImg?.url) || `${baseUrl}/products/placeholder.webp`;
+    const imageLink = p.metaOgImage || (firstImg?.url) || `${baseUrl}/ui/product-4x3.svg`;
     const price = `${Number(p.sellingPrice)} BDT`;
     const availability = "in stock";
 
