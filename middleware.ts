@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitSync } from "@/lib/rate-limit-memory";
 import { buildRedirectUrl } from "@/lib/site-url";
 
 /** Production: Prisma only. Dev: Prisma if DATABASE_URL set, else demo. */
@@ -19,10 +19,13 @@ function getClientIp(request: NextRequest): string {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Rate limit admin login attempts
-  if (pathname === "/api/auth/callback/credentials" && request.method === "POST") {
+  // Rate limit admin login attempts (credentials POST)
+  if (
+    (pathname === "/api/auth/signin/credentials" || pathname === "/api/auth/callback/credentials") &&
+    request.method === "POST"
+  ) {
     const ip = getClientIp(request);
-    const rl = rateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000);
+    const rl = rateLimitSync(`admin-login:${ip}`, 5, 15 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: "Too many login attempts. Try again later." },
@@ -55,6 +58,23 @@ export async function middleware(request: NextRequest) {
         if (pathname === "/admin/login") return NextResponse.redirect(buildRedirectUrl(request, "/admin"));
       }
       if (isLoggedIn && pathname === "/login") return NextResponse.redirect(buildRedirectUrl(request, "/account"));
+      // If unauthenticated user hit /login with admin callbackUrl, redirect to admin login
+      if (pathname === "/login" && !isLoggedIn) {
+        const callback = request.nextUrl.searchParams.get("callbackUrl") ?? request.nextUrl.searchParams.get("next");
+        if (typeof callback === "string") {
+          let path = callback;
+          if (!callback.startsWith("/")) {
+            try {
+              path = new URL(callback).pathname;
+            } catch {
+              path = "";
+            }
+          }
+          if (path === "/admin" || path.startsWith("/admin/")) {
+            return NextResponse.redirect(buildRedirectUrl(request, `/admin/login?callbackUrl=${encodeURIComponent(callback)}`));
+          }
+        }
+      }
       return NextResponse.next();
     }
 
