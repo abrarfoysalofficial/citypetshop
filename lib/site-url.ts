@@ -1,6 +1,6 @@
 /**
  * Environment-based base URL resolver.
- * Production: https://citypetshopbd.com (or NEXTAUTH_URL / NEXT_PUBLIC_SITE_URL / APP_URL)
+ * Production: https://citypetshop.bd (or NEXTAUTH_URL / NEXT_PUBLIC_SITE_URL / APP_URL)
  * Never use localhost in production.
  */
 
@@ -11,7 +11,7 @@ export function getPublicBaseUrlFromRequest(request: NextRequest): string {
   const proto = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol?.replace(":", "") ?? "https").split(",")[0]?.trim() || "https";
   const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(",")[0]?.trim() || "";
   if (host && (host.includes("localhost") || host.includes("127.0.0.1"))) {
-    return process.env.NODE_ENV === "production" ? "https://citypetshopbd.com" : `http://${host}`;
+    return process.env.NODE_ENV === "production" ? "https://citypetshop.bd" : `http://${host}`;
   }
   if (host && proto) return `${proto}://${host}`;
   return getServerBaseUrl();
@@ -34,7 +34,7 @@ export function getServerBaseUrl(): string {
     process.env.NEXT_PUBLIC_SITE_URL ||
     "";
   if (url && !isLocalhost(url)) return url;
-  return process.env.NODE_ENV === "production" ? "https://citypetshopbd.com" : "http://localhost:3000";
+  return process.env.NODE_ENV === "production" ? "https://citypetshop.bd" : "http://localhost:3000";
 }
 
 /** Client/public base URL (NEXT_PUBLIC_SITE_URL, APP_URL). */
@@ -45,7 +45,7 @@ export function getPublicBaseUrl(): string {
     process.env.APP_URL ||
     "";
   if (url && !isLocalhost(url)) return url;
-  return process.env.NODE_ENV === "production" ? "https://citypetshopbd.com" : "http://localhost:3000";
+  return process.env.NODE_ENV === "production" ? "https://citypetshop.bd" : "http://localhost:3000";
 }
 
 /** Check if URL is localhost (dev only). */
@@ -66,7 +66,7 @@ export function getAuthBaseUrl(): string {
     process.env.NEXT_PUBLIC_SITE_URL ||
     "";
   if (process.env.NODE_ENV === "production" && (!url || isLocalhost(url))) {
-    return "https://citypetshopbd.com";
+    return "https://citypetshop.bd";
   }
   return url || getServerBaseUrl();
 }

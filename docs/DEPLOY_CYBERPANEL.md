@@ -1,6 +1,8 @@
-# Fresh Deployment Guide (CyberPanel) — City Plus Pet Shop
+# Fresh Deployment Guide (CyberPanel) — City Pet Shop BD
 
 **Purpose:** Step-by-step fresh deployment from a clean local machine to a brand-new CyberPanel VPS. No old code, no old database, no restore, no backups. All data will be unrecoverable if you overwrite or drop it.
+
+**Brand:** City Pet Shop BD (citypetshop, citypetshopbd, citypet) · **Domain:** https://citypetshop.bd
 
 **Stack:** Ubuntu 24.04 · CyberPanel 2.3+ · OpenLiteSpeed · Node.js 20 · npm · PM2 · PostgreSQL 14+ · Redis (optional)
 
@@ -21,6 +23,173 @@
 | **HTTP** | http://citypetshop.bd, http://www.citypetshop.bd | 301 redirect → https://citypetshop.bd |
 
 Issue Let's Encrypt SSL for both `citypetshop.bd` and `www.citypetshop.bd` in CyberPanel.
+
+---
+
+## REPLACE LIVE SITE: 100% Copy-Paste Guide
+
+Use this when you want to **permanently delete** the previous live site and **go live** with the new code. Run each block in order. Expected output is shown after each command.
+
+### Step A: Stop and remove the old app
+
+```bash
+pm2 stop cityplus 2>/dev/null || true
+pm2 delete cityplus 2>/dev/null || true
+pm2 save
+```
+
+**Expected:** `[PM2] Applying action deleteProcessId...` or no output if app didn't exist.
+
+---
+
+### Step B: Remove old app directory (keeps uploads if you want to preserve)
+
+```bash
+sudo rm -rf /var/www/cityplus/app
+```
+
+**Expected:** No output. Directory removed.
+
+---
+
+### Step C: (Optional) Drop database for fresh start — **ALL DATA LOST**
+
+```bash
+sudo -u postgres psql -c "DROP DATABASE IF EXISTS cityplus_db;"
+sudo -u postgres psql -c "DROP USER IF EXISTS cityplus_app;"
+```
+
+**Expected:** `DROP DATABASE` and `DROP USER` messages. Skip this if you want to keep existing data.
+
+---
+
+### Step D: Recreate database (only if you ran Step C)
+
+```bash
+DB_PASS=$(openssl rand -base64 24 | tr -d '\n/+=' | head -c 24)
+sudo -u postgres psql -c "CREATE USER cityplus_app WITH PASSWORD '$DB_PASS';"
+sudo -u postgres psql -c "CREATE DATABASE cityplus_db OWNER cityplus_app;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cityplus_db TO cityplus_app;"
+echo "$DB_PASS" | sudo tee /root/.cityplus_db_pass
+```
+
+**Expected:** `CREATE ROLE`, `CREATE DATABASE`, `GRANT` messages. Save the password from `/root/.cityplus_db_pass` for next step.
+
+---
+
+### Step E: Clone fresh code
+
+```bash
+sudo -u cityplus bash -c 'cd /var/www/cityplus && git clone https://github.com/abrarfoysalofficial/citypetshop.bd app'
+```
+
+**Expected:** `Cloning into 'app'...` then `done`.
+
+---
+
+### Step F: Create .env.production.local
+
+*(If you skipped Step C, use your existing DB password instead of the one from `/root/.cityplus_db_pass`.)*
+
+```bash
+DB_PASS=$(sudo cat /root/.cityplus_db_pass 2>/dev/null || echo "YOUR_EXISTING_DB_PASSWORD")
+NEXTAUTH_SECRET=$(openssl rand -hex 32)
+MASTER_SECRET=$(openssl rand -hex 32)
+sudo -u cityplus tee /var/www/cityplus/app/.env.production.local <<ENV
+NODE_ENV=production
+NEXT_PUBLIC_SITE_URL=https://citypetshop.bd
+NEXTAUTH_URL=https://citypetshop.bd
+APP_URL=https://citypetshop.bd
+DATABASE_URL=postgresql://cityplus_app:${DB_PASS}@127.0.0.1:5432/cityplus_db
+NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+AUTH_TRUST_HOST=true
+MASTER_SECRET=${MASTER_SECRET}
+UPLOAD_DIR=/var/www/cityplus/uploads
+ADMIN_EMAIL=admin@citypetshop.bd
+ADMIN_PASSWORD=TempPass123ChangeMe
+ENV
+```
+
+**Expected:** File written. (Use `TempPass123ChangeMe` or any 12+ char password for initial seed.)
+
+---
+
+### Step G: Install, migrate, seed, build
+
+```bash
+sudo -u cityplus bash -lc 'cd /var/www/cityplus/app && npm ci'
+```
+
+**Expected:** `added X packages`.
+
+```bash
+sudo -u cityplus bash -lc 'cd /var/www/cityplus/app && npx prisma generate'
+```
+
+**Expected:** `Generated Prisma Client`.
+
+```bash
+sudo -u cityplus bash -lc 'cd /var/www/cityplus/app && npx prisma migrate deploy'
+```
+
+**Expected:** `X migration(s) applied`.
+
+```bash
+sudo -u cityplus bash -lc 'cd /var/www/cityplus/app && npm run db:seed'
+```
+
+**Expected:** `Tenant settings ready`, `Roles ready`, `Admin user ready`.
+
+```bash
+sudo -u cityplus bash -lc 'cd /var/www/cityplus/app && NODE_OPTIONS=--max-old-space-size=4096 npm run build'
+```
+
+**Expected:** `Compiled successfully`, `Route (app)`, build completes.
+
+---
+
+### Step H: Copy assets and start PM2
+
+```bash
+cd /var/www/cityplus/app
+cp -r public .next/standalone/public 2>/dev/null || true
+cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+APP_DIR=/var/www/cityplus/app pm2 start ecosystem.config.js --env production --only cityplus
+pm2 save
+```
+
+**Expected:** `[PM2] Starting ecosystem.config.js in env_production`, `App [cityplus] online`.
+
+---
+
+### Step I: Set temporary admin password (admin@citypetshop.bd / Admin 123)
+
+```bash
+cd /var/www/cityplus/app
+ADMIN_EMAIL=admin@citypetshop.bd ADMIN_PASSWORD='Admin 123' npx tsx scripts/admin-reset.ts
+```
+
+**Expected:** `Admin reset complete: admin@citypetshop.bd` and `Login at: https://citypetshop.bd/admin/login`.
+
+---
+
+### Step J: Verify site is live
+
+```bash
+curl -sf http://127.0.0.1:3001/api/health
+```
+
+**Expected:** JSON with `"ok":true` or similar.
+
+---
+
+### Login
+
+- **URL:** https://citypetshop.bd/admin/login  
+- **Email:** admin@citypetshop.bd  
+- **Password:** Admin 123  
+
+**Change the password after first login.**
 
 ---
 
@@ -720,12 +889,12 @@ If you are redirected to the customer login page (`/login`) when trying to acces
    ```
    Check `User` table: your admin email must have `role` = `admin`, `adm`, or `super_admin`.
 
-4. **Reset admin password:**
+4. **Reset admin password (temp: admin@citypetshop.bd / Admin 123):**
    ```bash
    cd /var/www/cityplus/app
-   ADMIN_PASSWORD='YourNewSecurePassword123!' npx tsx scripts/admin-reset.ts
+   ADMIN_EMAIL=admin@citypetshop.bd ADMIN_PASSWORD='Admin 123' npx tsx scripts/admin-reset.ts
    ```
-   Save the password; use it at `/admin/login`.
+   Or use a stronger password: `ADMIN_PASSWORD='YourNewSecurePassword123!' npx tsx scripts/admin-reset.ts`
 
 5. **Restart PM2** after changing env vars:
    ```bash

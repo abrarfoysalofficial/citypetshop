@@ -1,24 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { CartProvider } from "@/context/CartContext";
-import { CompareProvider } from "@/context/CompareContext";
-import { WishlistProvider } from "@/context/WishlistContext";
-import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
-import { ProductsProvider } from "@/context/ProductsContext";
-import { CategoriesProvider } from "@/context/CategoriesContext";
-import { OffersProvider } from "@/context/OffersContext";
-import { VouchersProvider } from "@/context/VouchersContext";
-import { BlogProvider } from "@/context/BlogContext";
+import { CartProvider } from "@/store/CartContext";
+import { CompareProvider } from "@/store/CompareContext";
+import { WishlistProvider } from "@/store/WishlistContext";
+import { SiteSettingsProvider } from "@/store/SiteSettingsContext";
+import { ProductsProvider } from "@/store/ProductsContext";
+import { CategoriesProvider } from "@/store/CategoriesContext";
+import { OffersProvider } from "@/store/OffersContext";
+import { VouchersProvider } from "@/store/VouchersContext";
+import { BlogProvider } from "@/store/BlogContext";
 import StoreLayout from "@/components/StoreLayout";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
 import { PreloadLinks, PreloadCriticalRoutes } from "@/components/PreloadLinks";
+import OrganizationSchema from "@/components/seo/OrganizationSchema";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshopbd.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "City Plus Pet Shop | Your pet, our passion",
-  description: "Premium pet food, accessories, toys, and medicine for your furry friends.",
+  title: "City Pet Shop BD | Pet Shop in Bangladesh | Dog Food BD | Cat Food BD",
+  description: "Buy authentic dog food, cat food, and pet accessories in Bangladesh. Fast delivery, COD available, trusted brands at the best price.",
   openGraph: {
     type: "website",
     locale: "en",
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-title": "City Plus Pet Shop",
+    "apple-mobile-web-app-title": "City Pet Shop BD",
   },
 };
 
@@ -51,6 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col">
+        <OrganizationSchema />
         <AnalyticsScripts />
         <PreloadLinks />
         <PreloadCriticalRoutes />

@@ -1,27 +1,27 @@
 #!/usr/bin/env npx tsx
 /**
- * Safe admin password reset — City Plus Pet Shop
+ * Safe admin password reset — City Pet Shop BD
  *
- * Upserts admin@citypetshopbd.com with role SUPER_ADMIN and a new password.
+ * Upserts admin@citypetshop.bd with role SUPER_ADMIN and a new password.
  * Loads .env.production.local (or .env.local) for DATABASE_URL.
  *
  * Usage (production):
  *   cd /var/www/cityplus/app
  *   ADMIN_PASSWORD='YourNewSecurePassword123!' npx tsx scripts/admin-reset.ts
  *
- * Or via npm:
- *   ADMIN_PASSWORD='...' npm run admin:reset
+ * Temporary (change after first login):
+ *   ADMIN_EMAIL=admin@citypetshop.bd ADMIN_PASSWORD='Admin 123' npx tsx scripts/admin-reset.ts
  *
  * Requirements:
  *   - DATABASE_URL must be set (from .env.production.local)
- *   - ADMIN_PASSWORD must be at least 12 characters
+ *   - ADMIN_PASSWORD must be at least 8 characters (12+ recommended for production)
  */
 import { config } from "dotenv";
 import { resolve } from "path";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 
-const ADMIN_EMAIL = "admin@citypetshopbd.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@citypetshop.bd";
 
 async function main() {
   // Load env: prefer .env.production.local, then .env.local
@@ -39,8 +39,8 @@ async function main() {
     process.exit(1);
   }
 
-  if (!adminPassword || adminPassword.length < 12) {
-    console.error("ERROR: ADMIN_PASSWORD must be set and at least 12 characters.");
+  if (!adminPassword || adminPassword.length < 8) {
+    console.error("ERROR: ADMIN_PASSWORD must be set and at least 8 characters.");
     console.error("Usage: ADMIN_PASSWORD='YourNewPassword123!' npx tsx scripts/admin-reset.ts");
     process.exit(1);
   }
@@ -85,7 +85,7 @@ async function main() {
     }
 
     console.log(`Admin reset complete: ${ADMIN_EMAIL}`);
-    console.log("Login at: https://citypetshopbd.com/admin/login");
+    console.log("Login at: https://citypetshop.bd/admin/login");
   } finally {
     await prisma.$disconnect();
   }
