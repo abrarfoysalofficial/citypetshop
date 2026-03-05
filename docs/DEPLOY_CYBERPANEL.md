@@ -9,7 +9,7 @@
 **Repo:** https://github.com/abrarfoysalofficial/citypetshop.bd
 
 **App path:** /var/www/cityplus/app  
-**Port:** 3001 (127.0.0.1 only) — PM2, ecosystem.config.js, and OpenLiteSpeed proxy target must all use 3001  
+**Port:** 3000 (127.0.0.1 only) — PM2, ecosystem.config.js, and OpenLiteSpeed proxy target must all use 3000  
 **Output:** Next.js standalone
 
 ---
@@ -176,7 +176,7 @@ ADMIN_EMAIL=admin@citypetshop.bd ADMIN_PASSWORD='Admin 123' npx tsx scripts/admi
 ### Step J: Verify site is live
 
 ```bash
-curl -sf http://127.0.0.1:3001/api/health
+curl -sf http://127.0.0.1:3000/api/health
 ```
 
 **Expected:** JSON with `"ok":true` or similar.
@@ -644,7 +644,7 @@ Output: public assets listed.
 
 ## 10. PM2 Start
 
-### 10.1 Start app with PM2 (port 3001)
+### 10.1 Start app with PM2 (port 3000)
 
 ```bash
 sudo -u cityplus bash -lc 'cd /var/www/cityplus/app && APP_DIR=/var/www/cityplus/app pm2 start ecosystem.config.js --env production'
@@ -657,7 +657,7 @@ sudo -u cityplus bash -lc 'cd /var/www/cityplus/app && APP_DIR=/var/www/cityplus
 sudo -u cityplus bash -lc 'pm2 list'
 grep -A2 env_production /var/www/cityplus/app/ecosystem.config.js
 ```
-Output: `cityplus` status `online`; `PORT: "3001"` in ecosystem.
+Output: `cityplus` status `online`; `PORT: "3000"` in ecosystem.
 
 ---
 
@@ -687,17 +687,17 @@ Output: `Active: active (running)` (after running the printed startup command).
 
 ---
 
-### 10.4 Health check (local, port 3001)
+### 10.4 Health check (local, port 3000)
 
 ```bash
-curl -sf http://127.0.0.1:3001/api/health
+curl -sf http://127.0.0.1:3000/api/health
 ```
 
 **Expected:** `{"status":"ok","timestamp":"...","database":"connected"}`.
 
 **Verify:**
 ```bash
-curl -s http://127.0.0.1:3001/api/health | jq .
+curl -s http://127.0.0.1:3000/api/health | jq .
 ```
 Output: JSON with `status` = `ok`.
 
@@ -727,7 +727,7 @@ RewriteRule ^(.*)$ https://citypetshop.bd/$1 [R=301,L]
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://citypetshop.bd/$1 [R=301,L]
 
-RewriteRule ^(.*)$ http://127.0.0.1:3001/$1 [P,L]
+RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
 ```
 
 4. Save
@@ -780,14 +780,14 @@ Output: `drwxr-xr-x` owned by `cityplus`.
 ## 13. Health and Route Verification
 
 ```bash
-curl -sf http://127.0.0.1:3001/api/health
+curl -sf http://127.0.0.1:3000/api/health
 curl -I https://citypetshop.bd/
 curl -I https://www.citypetshop.bd/
 curl -sf https://citypetshop.bd/api/health
 ```
 
 **Expected:**
-- `curl -sf http://127.0.0.1:3001/api/health`: `{"status":"ok","timestamp":"...","database":"connected"}`
+- `curl -sf http://127.0.0.1:3000/api/health`: `{"status":"ok","timestamp":"...","database":"connected"}`
 - `curl -I https://citypetshop.bd/`: `HTTP/2 200` or `302`
 - `curl -I https://www.citypetshop.bd/`: `HTTP/2 301` with `Location: https://citypetshop.bd/`
 - `curl -sf https://citypetshop.bd/api/health`: `{"status":"ok","timestamp":"...","database":"connected"}`
@@ -868,7 +868,7 @@ cp -r public .next/standalone/public 2>/dev/null || true
 cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
 APP_DIR=/var/www/cityplus/app pm2 startOrReload ecosystem.config.js --env production --update-env --only cityplus
 pm2 save
-curl -sf http://127.0.0.1:3001/api/health
+curl -sf http://127.0.0.1:3000/api/health
 ```
 
 ---

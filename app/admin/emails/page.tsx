@@ -17,7 +17,7 @@ const EMAIL_NOTIFICATIONS = [
 
 export default function AdminEmailsPage() {
   const [fromName, setFromName] = useState("City Plus Pet Shop");
-  const [fromAddress, setFromAddress] = useState("admin@citypluspetshop.com");
+  const [fromAddress, setFromAddress] = useState(process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "admin@citypetshop.bd");
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {

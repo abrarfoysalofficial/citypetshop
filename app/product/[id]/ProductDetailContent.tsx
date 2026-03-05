@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, Minus, Plus, GitCompare, Star, Check, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCart } from "@/context/CartContext";
-import { useCompare } from "@/context/CompareContext";
+import { useCart } from "@/store/CartContext";
+import { useCompare } from "@/store/CompareContext";
 import { getProductRichContent } from "@/lib/content";
 import SafeImage from "@/components/media/SafeImage";
 import LowStockBadge from "@/components/trust/LowStockBadge";
@@ -19,7 +19,7 @@ import type { Product, ProductVariation } from "@/src/data/types";
 import type { Product as CartProduct } from "@/lib/types";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
 
 function toCartProduct(p: Product): CartProduct {
   return {

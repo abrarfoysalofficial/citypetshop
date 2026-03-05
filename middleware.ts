@@ -16,8 +16,18 @@ function getClientIp(request: NextRequest): string {
     ?? "unknown";
 }
 
+/** Add x-request-id for correlation. Propagate from client or generate. */
+function withRequestId(request: NextRequest): Headers {
+  const headers = new Headers(request.headers);
+  if (!headers.get("x-request-id")) {
+    headers.set("x-request-id", crypto.randomUUID());
+  }
+  return headers;
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const requestHeaders = withRequestId(request);
 
   // Rate limit admin login attempts (credentials POST)
   if (
@@ -27,10 +37,12 @@ export async function middleware(request: NextRequest) {
     const ip = getClientIp(request);
     const rl = rateLimitSync(`admin-login:${ip}`, 5, 15 * 60 * 1000);
     if (!rl.ok) {
-      return NextResponse.json(
+      const res = NextResponse.json(
         { error: "Too many login attempts. Try again later." },
         { status: 429, headers: { "Retry-After": String(rl.retryAfter ?? 900) } }
       );
+      res.headers.set("x-request-id", requestHeaders.get("x-request-id") ?? "");
+      return res;
     }
   }
 
@@ -75,21 +87,24 @@ export async function middleware(request: NextRequest) {
           }
         }
       }
-      return NextResponse.next();
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
     if (pathname.startsWith("/admin/") || pathname === "/admin") {
       const isAdmin = token && adminRoles.includes((token as { role?: string }).role ?? "");
-      if (!isAdmin) return NextResponse.redirect(buildRedirectUrl(request, "/admin/login"));
-      return NextResponse.next();
+      if (!isAdmin) {
+        if (isLoggedIn) return NextResponse.redirect(buildRedirectUrl(request, "/"));
+        return NextResponse.redirect(buildRedirectUrl(request, "/admin/login"));
+      }
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
     if (pathname.startsWith("/account/") || pathname === "/account") {
       if (!isLoggedIn) return NextResponse.redirect(buildRedirectUrl(request, "/login"));
-      return NextResponse.next();
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Demo mode: use demo_session cookie
@@ -102,20 +117,20 @@ export async function middleware(request: NextRequest) {
     if ((session === "user" || session === "admin") && pathname === "/login") {
       return NextResponse.redirect(buildRedirectUrl(request, "/account"));
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (pathname.startsWith("/admin/") || pathname === "/admin") {
     if (session !== "admin") return NextResponse.redirect(buildRedirectUrl(request, "/admin/login"));
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (pathname.startsWith("/account/") || pathname === "/account") {
     if (session !== "user" && session !== "admin") return NextResponse.redirect(buildRedirectUrl(request, "/login"));
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
@@ -127,6 +142,6 @@ export const config = {
     "/login",
     "/auth/:path*",
     "/dev/:path*",
-    "/api/auth/:path*",
+    "/api/:path*",
   ],
 };

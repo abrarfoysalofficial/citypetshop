@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { CONTACT_EMAIL } from "@/lib/constants";
 
 export default function ContactPage() {
   return (
@@ -36,7 +37,7 @@ export default function ContactPage() {
             </li>
             <li className="flex items-center gap-3">
               <Mail className="h-5 w-5 shrink-0 text-secondary" />
-              <a href="mailto:info@citypluspetshop.com" className="hover:text-primary">info@citypluspetshop.com</a>
+              <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-primary">{CONTACT_EMAIL}</a>
             </li>
             <li className="flex items-start gap-3">
               <Clock className="mt-0.5 h-5 w-5 shrink-0 text-secondary" />

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
+import { getDefaultTenantId } from "@/lib/tenant";
 import SafeImage from "@/components/media/SafeImage";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -13,13 +14,14 @@ import {
   Mail,
   ExternalLink,
 } from "lucide-react";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshopbd.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
 const ABOUT_URL = `${SITE_URL.replace(/\/$/, "")}/about`;
 
 const DEFAULT_FOUNDER = {
-  name: "Sheikh Shakil",
+  name: "Our Founder",
   title: "Founder",
-  bioEn: "City Plus Pet Shop এর প্রতিষ্ঠাতা। পোষা প্রাণীর যত্নে আমরা নিবেদিত।",
+  bioEn:
+    "City Plus Pet Shop started with a simple belief: every pet deserves the best. From a small shop in Dhaka to serving pet owners across Bangladesh, we remain committed to authentic dog food, cat food, and premium pet products. Your trust drives us every day.",
   imageUrl: "/team/founder.jpg",
   whatsapp: null as string | null,
   phone: null as string | null,
@@ -31,28 +33,20 @@ const DEFAULT_TEAM: {
   email: string | null;
   imageUrl: string | null;
   whatsapp: string | null;
-}[] = [
-  {
-    name: "Abrar Foysal",
-    title: "Founder & CEO, Fresher IT BD",
-    email: "abrar@fresheritbd.com",
-    imageUrl: "/team/developer.jpg",
-    whatsapp: "8801929524975",
-  },
-];
+}[] = [];
 
 export const metadata: Metadata = {
   title:
     "আমাদের সম্পর্কে | About Us - City Plus Pet Shop | পোষা প্রাণীর খাবার ও এক্সেসরিজ | Pet Food Bangladesh",
   description:
-    "City Plus Pet Shop - ঢাকার মিরপুর ২ থেকে পোষা প্রাণীর জন্য ১০০% অরিজিনাল খাবার, ঔষধ ও প্রিমিয়াম এক্সেসরিজ। Premium pet food, medicine, accessories in Dhaka, Bangladesh. Fast delivery, authentic products.",
+    "City Plus Pet Shop — trusted pet shop in Bangladesh. 100% authentic dog food, cat food, and premium pet products. Fast delivery, genuine brands, expert support. Your pet, our passion.",
   alternates: {
     canonical: ABOUT_URL,
   },
   openGraph: {
     title: "আমাদের সম্পর্কে | About Us - City Plus Pet Shop | Pet Food & Accessories Bangladesh",
     description:
-      "১০০% অরিজিনাল পোষা প্রাণীর খাবার, দ্রুত ডেলিভারি, বিশেষজ্ঞ পরামর্শ। Premium pet food, medicine, accessories in Dhaka.",
+      "Trusted pet shop in Bangladesh. Authentic dog food BD, cat food BD, and premium pet products. Fast delivery, expert support.",
     url: ABOUT_URL,
     type: "website",
     locale: "bn_BD",
@@ -64,12 +58,13 @@ export const metadata: Metadata = {
   },
   keywords: [
     "pet shop Bangladesh",
-    "পোষা প্রাণীর দোকান",
-    "pet food Dhaka",
-    "cat food dog food",
-    "মিরপুর পেট শপ",
-    "City Plus Pet Shop",
+    "pet shop in Bangladesh",
+    "dog food BD",
+    "cat food BD",
     "authentic pet products",
+    "pet food Dhaka",
+    "City Plus Pet Shop",
+    "City Pet Shop BD",
   ],
 };
 
@@ -146,7 +141,7 @@ export default async function AboutPage() {
 
   let sitePhone: string | null = null;
   try {
-    sitePhone = (await prisma.siteSettings.findUnique({ where: { id: "default" } }))?.phone ?? null;
+    sitePhone = (await prisma.tenantSettings.findUnique({ where: { tenantId: getDefaultTenantId() } }))?.phone ?? null;
   } catch {
     //
   }
@@ -162,7 +157,7 @@ export default async function AboutPage() {
     "@type": "AboutPage",
     name: "আমাদের সম্পর্কে | About Us - City Plus Pet Shop",
     description:
-      "City Plus Pet Shop - ঢাকার মিরপুর ২ থেকে পোষা প্রাণীর জন্য ১০০% অরিজিনাল খাবার, ঔষধ ও প্রিমিয়াম এক্সেসরিজ।",
+      "City Plus Pet Shop — trusted pet shop in Bangladesh. Authentic dog food, cat food, and premium pet products. Fast delivery, expert support.",
     url: ABOUT_URL,
     mainEntity: {
       "@type": "Organization",
@@ -210,7 +205,7 @@ export default async function AboutPage() {
                   id="about-hero-heading"
                   className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl"
                 >
-                  আমাদের সম্পর্কে{" "}
+                  About Us{" "}
                   <span className="block text-primary sm:inline">
                     City Plus Pet Shop
                   </span>
@@ -233,11 +228,17 @@ export default async function AboutPage() {
             <h2 id="about-intro-heading" className="sr-only">
               About Us
             </h2>
-            <div className="prose prose-slate max-w-none">
+            <div className="prose prose-slate max-w-none space-y-4">
               <p className="text-base leading-relaxed text-slate-700 sm:text-lg">
-                সিটি প্লাস পেট শপ-এ আপনাদের স্বাগতম। আমরা বিশ্বাস করি আপনার পোষা প্রাণীটি কেবল
-                একটি প্রাণী নয়, বরং আপনার পরিবারের একজন সদস্য। আর তাই, তাদের সুস্থতা এবং আনন্দের
-                জন্য সেরা মানের পণ্য সরবরাহ করাই আমাদের মূল লক্ষ্য।
+                Welcome to City Plus Pet Shop — your trusted pet shop in Bangladesh. We believe your
+                pet is not just an animal, but a family member. That&apos;s why we&apos;re
+                committed to bringing you the best quality dog food, cat food, and authentic pet
+                products across Bangladesh.
+              </p>
+              <p className="text-base leading-relaxed text-slate-700 sm:text-lg">
+                From premium dog food BD and cat food BD to essential medicines and accessories, we
+                deliver genuine brands with safe packaging and reliable support. Your pet&apos;s
+                health and happiness are our priority.
               </p>
             </div>
           </div>
@@ -254,14 +255,15 @@ export default async function AboutPage() {
               className="text-xl font-bold text-slate-900 sm:text-2xl"
             >
               <span className="border-l-4 border-primary pl-3">
-                আমাদের লক্ষ্য
+                Our Mission
               </span>
             </h2>
             <p className="mt-6 text-base leading-relaxed text-slate-700 sm:text-lg">
-              ঢাকার মিরপুর ২ থেকে শুরু হওয়া আমাদের এই পথচলার মূল উদ্দেশ্য হলো পোষা প্রাণীদের জন্য
-              ১০০% অরিজিনাল খাবার, প্রয়োজনীয় ঔষধ এবং প্রিমিয়াম এক্সেসরিজ সরাসরি আপনার দোরগোড়ায়
-              পৌঁছে দেওয়া। আমরা জানি, সঠিক পুষ্টি এবং যত্নই পারে একটি প্রাণীকে দীর্ঘায়ু ও প্রাণবন্ত
-              রাখতে।
+              Our mission is to make premium pet care accessible to every pet owner in Bangladesh.
+              We deliver 100% authentic dog food, cat food, medicines, and accessories directly to
+              your doorstep. Fast delivery, genuine brands, and expert support — that&apos;s our
+              promise. We know that proper nutrition and care make the difference between a good
+              life and a great one for your pet.
             </p>
           </div>
         </section>
@@ -276,28 +278,28 @@ export default async function AboutPage() {
               id="features-heading"
               className="text-center text-xl font-bold text-slate-900 sm:text-2xl"
             >
-              আমরা কেন অনন্য?
+              Why Trust Us
             </h2>
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <FeatureCard
                 icon={ShieldCheck}
-                title="১০০% অথেন্টিক পণ্য"
-                description="আমরা সরাসরি অনুমোদিত আমদানিকারক থেকে পণ্য সংগ্রহ করি।"
+                title="100% Authentic Products"
+                description="We source directly from approved distributors. Every dog food, cat food, and pet product is genuine."
               />
               <FeatureCard
                 icon={Truck}
-                title="দ্রুত ডেলিভারি"
-                description="আপনার জরুরি প্রয়োজনে আমরা দ্রুততম সময়ে পণ্য পৌঁছানোর নিশ্চয়তা দেই।"
+                title="Fast Delivery"
+                description="Quick delivery across Dhaka and nationwide. Your pet's essentials when you need them."
               />
               <FeatureCard
                 icon={Tag}
-                title="সাশ্রয়ী মূল্য"
-                description="আমরা বাজারের সেরা মূল্যে প্রিমিয়াম কোয়ালিটি নিশ্চিত করি।"
+                title="Best Value"
+                description="Competitive prices without compromising quality. Premium pet products at fair prices."
               />
               <FeatureCard
                 icon={HeartPulse}
-                title="বিশেষজ্ঞ পরামর্শ"
-                description="আমাদের অভিজ্ঞ টিম আপনাকে আপনার পোষা প্রাণীর জন্য সঠিক খাবার ও যত্ন নির্বাচনে সহায়তা করে।"
+                title="Expert Support"
+                description="Our team helps you choose the right food and care for your pet. WhatsApp support available."
               />
             </div>
           </div>
@@ -355,7 +357,7 @@ export default async function AboutPage() {
               Team
             </h2>
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
-              {teamData.map((member, i) => (
+              {teamData.length > 0 ? teamData.map((member, i) => (
                 <article
                   key={i}
                   className="flex flex-col items-center rounded-xl border border-slate-200 bg-slate-50 p-6 text-center shadow-sm"
@@ -394,7 +396,14 @@ export default async function AboutPage() {
                     </a>
                   )}
                 </article>
-              ))}
+              )) : (
+                <div className="col-span-full rounded-xl border border-slate-200 bg-slate-50 p-8 text-center">
+                  <p className="text-base text-slate-700">
+                    Our dedicated team is here to serve you. Need help choosing the right pet food or
+                    accessories? Reach us on WhatsApp for quick support.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </section>

@@ -7,7 +7,7 @@
 *(If your path is `/home/cloudpanel/htdocs/citypetshop.bd`, replace `citypetshop` with `cloudpanel` in all commands.)*  
 **Repo:** https://github.com/abrarfoysalofficial/citypetshop.bd
 
-**Stack:** Node.js 20 · PM2 · PostgreSQL · Next.js standalone · Port 3001
+**Stack:** Node.js 20 · PM2 · PostgreSQL · Next.js standalone · Port 3000
 
 ---
 
@@ -107,9 +107,11 @@ NODE_ENV=production
 NEXT_PUBLIC_SITE_URL=https://citypetshop.bd
 NEXTAUTH_URL=https://citypetshop.bd
 APP_URL=https://citypetshop.bd
-DATABASE_URL=postgresql://cityplus_app:${DB_PASS}@127.0.0.1:5432/cityplus_db
+DATABASE_URL=postgresql://cityplus_app:${DB_PASS}@127.0.0.1:5432/cityplus_db?connection_limit=10&connect_timeout=10&pool_timeout=20
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 AUTH_TRUST_HOST=true
+# COOKIE_DOMAIN=.citypetshop.bd   # Uncomment if serving both www and non-www
+# SENTRY_DSN=                     # Optional: enable Sentry for error tracking
 MASTER_SECRET=${MASTER_SECRET}
 UPLOAD_DIR=/home/citypetshop/htdocs/citypetshop.bd/uploads
 ADMIN_EMAIL=admin@citypetshop.bd
@@ -193,29 +195,54 @@ sudo -u citypetshop bash -lc 'ADMIN_EMAIL=admin@citypetshop.bd ADMIN_PASSWORD="A
 ### Step L: Verify site is live
 
 ```bash
-curl -sf http://127.0.0.1:3001/api/health
+curl -sf http://127.0.0.1:3000/api/health
 ```
 
-**Expected:** JSON with `"ok":true` or similar.
+**Expected:** JSON with `"status":"ok"` and `"database":"connected"`.
+
+```bash
+# DB-only health (for load balancer probes)
+curl -sf http://127.0.0.1:3000/api/health/db
+```
 
 ---
 
-## CloudPanel Vhost / Reverse Proxy
+## CloudPanel Vhost / Reverse Proxy (Nginx)
 
-Ensure your CloudPanel vhost proxies to `http://127.0.0.1:3001`. In CloudPanel:
+Admin login and sessions require correct proxy headers. Ensure your vhost forwards:
 
-1. Go to **Sites** → **citypetshop.bd** → **Vhost**
-2. Add or edit **Reverse Proxy**:
-   - **Domain:** citypetshop.bd (and www.citypetshop.bd if needed)
-   - **Backend:** `http://127.0.0.1:3001`
-   - **WebSocket:** enabled if needed
+- `X-Forwarded-Host`
+- `X-Forwarded-Proto` (must be `https` for secure cookies)
+- `X-Forwarded-For`
 
-Or add this to your vhost config (LiteSpeed/OpenLiteSpeed):
+**CloudPanel:** Sites → citypetshop.bd → Vhost → Reverse Proxy:
+- **Backend:** `http://127.0.0.1:3000`
+- **WebSocket:** enabled if needed
+
+**Nginx vhost** (CloudPanel often uses Nginx):
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+}
+```
+
+**LiteSpeed/OpenLiteSpeed** (if used):
 
 ```apache
 ProxyPreserveHost On
-ProxyPass / http://127.0.0.1:3001/
-ProxyPassReverse / http://127.0.0.1:3001/
+RequestHeader set X-Forwarded-Proto "https"
+ProxyPass / http://127.0.0.1:3000/
+ProxyPassReverse / http://127.0.0.1:3000/
 ```
 
 ---
@@ -239,6 +266,17 @@ sudo chown -R citypetshop:citypetshop /home/citypetshop/htdocs/citypetshop.bd/pu
 
 ---
 
+## Production Redeploy Plan
+
+See **[docs/PRODUCTION_REDEPLOY_PLAN.md](PRODUCTION_REDEPLOY_PLAN.md)** for:
+- Folder structure (releases, shared, logs)
+- Pre-deploy backup and post-deploy smoke tests
+- Nginx config validation
+- Rollback strategy
+- Copy-paste command blocks
+
+---
+
 ## Quick re-deploy (after initial setup)
 
 ```bash
@@ -251,15 +289,96 @@ cp -r public .next/standalone/public 2>/dev/null || true
 cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
 APP_DIR=/home/citypetshop/htdocs/citypetshop.bd pm2 startOrReload ecosystem.config.js --env production --update-env --only cityplus
 pm2 save
-curl -sf http://127.0.0.1:3001/api/health
+curl -sf http://127.0.0.1:3000/api/health
 ```
+
+---
+
+## Production Runbook (Admin + PostgreSQL Stability)
+
+### Health checks (run after deploy)
+
+```bash
+# 1. App health (DB + env)
+curl -s http://127.0.0.1:3000/api/health | jq .
+
+# Expected: {"status":"ok","database":"connected","checks":{"env":"ok","database":"ok"}}
+
+# 2. Via HTTPS (through proxy)
+curl -s https://citypetshop.bd/api/health | jq .
+
+# 3. Admin login page loads
+curl -sI https://citypetshop.bd/admin/login | head -1
+# Expected: HTTP/2 200
+```
+
+### Verify admin login
+
+1. Open https://citypetshop.bd/admin/login in a browser (HTTPS required for cookies).
+2. Log in with admin@citypetshop.bd and your password.
+3. You should land on `/admin` dashboard. If redirected to `/login`, proxy headers or `NEXTAUTH_URL` are wrong.
+
+### Logs and debugging
+
+```bash
+# PM2 logs (errors, startup messages)
+pm2 logs cityplus --lines 100
+
+# Startup should show: [startup] Environment validated ✓
+#                      [startup] PostgreSQL connected ✓
+
+# If DB fails at startup: check DATABASE_URL, PostgreSQL service
+sudo systemctl status postgresql
+```
+
+### PostgreSQL connectivity
+
+```bash
+# Health endpoint tests DB internally
+curl -s http://127.0.0.1:3000/api/health | jq .database
+# "connected" = OK
+```
+
+---
+
+## Database Migration & Backup
+
+See **[docs/DB_MIGRATION_RUNBOOK.md](DB_MIGRATION_RUNBOOK.md)** for:
+- Non-destructive migration (`prisma migrate deploy`)
+- Backup strategy (pg_dump before migration)
+- PostgreSQL VPS settings (max_connections, pool)
+- DB health endpoint (`/api/health/db`)
+
+---
+
+## Observability & Troubleshooting
+
+See **[docs/OBSERVABILITY_TROUBLESHOOTING.md](OBSERVABILITY_TROUBLESHOOTING.md)** for:
+- Where to check logs (PM2, Nginx, PostgreSQL)
+- Structured log format (scope, requestId, errorCode)
+- Debug steps for 502, 500, login loop, DB timeout
+- Optional Sentry (`SENTRY_DSN`)
+
+---
+
+## Auth Production Guide
+
+See **[docs/AUTH_PRODUCTION.md](AUTH_PRODUCTION.md)** for:
+- Environment variables checklist
+- Nginx reverse proxy config (required headers)
+- Cookie configuration (secure, sameSite, domain)
+- Smoke test plan (login, session, logout, protected routes)
 
 ---
 
 ## Troubleshooting
 
-**Admin redirects to customer login:** Use https://citypetshop.bd/admin/login directly. Ensure `NEXTAUTH_URL=https://citypetshop.bd` and `NEXTAUTH_SECRET` is set in `.env.production.local`.
+**Admin redirects to customer login:** Use https://citypetshop.bd/admin/login directly. Ensure `NEXTAUTH_URL=https://citypetshop.bd`, `NEXTAUTH_SECRET` (32+ chars), and `AUTH_TRUST_HOST=true` in `.env.production.local`.
+
+**Session/cookie not persisting:** Ensure Nginx passes `X-Forwarded-Proto: https` and `X-Forwarded-Host`. NextAuth uses secure cookies in production; HTTP will fail.
 
 **502 Bad Gateway:** PM2 app may not be running. Check: `pm2 status` and `pm2 logs cityplus`.
+
+**Health returns 503 / database disconnected:** Check `pm2 logs cityplus` for DB errors. Verify PostgreSQL is running and `DATABASE_URL` is correct. Run `npx prisma migrate deploy` if migrations are pending.
 
 **Permission denied:** Ensure files are owned by `citypetshop`: `sudo chown -R citypetshop:citypetshop /home/citypetshop/htdocs/citypetshop.bd`

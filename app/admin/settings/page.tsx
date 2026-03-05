@@ -15,6 +15,8 @@ import {
   Truck,
 } from "lucide-react";
 import type { SiteSettingsRow } from "@/lib/schema";
+import { CTA_COLOR } from "@/lib/theme-constants";
+import { CONTACT_EMAIL } from "@/lib/constants";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Partial<SiteSettingsRow>>({
@@ -27,9 +29,9 @@ export default function AdminSettingsPage() {
     sales_top_bar_enabled: true,
     delivery_inside_dhaka: 70,
     delivery_outside_dhaka: 130,
-    primary_color: "#0f172a",
+    primary_color: "#5cd4ff",
     secondary_color: "#06b6d4",
-    accent_color: "#f97316",
+    accent_color: CTA_COLOR,
   });
   
   const [loading, setLoading] = useState(true);
@@ -311,7 +313,7 @@ export default function AdminSettingsPage() {
               value={settings.email || ""}
               onChange={(e) => setSettings({ ...settings, email: e.target.value })}
               className="w-full rounded-lg border border-slate-200 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="info@citypluspetshop.com"
+              placeholder={CONTACT_EMAIL}
             />
           </div>
         </div>
@@ -482,13 +484,13 @@ export default function AdminSettingsPage() {
             <div className="flex gap-2">
               <input
                 type="color"
-                value={settings.primary_color || "#0f172a"}
+                value={settings.primary_color || "#5cd4ff"}
                 onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
                 className="h-12 w-16 rounded-lg border border-slate-200 cursor-pointer"
               />
               <input
                 type="text"
-                value={settings.primary_color || "#0f172a"}
+                value={settings.primary_color || "#5cd4ff"}
                 onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
                 className="flex-1 rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
@@ -522,13 +524,13 @@ export default function AdminSettingsPage() {
             <div className="flex gap-2">
               <input
                 type="color"
-                value={settings.accent_color || "#f97316"}
+                value={settings.accent_color || CTA_COLOR}
                 onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}
                 className="h-12 w-16 rounded-lg border border-slate-200 cursor-pointer"
               />
               <input
                 type="text"
-                value={settings.accent_color || "#f97316"}
+                value={settings.accent_color || CTA_COLOR}
                 onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}
                 className="flex-1 rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />

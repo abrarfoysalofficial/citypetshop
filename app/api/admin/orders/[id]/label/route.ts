@@ -4,6 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { requireAdminAuth } from "@/lib/admin-auth";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
@@ -16,8 +17,9 @@ export async function GET(
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
-  const order = await prisma.order.findUnique({
-    where: { id: params.id },
+  const tenantId = getDefaultTenantId();
+  const order = await prisma.order.findFirst({
+    where: { id: params.id, tenantId },
     select: {
       id: true,
       shippingName: true,
@@ -42,7 +44,8 @@ export async function GET(
 
     const { width, height } = page.getSize();
     const black = rgb(0, 0, 0);
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "citypluspetshop.com";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
+    const siteUrl = baseUrl.startsWith("http") ? new URL(baseUrl).hostname : baseUrl;
 
     let y = height - 20;
 

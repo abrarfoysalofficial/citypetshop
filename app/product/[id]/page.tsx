@@ -1,15 +1,18 @@
-export const dynamic = "force-dynamic";
+// Phase 1: ISR — revalidate every 2 min
+export const revalidate = 120;
+
 import Link from "next/link";
 import NextDynamic from "next/dynamic";
 import type { Metadata } from "next";
 import { getProductById, getRecommendedProducts } from "@/src/data/provider";
 import ProductDetailContent from "./ProductDetailContent";
+import ProductSchema from "@/components/seo/ProductSchema";
 import LazyBelowFold from "@/components/ui/LazyBelowFold";
 
 const RecommendedProducts = NextDynamic(() => import("@/components/products/RecommendedProducts"), { ssr: true });
 const RecentlyViewedProducts = NextDynamic(() => import("@/components/products/RecentlyViewedProducts"), { ssr: true });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
 
 export async function generateMetadata({
   params,
@@ -59,8 +62,10 @@ export default async function ProductPage({
     );
   }
 
+  const productUrl = `${SITE_URL}/product/${id}`;
   return (
     <>
+      <ProductSchema product={product} productUrl={productUrl} />
       <ProductDetailContent product={product} />
       <LazyBelowFold>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

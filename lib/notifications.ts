@@ -12,6 +12,7 @@
  */
 
 import { Resend } from "resend";
+import { DEFAULT_EMAIL_FROM, DEFAULT_SUPPORT_EMAIL } from "@/lib/constants";
 
 export interface NotificationResult {
   ok: boolean;
@@ -92,17 +93,33 @@ export async function sendOrderStatusSms(
   phone: string,
   orderId: string,
   status: string,
-  trackingCode?: string
+  trackingCode?: string,
+  tenantId?: string
 ): Promise<NotificationResult> {
+  let siteName = "City Plus Pet Shop";
+  if (tenantId && process.env.DATABASE_URL) {
+    try {
+      const { prisma } = await import("@/lib/db");
+      const settings = await prisma.tenantSettings.findUnique({
+        where: { tenantId },
+        select: { siteNameEn: true },
+      });
+      if (settings?.siteNameEn) siteName = settings.siteNameEn;
+    } catch {
+      // Use default on error
+    }
+  }
+  const shortId = orderId.slice(-8).toUpperCase();
+  const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "01XXXXXXXXX";
   const statusMessages: Record<string, string> = {
-    confirmed: `Your order #${orderId.slice(-8).toUpperCase()} has been confirmed. City Plus Pet Shop.`,
-    processing: `Your order #${orderId.slice(-8).toUpperCase()} is being processed. City Plus Pet Shop.`,
-    shipped: `Your order #${orderId.slice(-8).toUpperCase()} has been shipped.${trackingCode ? ` Tracking: ${trackingCode}` : ""} City Plus Pet Shop.`,
-    handed_to_courier: `Your order #${orderId.slice(-8).toUpperCase()} is on the way!${trackingCode ? ` Track: ${trackingCode}` : ""} City Plus Pet Shop.`,
-    delivered: `Your order #${orderId.slice(-8).toUpperCase()} has been delivered. Thank you for shopping with City Plus Pet Shop!`,
-    cancelled: `Your order #${orderId.slice(-8).toUpperCase()} has been cancelled. Contact us: ${process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "01XXXXXXXXX"}. City Plus Pet Shop.`,
+    confirmed: `Your order #${shortId} has been confirmed. ${siteName}.`,
+    processing: `Your order #${shortId} is being processed. ${siteName}.`,
+    shipped: `Your order #${shortId} has been shipped.${trackingCode ? ` Tracking: ${trackingCode}` : ""} ${siteName}.`,
+    handed_to_courier: `Your order #${shortId} is on the way!${trackingCode ? ` Track: ${trackingCode}` : ""} ${siteName}.`,
+    delivered: `Your order #${shortId} has been delivered. Thank you for shopping with ${siteName}!`,
+    cancelled: `Your order #${shortId} has been cancelled. Contact us: ${supportPhone}. ${siteName}.`,
   };
-  const message = statusMessages[status] ?? `Your order #${orderId.slice(-8).toUpperCase()} status: ${status}. City Plus Pet Shop.`;
+  const message = statusMessages[status] ?? `Your order #${shortId} status: ${status}. ${siteName}.`;
   return sendSms(phone, message);
 }
 
@@ -116,25 +133,26 @@ function getResend(): Resend | null {
   return resendClient;
 }
 
-const FROM_EMAIL = process.env.EMAIL_FROM ?? "noreply@citypluspetshop.com";
+function getFromEmail(): string {
+  return process.env.EMAIL_FROM ?? DEFAULT_EMAIL_FROM;
+}
 
 export async function sendEmail(opts: {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  from?: string;
 }): Promise<NotificationResult> {
   const resend = getResend();
   if (!resend) {
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[EMAIL STUB] To: ${opts.to} | Subject: ${opts.subject}`);
-      return { ok: true, provider: "console-stub" };
-    }
+    const { logWarn } = await import("@/lib/logger");
+    logWarn("notifications", "RESEND_API_KEY not configured. Email not sent.");
     return { ok: false, error: "RESEND_API_KEY not configured." };
   }
   try {
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: opts.from ?? getFromEmail(),
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
@@ -148,6 +166,7 @@ export async function sendEmail(opts: {
 }
 
 export async function sendOrderConfirmationEmail(opts: {
+  tenantId: string;
   to: string;
   orderId: string;
   customerName: string;
@@ -156,22 +175,45 @@ export async function sendOrderConfirmationEmail(opts: {
   shippingAddress: string;
   paymentMethod: string;
 }): Promise<NotificationResult> {
-  const { to, orderId, customerName, items, total, shippingAddress, paymentMethod } = opts;
+  const { tenantId, to, orderId, customerName, items, total, shippingAddress, paymentMethod } = opts;
   const shortId = orderId.slice(-8).toUpperCase();
+
+  let siteName = "City Plus Pet Shop";
+  let supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? DEFAULT_SUPPORT_EMAIL;
+  let primaryColor = "#5cd4ff";
+  let secondaryColor = "#06b6d4";
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const { prisma } = await import("@/lib/db");
+      const settings = await prisma.tenantSettings.findUnique({
+        where: { tenantId },
+        select: { siteNameEn: true, email: true, primaryColor: true, secondaryColor: true },
+      });
+      if (settings?.siteNameEn) siteName = settings.siteNameEn;
+      if (settings?.email) supportEmail = settings.email;
+      if (settings?.primaryColor) primaryColor = settings.primaryColor;
+      if (settings?.secondaryColor) secondaryColor = settings.secondaryColor;
+    } catch {
+      // Use defaults on error
+    }
+  }
+
   const itemsHtml = items
     .map((i) => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${i.name}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${i.quantity}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right">৳${i.price.toLocaleString()}</td></tr>`)
     .join("");
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const html = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;padding:20px">
-  <div style="background:#0f172a;padding:20px;text-align:center;border-radius:8px 8px 0 0">
-    <h1 style="color:#fff;margin:0;font-size:24px">City Plus Pet Shop</h1>
+  <div style="background:${primaryColor};padding:20px;text-align:center;border-radius:8px 8px 0 0">
+    <h1 style="color:#fff;margin:0;font-size:24px">${siteName}</h1>
   </div>
   <div style="background:#fff;padding:30px;border:1px solid #eee;border-top:none">
-    <h2 style="color:#0f172a">Order Confirmed! 🎉</h2>
+    <h2 style="color:${primaryColor}">Order Confirmed! 🎉</h2>
     <p>Dear ${customerName},</p>
     <p>Thank you for your order. We've received your order and will process it shortly.</p>
     <div style="background:#f8fafc;padding:15px;border-radius:8px;margin:20px 0">
@@ -191,23 +233,23 @@ export async function sendOrderConfirmationEmail(opts: {
       <tfoot>
         <tr>
           <td colspan="2" style="padding:10px;text-align:right;font-weight:bold">Total:</td>
-          <td style="padding:10px;text-align:right;font-weight:bold;color:#0f172a">৳${total.toLocaleString()}</td>
+          <td style="padding:10px;text-align:right;font-weight:bold;color:${primaryColor}">৳${total.toLocaleString()}</td>
         </tr>
       </tfoot>
     </table>
-    <p style="margin-top:20px">You can track your order at: <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/track-order" style="color:#06b6d4">Track Order</a></p>
-    <p>Questions? Contact us at ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@citypluspetshop.com"}</p>
+    <p style="margin-top:20px">You can track your order at: <a href="${siteUrl}/track-order" style="color:${secondaryColor}">Track Order</a></p>
+    <p>Questions? Contact us at ${supportEmail}</p>
   </div>
   <div style="text-align:center;padding:15px;color:#888;font-size:12px">
-    © ${new Date().getFullYear()} City Plus Pet Shop. All rights reserved.
+    © ${new Date().getFullYear()} ${siteName}. All rights reserved.
   </div>
 </body>
 </html>`;
 
   return sendEmail({
     to,
-    subject: `Order Confirmed #${shortId} – City Plus Pet Shop`,
+    subject: `Order Confirmed #${shortId} – ${siteName}`,
     html,
-    text: `Order #${shortId} confirmed. Total: ৳${total}. Track at: ${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/track-order`,
+    text: `Order #${shortId} confirmed. Total: ৳${total}. Track at: ${siteUrl}/track-order`,
   });
 }

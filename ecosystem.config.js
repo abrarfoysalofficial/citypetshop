@@ -13,7 +13,8 @@ module.exports = {
       exec_mode: "fork",
       env_production: {
         NODE_ENV: "production",
-        PORT: "3001",
+        PORT: "3000",
+        APP_DIR: process.env.APP_DIR || "/home/citypetshop/htdocs/citypetshop.bd",
       },
       max_memory_restart: "1G",
       autorestart: true,

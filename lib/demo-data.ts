@@ -1,6 +1,7 @@
 /**
  * Demo/mock data for admin panel when Supabase is not configured or in demo mode.
  */
+import { CONTACT_EMAIL } from "@/lib/constants";
 import type { ProductRow } from "@/lib/schema";
 import type { SiteSettingsRow } from "@/lib/schema";
 import type { PaymentGatewayRow } from "@/lib/schema";
@@ -88,9 +89,9 @@ export const DEMO_SITE_SETTINGS: Partial<SiteSettingsRow> = {
   site_name_bn: null,
   tagline_en: "Your pet, our passion",
   tagline_bn: null,
-  primary_color: "#0f172a",
+  primary_color: "#5cd4ff",
   secondary_color: "#06b6d4",
-  accent_color: "#f97316",
+  accent_color: "#f39221",
   font_family: null,
   button_style: null,
   navbar_links: [],
@@ -102,7 +103,7 @@ export const DEMO_SITE_SETTINGS: Partial<SiteSettingsRow> = {
   address_en: "Mirpur 2, Borobag, Dhaka 1216",
   address_bn: null,
   phone: "+880 1643-390045",
-  email: "info@citypluspetshop.com",
+  email: CONTACT_EMAIL,
   whatsapp_number: null,
   hero_slider: [],
   side_banners: [],

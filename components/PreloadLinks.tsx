@@ -35,7 +35,7 @@ export function usePrefetch() {
   const prefetch = useCallback(
     (href: string) => {
       if (!shouldPrefetch(href)) return;
-      const url = new URL(href, typeof window !== "undefined" ? window.location.origin : "https://citypetshopbd.com");
+      const url = new URL(href, typeof window !== "undefined" ? window.location.origin : "https://citypetshop.bd");
       const path = url.pathname + url.search;
       if (path === pathname) return;
       router.prefetch(path);

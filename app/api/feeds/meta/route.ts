@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -8,13 +9,14 @@ export const dynamic = "force-dynamic";
  * Meta (Facebook) product feed - Catalog format for dynamic ads.
  */
 export async function GET() {
+  const tenantId = getDefaultTenantId();
   const products = await prisma.product.findMany({
-    where: { isActive: true },
+    where: { tenantId, deletedAt: null, isActive: true },
     include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },
     take: 1000,
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://citypluspetshop.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://citypetshop.bd";
   const items = products.map((p) => {
     const id = p.id;
     const title = p.nameEn;

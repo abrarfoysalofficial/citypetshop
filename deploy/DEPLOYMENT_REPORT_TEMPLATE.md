@@ -47,17 +47,17 @@
 
 - [ ] pm2 restart cityplus OK
 - [ ] pm2 save OK
-- [ ] Port 3001 listening
-- [ ] curl http://127.0.0.1:3001/api/health → 200
+- [ ] Port 3000 listening
+- [ ] curl http://127.0.0.1:3000/api/health → 200
 - [ ] systemctl restart lsws OK
 
 ---
 
 ## End-to-end (Phase G)
 
-- [ ] curl -I https://citypetshopbd.com/ → 200
-- [ ] curl -I https://citypetshopbd.com/admin → 302 (redirect to login) or 200
-- [ ] curl -I https://citypetshopbd.com/admin/login → 200
+- [ ] curl -I https://citypetshop.bd/ → 200
+- [ ] curl -I https://citypetshop.bd/admin → 302 (redirect to login) or 200
+- [ ] curl -I https://citypetshop.bd/admin/login → 200
 - [ ] No Location header points to localhost
 
 ---

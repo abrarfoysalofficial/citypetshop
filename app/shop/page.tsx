@@ -1,14 +1,12 @@
-export const dynamic = "force-dynamic";
+// Phase 1: ISR — revalidate every 5 min
+export const revalidate = 300;
 
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { getProducts } from "@/src/data/provider";
+import { getProducts, searchProducts } from "@/src/data/provider";
 import ShopClient from "./ShopClient";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypluspetshop.com";
-
-// Phase 1: 5 min revalidate for product list
-export const revalidate = 300;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
 
 export const metadata: Metadata = {
   title: "Shop | City Plus Pet Shop",
@@ -31,11 +29,37 @@ function ShopFallback() {
   );
 }
 
-export default async function ShopPage() {
-  const products = await getProducts();
+const SHOP_PAGE_LIMIT = 48;
+
+type ShopPageProps = { searchParams: Promise<{ q?: string; category?: string; page?: string }> };
+
+export default async function ShopPage({ searchParams }: ShopPageProps) {
+  const params = await searchParams;
+  const searchQ = params.q?.trim();
+  const categorySlug = params.category?.trim();
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+
+  let products: Awaited<ReturnType<typeof getProducts>>;
+  let total = 0;
+  let isSearch = false;
+
+  if (searchQ) {
+    isSearch = true;
+    const result = await searchProducts(searchQ, SHOP_PAGE_LIMIT, page);
+    products = result.products;
+    total = result.total;
+  } else {
+    products = await getProducts({ limit: SHOP_PAGE_LIMIT, categorySlug: categorySlug || undefined });
+  }
+
   return (
     <Suspense fallback={<ShopFallback />}>
-      <ShopClient products={products} />
+      <ShopClient
+        products={products}
+        searchTotal={isSearch ? total : undefined}
+        searchPage={isSearch ? page : undefined}
+        searchQuery={searchQ || undefined}
+      />
     </Suspense>
   );
 }

@@ -31,7 +31,7 @@ sudo systemctl restart sshd
 sudo ufw allow 22/tcp     # SSH
 sudo ufw allow 80/tcp     # HTTP
 sudo ufw allow 443/tcp    # HTTPS
-sudo ufw deny 3001        # Block direct app port from outside
+sudo ufw deny 3000        # Block direct app port from outside
 sudo ufw enable
 
 # Fail2ban
@@ -52,14 +52,14 @@ sudo systemctl enable fail2ban
 | Separate system user per client | `useradd -m -s /bin/bash client1` |
 | Separate PostgreSQL role per client | `CREATE USER client1_app ...` |
 | Separate database per client | `CREATE DATABASE client1_db ...` |
-| Separate PM2 app name + port | `name: "client1"`, `PORT: 3001`; `PORT: 3002` etc. |
+| Separate PM2 app name + port | `name: "client1"`, `PORT: 3000`; `PORT: 3002` etc. |
 | No cross-DB access | Each role only has GRANT on own DB |
 | Separate NEXTAUTH_SECRET per site | Never share secrets |
 | Separate upload directory per site | `/var/www/client1/uploads/` |
 | OLS vHost isolation | Each site gets own vHost in CyberPanel |
 
 **Port Allocation (example)**:
-- City Plus Pet Shop → Port 3001
+- City Plus Pet Shop → Port 3000
 - Client 2 → Port 3002
 - Client 3 → Port 3003
 
