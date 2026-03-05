@@ -19,6 +19,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 
 export const authOptions: AuthOptions = {
+  trustHost: isProduction || process.env.AUTH_TRUST_HOST === "true",
   useSecureCookies: isProduction,
   session: {
     strategy: "jwt",

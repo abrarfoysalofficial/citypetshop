@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { requireAdminAuth } from "@/lib/admin-auth";
-import { DEMO_SITE_SETTINGS } from "@/lib/demo-data";
+import { createAuditLog } from "@/lib/audit";
 import { isPrismaConfigured } from "@/src/config/env";
+import { z } from "zod";
+
+/** Minimal defaults when no tenant settings exist yet. */
+const EMPTY_SETTINGS: Record<string, unknown> = {
+  site_name_en: "City Pet Shop BD",
+  primary_color: "#5cd4ff",
+  accent_color: "#f39221",
+  delivery_inside_dhaka: 70,
+  delivery_outside_dhaka: 130,
+  free_delivery_threshold: 2000,
+  terms_url: "/terms",
+  privacy_url: "/privacy",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +33,13 @@ export async function GET() {
 
   if (isPrismaConfigured()) {
     try {
-      const s = await prisma.siteSettings.findUnique({
-        where: { id: "default" },
+      const tenantId = getDefaultTenantId();
+      const s = await prisma.tenantSettings.findUnique({
+        where: { tenantId },
       });
-      if (!s) return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
+      if (!s) return NextResponse.json(EMPTY_SETTINGS);
       const data: Record<string, unknown> = {
-        id: s.id,
+        id: s.tenantId,
         updated_at: s.updatedAt.toISOString(),
         logo_url: s.logoUrl,
         logo_dark_url: s.logoDarkUrl,
@@ -78,11 +94,11 @@ export async function GET() {
       return NextResponse.json(data);
     } catch (err) {
       console.error("[api/admin/settings] GET Prisma error:", err);
-      return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
+      return NextResponse.json(EMPTY_SETTINGS);
     }
   }
 
-  return NextResponse.json(DEMO_SITE_SETTINGS as Record<string, unknown>);
+  return NextResponse.json({ error: "Database not configured" }, { status: 503 });
 }
 
 /**
@@ -96,8 +112,16 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const { id: _id, updated_at: _ua, ...updates } = body;
+    const raw = await request.json();
+    const patchSchema = z.object({
+      id: z.unknown().optional(),
+      updated_at: z.unknown().optional(),
+    }).passthrough();
+    const parsed = patchSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+    const { id: _id, updated_at: _ua, ...updates } = parsed.data;
 
     if (isPrismaConfigured()) {
       const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -125,12 +149,23 @@ export async function PATCH(request: Request) {
         const camel = map[k] ?? snakeToCamel(k);
         if (camel && v !== undefined) data[camel] = v;
       }
-      const updated = await prisma.siteSettings.upsert({
-        where: { id: "default" },
-        create: { id: "default", ...data } as never,
+      const tenantId = getDefaultTenantId();
+      const updated = await prisma.tenantSettings.upsert({
+        where: { tenantId },
+        create: { tenantId, ...data } as never,
         update: data as never,
       });
-      const out: Record<string, unknown> = { id: updated.id, updated_at: updated.updatedAt.toISOString() };
+      revalidatePath("/");
+
+      await createAuditLog({
+        userId: auth.userId,
+        action: "update",
+        resource: "tenant_settings",
+        resourceId: tenantId,
+        newValues: { keys: Object.keys(data) },
+      });
+
+      const out: Record<string, unknown> = { id: updated.tenantId, updated_at: updated.updatedAt.toISOString() };
       for (const [k, v] of Object.entries(updated)) {
         if (k === "updatedAt") continue;
         const snake = k.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, "");

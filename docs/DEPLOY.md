@@ -299,7 +299,7 @@ If rollback fails, manual recovery:
 
 Admin routes (`/admin/*`) and API routes (`/api/admin/*`) enforce role-based access:
 
-- **Middleware** (`middleware.ts`): Redirects unauthenticated users to `/admin/login`. Checks JWT `role` (admin, adm, super_admin) or demo `demo_session` cookie.
+- **Middleware** (`middleware.ts`): Redirects unauthenticated users to `/admin/login`. Checks JWT `role` (admin, adm, super_admin).
 - **API guards** (`lib/admin-auth.ts`): Each admin API calls `requireAdminAuth()` or `requireAdminAuthAndPermission(permission)`. Returns 401 (sign in required) or 403 (access denied).
 - **Granular permissions**: RBAC uses `UserRole` + `RolePermission` (Prisma). Admin panel pages check `hasPermission(userId, "resource.action")` before rendering sensitive UI.
 - **Verification**: Unauthorized user cannot access `/admin` pages (redirect to login) or admin APIs (401/403).

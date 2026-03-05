@@ -6,8 +6,10 @@
     "node": ">=18 <21"
   },
   "scripts": {
+    "check:nodemo": "tsx scripts/check-no-demo.ts",
+    "check:secrets": "tsx scripts/check-secrets.ts",
     "check:domain": "tsx scripts/check-domain.ts",
-    "prebuild": "tsx scripts/check-domain.ts",
+    "prebuild": "npm run check:nodemo && npm run check:secrets && npm run check:domain",
     "dev": "next dev",
     "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
     "build": "npx cross-env NODE_OPTIONS=--max-old-space-size=4096 next build",
@@ -82,6 +84,6 @@
     "seed": "tsx prisma/seed.ts"
   },
   "optionalDependencies": {
-    "@sentry/nextjs": "^7.0.0"
+    "@sentry/nextjs": "^10.42.0"
   }
 }

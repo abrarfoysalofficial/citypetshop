@@ -14,12 +14,16 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Local env
+# Local env and secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+*.pem
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.key
 
 # Vercel
 .vercel
@@ -56,7 +60,10 @@ test-results/
 playwright-report/
 coverage/
 
-# Root-level image dumps (not source assets)
+# Backup snapshots (Phase 0)
+_backup/
+
+# Root-level image dumps (not source assets) — now in legacy-data
 *.png
 *.jpg
 *.webp
@@ -64,3 +71,5 @@ coverage/
 !src/**
 !components/**
 !app/**
+!store/**
+node_modules

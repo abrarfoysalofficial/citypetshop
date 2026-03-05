@@ -277,6 +277,25 @@ See **[docs/PRODUCTION_REDEPLOY_PLAN.md](PRODUCTION_REDEPLOY_PLAN.md)** for:
 
 ---
 
+## Rollback (if deploy fails)
+
+```bash
+cd /home/citypetshop/htdocs/citypetshop.bd
+git log -1 --oneline   # note current commit
+git checkout <last-good-commit-hash>
+npm ci
+NODE_OPTIONS=--max-old-space-size=4096 npm run build
+cp -r public .next/standalone/public 2>/dev/null || true
+cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+pm2 startOrReload ecosystem.config.js --env production --only cityplus
+pm2 save
+curl -sf http://127.0.0.1:3000/api/health | jq .
+```
+
+If DB migration was applied, restore from backup. See [docs/DB_MIGRATION_RUNBOOK.md](DB_MIGRATION_RUNBOOK.md).
+
+---
+
 ## Quick re-deploy (after initial setup)
 
 ```bash
