@@ -4,8 +4,8 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     ...parsed.data,
     config:
       parsed.data.config !== undefined
-        ? (parsed.data.config as Prisma.InputJsonValue)
+        ? (JSON.parse(JSON.stringify(parsed.data.config)) as Prisma.InputJsonValue)
         : undefined,
   };
   const filter = await prisma.productFilter.create({

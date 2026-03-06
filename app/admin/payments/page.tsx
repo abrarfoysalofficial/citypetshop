@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreditCard, Banknote, Smartphone, Save, Loader2, AlertCircle, X, Check } from "lucide-react";
-import type { PaymentGatewayRow } from "@/lib/schema";
+import type { PaymentGatewayRow } from "@lib/schema";
 
 const GATEWAY_ICONS = {
   cod: Banknote,
   bkash: Smartphone,
   nagad: Smartphone,
+  rocket: Smartphone,
   sslcommerz: CreditCard,
 };
 
@@ -75,9 +76,15 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  const MASKED = "••••••••";
   const openCredentialsModal = (gateway: PaymentGatewayRow) => {
     setEditingGateway(gateway);
-    setCredentials(gateway.credentials_json || {});
+    const creds = gateway.credentials_json || {};
+    const cleaned: Record<string, string> = {};
+    for (const [k, v] of Object.entries(creds)) {
+      cleaned[k] = v === MASKED ? "" : String(v ?? "");
+    }
+    setCredentials(cleaned);
   };
 
   const saveCredentials = async () => {
@@ -287,7 +294,7 @@ export default function AdminPaymentsPage() {
                         value={credentials.app_secret || ""}
                         onChange={(e) => setCredentials({ ...credentials, app_secret: e.target.value })}
                         className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        placeholder="Enter bKash App Secret"
+                        placeholder="Leave blank to keep current"
                       />
                     </div>
                     <div>
@@ -307,7 +314,17 @@ export default function AdminPaymentsPage() {
                         value={credentials.password || ""}
                         onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                         className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        placeholder="Enter bKash Password"
+                        placeholder="Leave blank to keep current"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Wallet Number (for manual payment)</label>
+                      <input
+                        type="text"
+                        value={credentials.wallet_number || ""}
+                        onChange={(e) => setCredentials({ ...credentials, wallet_number: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="01XXXXXXXXX"
                       />
                     </div>
                   </>
@@ -332,7 +349,7 @@ export default function AdminPaymentsPage() {
                         value={credentials.store_password || ""}
                         onChange={(e) => setCredentials({ ...credentials, store_password: e.target.value })}
                         className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        placeholder="Enter SSLCommerz Store Password"
+                        placeholder="Leave blank to keep current"
                       />
                     </div>
                     <div>
@@ -362,13 +379,28 @@ export default function AdminPaymentsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Merchant Number</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Merchant Number / Wallet Number</label>
                       <input
                         type="text"
                         value={credentials.merchant_number || ""}
                         onChange={(e) => setCredentials({ ...credentials, merchant_number: e.target.value })}
                         className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        placeholder="Enter Nagad Merchant Number"
+                        placeholder="01XXXXXXXXX"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {editingGateway.gateway === "rocket" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Wallet Number</label>
+                      <input
+                        type="text"
+                        value={credentials.wallet_number || ""}
+                        onChange={(e) => setCredentials({ ...credentials, wallet_number: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="01XXXXXXXXX"
                       />
                     </div>
                   </>

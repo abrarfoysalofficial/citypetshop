@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
+import { prisma } from "@lib/db";
+import { isValidBdPhone, normalizeBdPhone } from "@lib/phone-bd";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 
@@ -23,10 +23,7 @@ export async function POST(request: NextRequest) {
   const phoneNormalized = normalizeBdPhone(phone).replace(/\D/g, "").slice(-10);
 
   if (!process.env.DATABASE_URL) {
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Order tracking is temporarily unavailable" }, { status: 503 });
-    }
-    return NextResponse.json({ token: "demo-token", message: "Demo: use this token with ?otp_token=demo-token" });
+    return NextResponse.json({ error: "Order tracking is temporarily unavailable" }, { status: 503 });
   }
 
   const row = await prisma.trackOtpVerification.findFirst({

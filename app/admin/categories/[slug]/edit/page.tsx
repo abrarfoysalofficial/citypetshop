@@ -2,9 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useCategories } from "@/context/CategoriesContext";
+import { useCategories } from "@store/CategoriesContext";
 import { useState, useEffect } from "react";
-import type { CategoryItem } from "@/lib/types";
+import type { CategoryItem } from "@lib/types";
 
 export default function AdminEditCategoryPage() {
   const params = useParams();

@@ -25,7 +25,7 @@ export default function OrderCompletePage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // Silently fail for demo/fallback order IDs
+      // Silently fail for invalid order IDs
     } finally {
       setDownloading(false);
     }

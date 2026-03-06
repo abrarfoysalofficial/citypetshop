@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,8 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
   try {
-    const s = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+    const tenantId = getDefaultTenantId();
+    const s = await prisma.tenantSettings.findUnique({ where: { tenantId } });
     const adv = (s?.advancedSettings ?? {}) as { dashboard_layout?: unknown };
     const layout = adv.dashboard_layout;
     if (Array.isArray(layout) && layout.length > 0) {
@@ -47,13 +49,14 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Invalid layout" }, { status: 400 });
   }
   try {
-    const s = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+    const tenantId = getDefaultTenantId();
+    const s = await prisma.tenantSettings.findUnique({ where: { tenantId } });
     const adv = (s?.advancedSettings ?? {}) as Record<string, unknown>;
     adv.dashboard_layout = parsed.data;
-    const jsonAdv = adv as Prisma.InputJsonValue;
-    await prisma.siteSettings.upsert({
-      where: { id: "default" },
-      create: { id: "default", advancedSettings: jsonAdv },
+    const jsonAdv = JSON.parse(JSON.stringify(adv)) as Prisma.InputJsonValue;
+    await prisma.tenantSettings.upsert({
+      where: { tenantId },
+      create: { tenantId, advancedSettings: jsonAdv },
       update: { advancedSettings: jsonAdv },
     });
     return NextResponse.json({ ok: true });

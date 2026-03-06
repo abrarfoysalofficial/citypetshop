@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useOffers } from "@/context/OffersContext";
+import { useOffers } from "@store/OffersContext";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import type { Offer } from "@/lib/types";
+import type { Offer } from "@lib/types";
 
 export default function AdminOffersPage() {
   const { offers, addOffer, updateOffer, deleteOffer, getOffer, lastUpdated } = useOffers();

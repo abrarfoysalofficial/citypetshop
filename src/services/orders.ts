@@ -1,8 +1,6 @@
 /**
- * Orders repository implementations.
- * Supabase: real DB when configured; Local: demo data from provider.
+ * Orders repository – Prisma/PostgreSQL via provider and checkout API.
  */
-import type { DemoOrder } from "@/src/data/types";
 import type { OrdersRepository, CreateOrderInput } from "./types";
 import {
   getAdminOrders,
@@ -11,28 +9,8 @@ import {
   getUserOrderById,
 } from "@/src/data/provider";
 
-/** Demo/local orders: read-only from provider; createOrder returns a stub id. */
+/** Orders: read via provider; createOrder calls checkout API. */
 export function createLocalOrdersRepository(): OrdersRepository {
-  return {
-    async createOrder() {
-      return { orderId: `demo-${Date.now()}` };
-    },
-    async getOrderById(id) {
-      const fromAdmin = await getAdminOrderById(id);
-      if (fromAdmin) return fromAdmin;
-      return getUserOrderById(id);
-    },
-    async listOrdersByUser() {
-      return getUserOrders();
-    },
-    async adminListOrders() {
-      return getAdminOrders();
-    },
-  };
-}
-
-/** Supabase orders: same read path via provider when DATA_SOURCE allows; createOrder can call API later. */
-export function createSupabaseOrdersRepository(): OrdersRepository {
   return {
     async createOrder(input: CreateOrderInput) {
       try {
@@ -48,10 +26,10 @@ export function createSupabaseOrdersRepository(): OrdersRepository {
         return { error: "Network error" };
       }
     },
-    async getOrderById(id) {
+    async getOrderById(id, userId) {
       const fromAdmin = await getAdminOrderById(id);
       if (fromAdmin) return fromAdmin;
-      return getUserOrderById(id);
+      return getUserOrderById(id, userId ?? null);
     },
     async listOrdersByUser() {
       return getUserOrders();

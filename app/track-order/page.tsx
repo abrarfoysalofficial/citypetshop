@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PackageSearch, MessageSquare, Truck, User } from "lucide-react";
-import { isValidBdPhone } from "@/lib/phone-bd";
+import { isValidBdPhone } from "@lib/phone-bd";
 type OrderSummary = { id: string; status: string; total: number; createdAt: string; customerName?: string; phone?: string };
 type Note = { id: string; type: string; visibility: string; message: string; created_at: string };
 type Event = { id: string; status: string; provider?: string; created_at: string; payload_summary?: unknown };

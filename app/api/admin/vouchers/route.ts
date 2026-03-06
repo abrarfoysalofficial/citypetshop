@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { AUTH_MODE } from "@/src/config/runtime";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { logAdminAction } from "@lib/rbac";
 import { isPrismaConfigured } from "@/src/config/env";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,14 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (AUTH_MODE !== "prisma" || !isPrismaConfigured()) {
+  if (!isPrismaConfigured()) {
     return NextResponse.json([]);
   }
 
   try {
+    const tenantId = getDefaultTenantId();
     const rows = await prisma.voucher.findMany({
+      where: { tenantId },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(
@@ -54,7 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (AUTH_MODE !== "prisma" || !isPrismaConfigured()) {
+  if (!isPrismaConfigured()) {
     return NextResponse.json({ error: "Vouchers require database" }, { status: 400 });
   }
 
@@ -72,13 +75,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Code and value required" }, { status: 400 });
     }
 
-    const existing = await prisma.voucher.findUnique({ where: { code } });
+    const tenantId = getDefaultTenantId();
+    const existing = await prisma.voucher.findFirst({ where: { tenantId, code } });
     if (existing) {
       return NextResponse.json({ error: "Voucher code already exists" }, { status: 400 });
     }
 
     const v = await prisma.voucher.create({
       data: {
+        tenantId,
         code,
         discountType,
         discountValue: value,
@@ -88,6 +93,7 @@ export async function POST(request: NextRequest) {
         isActive: active,
       },
     });
+    await logAdminAction(auth.userId!, "create", "voucher", v.id, undefined, { code: v.code }, { headers: request.headers });
     return NextResponse.json({
       id: v.id,
       code: v.code,

@@ -32,7 +32,7 @@ export default function HomeComboBlock({
           </div>
           <Link
             href="/combo-offers"
-            className="font-semibold text-primary hover:underline"
+            className="font-semibold text-[var(--teal-from)] hover:underline"
           >
             View all →
           </Link>
@@ -42,7 +42,7 @@ export default function HomeComboBlock({
             <Link
               key={combo.id}
               href={combo.href}
-              className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+              className="group flex flex-col overflow-hidden rounded-card border border-[var(--border-light)] bg-white shadow-soft transition-all duration-200 hover:-translate-y-1 hover:shadow-card"
             >
               <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
                 <SafeImage
@@ -64,14 +64,14 @@ export default function HomeComboBlock({
                 )}
               </div>
               <div className="flex flex-1 flex-col p-5">
-                <h3 className="font-bold text-slate-900 group-hover:text-primary sm:text-lg">
+                <h3 className="font-bold text-slate-900 group-hover:text-[var(--teal-from)] sm:text-lg">
                   {combo.title}
                 </h3>
                 <p className="mt-1 line-clamp-2 text-sm text-slate-700">
                   {combo.description}
                 </p>
                 <div className="mt-3 flex items-center gap-2">
-                  <p className="text-base font-bold text-secondary sm:text-lg">
+                  <p className="text-base font-bold text-[var(--teal-from)] sm:text-lg">
                     ৳{combo.price.toLocaleString("en-BD")}
                   </p>
                   {combo.comparePrice != null &&

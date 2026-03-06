@@ -2,6 +2,111 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+type PolicyType = {
+  blockThreshold: number;
+  otpThreshold: number;
+  manualReviewThreshold: number;
+  phoneVelocityLimit: number;
+};
+
+function PolicyEditor({
+  policy,
+  onSaved,
+}: {
+  policy: PolicyType;
+  onSaved: () => void;
+}) {
+  const [blockThreshold, setBlockThreshold] = useState(String(policy.blockThreshold ?? 60));
+  const [otpThreshold, setOtpThreshold] = useState(String(policy.otpThreshold ?? 40));
+  const [manualReviewThreshold, setManualReviewThreshold] = useState(String(policy.manualReviewThreshold ?? 30));
+  const [phoneVelocityLimit, setPhoneVelocityLimit] = useState(String(policy.phoneVelocityLimit ?? 3));
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    const block = parseInt(blockThreshold, 10);
+    const otp = parseInt(otpThreshold, 10);
+    const manual = parseInt(manualReviewThreshold, 10);
+    const velocity = parseInt(phoneVelocityLimit, 10);
+    if (isNaN(block) || isNaN(otp) || isNaN(manual) || isNaN(velocity)) return;
+    setSaving(true);
+    fetch("/api/admin/fraud/policy", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        blockThreshold: block,
+        otpThreshold: otp,
+        manualReviewThreshold: manual,
+        phoneVelocityLimit: velocity,
+      }),
+    })
+      .then((r) => r.json())
+      .then(() => onSaved())
+      .finally(() => setSaving(false));
+  };
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-lg font-semibold text-slate-900">Policy thresholds</h2>
+      <form onSubmit={handleSave} className="grid max-w-md gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Block threshold (score ≥)</label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={blockThreshold}
+            onChange={(e) => setBlockThreshold(e.target.value)}
+            className="w-full rounded border border-slate-300 px-3 py-2"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">OTP threshold (score ≥)</label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={otpThreshold}
+            onChange={(e) => setOtpThreshold(e.target.value)}
+            className="w-full rounded border border-slate-300 px-3 py-2"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Manual review threshold</label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={manualReviewThreshold}
+            onChange={(e) => setManualReviewThreshold(e.target.value)}
+            className="w-full rounded border border-slate-300 px-3 py-2"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Phone velocity limit (orders/24h)</label>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={phoneVelocityLimit}
+            onChange={(e) => setPhoneVelocityLimit(e.target.value)}
+            className="w-full rounded border border-slate-300 px-3 py-2"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save thresholds"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 type FraudFlag = {
   id: string;
   orderId: string;
@@ -16,7 +121,7 @@ export default function AdminFraudPage() {
   const [flags, setFlags] = useState<{ id: string; orderId: string; flagType: string; score: number; createdAt: string }[]>([]);
   const [reviewQueue, setReviewQueue] = useState<FraudFlag[]>([]);
   const [blockedIps, setBlockedIps] = useState<{ id: string; ip: string; reason: string | null; expiresAt: string | null }[]>([]);
-  const [policy, setPolicy] = useState<{ blockThreshold: number; otpThreshold: number; phoneVelocityLimit: number } | null>(null);
+  const [policy, setPolicy] = useState<PolicyType | null>(null);
   const [loading, setLoading] = useState(true);
   const [blockIp, setBlockIp] = useState("");
   const [blockReason, setBlockReason] = useState("");
@@ -89,13 +194,14 @@ export default function AdminFraudPage() {
       </p>
 
       {policy && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">Policy thresholds</h2>
-          <p className="text-sm text-slate-600">
-            Block: score ≥ {policy.blockThreshold} | OTP: ≥ {policy.otpThreshold} | Phone velocity: {policy.phoneVelocityLimit} orders/24h
-          </p>
-          <p className="mt-1 text-xs text-slate-500">Edit via API: PATCH /api/admin/fraud/policy</p>
-        </div>
+        <PolicyEditor
+          policy={policy}
+          onSaved={() => {
+            fetch("/api/admin/fraud/policy")
+              .then((r) => r.json())
+              .then((d) => d.policy && setPolicy(d.policy));
+          }}
+        />
       )}
 
       {reviewQueue.length > 0 && (

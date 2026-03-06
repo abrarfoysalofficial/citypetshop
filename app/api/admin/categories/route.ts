@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { logAdminAction } from "@/lib/rbac";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { logAdminAction } from "@lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,9 @@ export async function GET() {
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
   try {
+    const tenantId = getDefaultTenantId();
     const categories = await prisma.category.findMany({
+      where: { tenantId, deletedAt: null },
       include: {
         parent: { select: { id: true, nameEn: true, nameBn: true } },
         children: { select: { id: true, nameEn: true, nameBn: true } },
@@ -37,8 +40,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name and slug are required" }, { status: 400 });
     }
 
+    const tenantId = getDefaultTenantId();
     const category = await prisma.category.create({
       data: {
+        tenantId,
         nameEn: body.nameEn,
         nameBn: body.nameBn,
         slug: body.slug,
@@ -75,7 +80,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
 
-    const before = await prisma.category.findUnique({ where: { id } });
+    const tenantId = getDefaultTenantId();
+    const before = await prisma.category.findFirst({ where: { id, tenantId } });
     if (!before) return NextResponse.json({ error: "Category not found" }, { status: 404 });
 
     const category = await prisma.category.update({
@@ -114,10 +120,11 @@ export async function DELETE(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   try {
-    const before = await prisma.category.findUnique({ where: { id } });
+    const tenantId = getDefaultTenantId();
+    const before = await prisma.category.findFirst({ where: { id, tenantId } });
     if (!before) return NextResponse.json({ error: "Category not found" }, { status: 404 });
 
-    await prisma.category.delete({ where: { id } });
+    await prisma.category.update({ where: { id }, data: { deletedAt: new Date() } });
     await logAdminAction(auth.userId, "delete", "category", id, before, undefined, { headers: request.headers });
 
     return NextResponse.json({ success: true });

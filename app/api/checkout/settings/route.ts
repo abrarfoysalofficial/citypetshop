@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 import { isPrismaConfigured } from "@/src/config/env";
-import { cacheHeaders } from "@/lib/cache";
+import { cacheHeaders } from "@lib/cache";
 
 const DEFAULTS = {
   deliveryInsideDhaka: 70,
@@ -11,12 +12,12 @@ const DEFAULTS = {
   privacyUrl: "/privacy",
 };
 
-/** GET: Delivery charges, policy URLs. Prisma or Supabase. */
+/** GET: Delivery charges, policy URLs. Prisma TenantSettings. */
 export async function GET() {
   if (isPrismaConfigured()) {
     try {
-      const s = await prisma.siteSettings.findUnique({
-        where: { id: "default" },
+      const s = await prisma.tenantSettings.findUnique({
+        where: { tenantId: getDefaultTenantId() },
       });
       return NextResponse.json(
         {

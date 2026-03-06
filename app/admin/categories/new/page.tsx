@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useCategories } from "@/context/CategoriesContext";
-import type { CategoryItem } from "@/lib/types";
+import { useCategories } from "@store/CategoriesContext";
+import type { CategoryItem } from "@lib/types";
 
 export default function AdminNewCategoryPage() {
   const router = useRouter();

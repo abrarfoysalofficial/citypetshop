@@ -5,7 +5,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "/var/www/city-plus/uploads";
+const UPLOAD_DIR = process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
 const APP_URL = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "";
 
 export interface UploadResult {

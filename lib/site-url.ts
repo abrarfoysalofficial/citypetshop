@@ -25,7 +25,12 @@ export function getPublicBaseUrlFromRequest(request: NextRequest): string {
     .split(",")[0]
     ?.trim() || "";
   if (host && (host.includes("localhost") || host.includes("127.0.0.1"))) {
-    return process.env.NODE_ENV === "production" ? "https://citypetshop.bd" : `http://${host}`;
+    if (process.env.NODE_ENV === "production") {
+      const envUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
+      if (envUrl && !envUrl.includes("localhost")) return envUrl.replace(/\/$/, "");
+      return getServerBaseUrl();
+    }
+    return `http://${host}`;
   }
   if (host && proto) {
     const canonicalHost = getCanonicalHost(host);
@@ -89,20 +94,20 @@ function isLocalhost(url: string): boolean {
   }
 }
 
-/** Auth base URL for NextAuth callbacks. Production: never escape https://citypetshop.bd. */
+/**
+ * Auth base URL for NextAuth callbacks.
+ * Domain-safe: uses NEXTAUTH_URL, APP_URL, or NEXT_PUBLIC_SITE_URL when set.
+ * No hardcoded domain — works on any deployment (staging, production, custom domain).
+ */
 export function getAuthBaseUrl(): string {
-  const canonical = "https://citypetshop.bd";
-  if (process.env.NODE_ENV === "production") {
-    const url = process.env.NEXTAUTH_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
-    if (!url || isLocalhost(url)) return canonical;
+  const url = process.env.NEXTAUTH_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
+  if (url && !isLocalhost(url)) {
     try {
       const u = new URL(url);
-      if (u.hostname !== "citypetshop.bd" && u.hostname !== "www.citypetshop.bd") return canonical;
-      return url;
+      return u.origin;
     } catch {
-      return canonical;
+      /* fall through */
     }
   }
-  const url = process.env.NEXTAUTH_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
-  return (url && !isLocalhost(url)) ? url : getServerBaseUrl();
+  return getServerBaseUrl();
 }

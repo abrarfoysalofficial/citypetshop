@@ -9,7 +9,7 @@ export async function GET() {
   const checks: Record<string, string> = {};
   if (process.env.DATABASE_URL) {
     try {
-      const { prisma } = await import("@/lib/db");
+      const { prisma } = await import("@lib/db");
       await prisma.$queryRaw`SELECT 1`;
       checks.database = "ok";
     } catch {

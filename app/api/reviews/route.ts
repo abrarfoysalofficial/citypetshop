@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserOrderById } from "@/src/data/provider";
-import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { prisma } from "@lib/db";
+import { auth } from "@lib/auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
   const { productId, orderId, rating, comment } = parsed.data;
 
-  const order = await getUserOrderById(orderId);
+  const order = await getUserOrderById(orderId, userId);
   if (!order || order.status !== "delivered") {
     return NextResponse.json({ error: "Order not found or not delivered." }, { status: 400 });
   }

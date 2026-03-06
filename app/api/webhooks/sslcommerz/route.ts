@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { validateSslCommerzTransaction } from "@/lib/sslcommerz-validate";
-import { canTransitionPaymentStatus } from "@/lib/order-transitions";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { validateSslCommerzTransaction } from "@lib/sslcommerz-validate";
+import { canTransitionPaymentStatus } from "@lib/order-transitions";
+import { logWarn, logError } from "@lib/logger";
+import { assertBodySize } from "@lib/request-utils";
 
 export const dynamic = "force-dynamic";
 
 const AMOUNT_TOLERANCE = 0.01;
+const BODY_LIMIT_BYTES = 128 * 1024; // 128KB
+
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get("cf-connecting-ip") ??
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
+
+function isIpAllowed(clientIp: string, allowlist: string[]): boolean {
+  if (allowlist.length === 0) return true;
+  const normalized = clientIp.trim();
+  return allowlist.some((a) => a.trim() === normalized);
+}
 
 function formDataToObject(formData: FormData): object {
   return Object.fromEntries(
@@ -17,9 +36,23 @@ function formDataToObject(formData: FormData): object {
  * POST /api/webhooks/sslcommerz
  * SSLCommerz IPN. Validates via Order Validation API, enforces idempotency,
  * amount check, and strict payment_status transitions.
+ * Optional: SSLCOMMERZ_IP_ALLOWLIST (comma-separated) — if set, only listed IPs allowed.
  */
 export async function POST(request: NextRequest) {
   try {
+    const sizeCheck = assertBodySize(request, BODY_LIMIT_BYTES);
+    if (sizeCheck) return sizeCheck;
+
+    const allowlistRaw = process.env.SSLCOMMERZ_IP_ALLOWLIST?.trim();
+    if (allowlistRaw) {
+      const allowlist = allowlistRaw.split(",").map((s) => s.trim()).filter(Boolean);
+      const clientIp = getClientIp(request);
+      if (!isIpAllowed(clientIp, allowlist)) {
+        logWarn("webhooks/sslcommerz", "IP not in allowlist", { clientIp });
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const formData = await request.formData();
     const tranId = formData.get("tran_id") as string;
     const valId = (formData.get("val_id") as string) || undefined;
@@ -31,8 +64,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing tran_id" }, { status: 400 });
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: tranId },
+    const tenantId = getDefaultTenantId();
+    const order = await prisma.order.findFirst({
+      where: { id: tranId, tenantId },
     });
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -66,14 +100,14 @@ export async function POST(request: NextRequest) {
 
       const validation = await validateSslCommerzTransaction(valId);
       if (!validation.valid || (validation.status !== "VALID" && validation.status !== "VALIDATED")) {
-        console.warn("[sslcommerz IPN] Validation failed:", { tranId, valId, validation });
+        logWarn("webhooks/sslcommerz", "Validation failed", { tranId, valId, validationStatus: validation.status });
         return NextResponse.json({ error: "Transaction validation failed" }, { status: 400 });
       }
 
       // Amount must match
       const validatedAmount = validation.amount ?? paidAmount;
       if (Math.abs(orderTotal - validatedAmount) > AMOUNT_TOLERANCE) {
-        console.warn("[sslcommerz IPN] Amount mismatch:", { orderId: tranId, orderTotal, validatedAmount });
+        logWarn("webhooks/sslcommerz", "Amount mismatch", { tranId, orderTotal, validatedAmount });
         return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
       }
 
@@ -147,13 +181,23 @@ export async function POST(request: NextRequest) {
             amount: paidAmount || null,
             rawPayload: formDataToObject(formData),
           },
-        }).catch(() => {}); // Ignore duplicate val_id on race
+        }).catch((err) => {
+          const code = (err as { code?: string })?.code;
+          if (code !== "P2002") {
+            logError("webhooks/sslcommerz", "PaymentWebhookLog create failed on failure path", {
+              error: err instanceof Error ? err.message : "unknown",
+              valId,
+            });
+          }
+        });
       }
     }
 
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("[webhooks/sslcommerz]:", err);
+    logError("webhooks/sslcommerz", "IPN processing failed", {
+      error: err instanceof Error ? err.message : "unknown",
+    });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

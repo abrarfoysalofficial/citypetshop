@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/store/CartContext";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", icon: Home },

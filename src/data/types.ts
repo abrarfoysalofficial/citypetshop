@@ -132,7 +132,7 @@ export interface HomeSection {
   sideBanners?: { id: string; title: string; subtitle: string; image: string; href: string; cta: string }[];
 }
 
-// Admin / User account demo types
+// Admin / User account types
 export interface DemoOrderItem {
   productId: string;
   name: string;
@@ -151,6 +151,9 @@ export interface DemoOrder {
   items?: DemoOrderItem[];
   shippingAddress?: string;
   paymentMethod?: string;
+  courierBookingId?: string | null;
+  trackingCode?: string | null;
+  courierProvider?: string | null;
 }
 
 export interface DemoCustomer {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/store/CartContext";
 
 export default function CartSlideOver() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalItems, totalPrice } = useCart();

@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/commerce-settings";
+import { DEFAULT_LOW_STOCK_THRESHOLD } from "@lib/commerce-settings";
 
 /**
  * Shows a pulsing red "Only [x] left in stock!" when quantity is below threshold.

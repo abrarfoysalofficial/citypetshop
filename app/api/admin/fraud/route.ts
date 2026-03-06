@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { blockIp } from "@/lib/fraud";
+import { prisma } from "@lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { blockIp } from "@lib/fraud";
 
 export const dynamic = "force-dynamic";
 

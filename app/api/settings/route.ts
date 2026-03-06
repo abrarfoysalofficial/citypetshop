@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import type { SiteSettingsRow } from "@/lib/schema";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { CTA_COLOR } from "@lib/theme-constants";
+import type { SiteSettingsRow } from "@lib/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +15,9 @@ const DEFAULTS: SiteSettingsRow = {
   site_name_bn: null,
   tagline_en: "Your pet, our passion.",
   tagline_bn: null,
-  primary_color: "#0f172a",
+  primary_color: "#5cd4ff",
   secondary_color: "#06b6d4",
-  accent_color: "#f97316",
+  accent_color: CTA_COLOR,
   font_family: null,
   button_style: null,
   navbar_links: [],
@@ -40,6 +42,7 @@ const DEFAULTS: SiteSettingsRow = {
   facebook_capi_token: null,
   google_analytics_id: null,
   google_tag_manager_id: null,
+  tiktok_pixel_id: null,
   default_meta_title: null,
   default_meta_description: null,
   default_og_image_url: null,
@@ -50,11 +53,16 @@ const DEFAULTS: SiteSettingsRow = {
 /** GET /api/settings – public site settings (no secrets, no tokens) */
 export async function GET() {
   try {
-    const s = await prisma.siteSettings.findUnique({ where: { id: "default" } });
-    if (!s) return NextResponse.json(DEFAULTS);
+    const tenantId = getDefaultTenantId();
+    const s = await prisma.tenantSettings.findUnique({ where: { tenantId } });
+    if (!s) {
+      return NextResponse.json(DEFAULTS, {
+        headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+      });
+    }
 
     const data: SiteSettingsRow = {
-      id: s.id,
+      id: s.tenantId,
       updated_at: s.updatedAt.toISOString(),
       logo_url: s.logoUrl,
       logo_dark_url: s.logoDarkUrl,
@@ -90,6 +98,7 @@ export async function GET() {
       facebook_capi_token: null,
       google_analytics_id: s.googleAnalyticsId,
       google_tag_manager_id: s.googleTagManagerId,
+      tiktok_pixel_id: s.tiktokPixelId,
       default_meta_title: s.defaultMetaTitle,
       default_meta_description: s.defaultMetaDescription,
       default_og_image_url: s.defaultOgImageUrl,

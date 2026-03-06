@@ -6,20 +6,20 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCart } from "@/context/CartContext";
-import { useVouchers } from "@/context/VouchersContext";
-import { calculateCheckout, type ShippingCity } from "@/lib/checkout";
+import { useCart } from "@store/CartContext";
+import { useVouchers } from "@store/VouchersContext";
+import { calculateCheckout, type ShippingCity } from "@lib/checkout";
 import {
   checkoutSchema,
   type CheckoutFormData,
-} from "@/lib/validations/checkout";
+} from "@lib/validations/checkout";
 import {
   ALL_DISTRICTS,
   getZoneFromDistrict,
-} from "@/lib/checkout-districts";
+} from "@lib/checkout-districts";
 import Image from "next/image";
 import SafeImage from "@/components/media/SafeImage";
-import { captureEvent } from "@/lib/analytics";
+import { captureEvent } from "@lib/analytics";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -497,6 +497,19 @@ export default function CheckoutPage() {
                 </li>
               ))}
             </ul>
+
+            {/* Trust badges */}
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-b border-slate-200 pb-4 text-xs text-slate-600">
+              <span className="flex items-center gap-1.5">
+                <svg className="h-4 w-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                Delivery in 2–5 days
+              </span>
+              <span className="flex items-center gap-1.5">
+                <svg className="h-4 w-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                Secure checkout
+              </span>
+              <Link href="/refund" className="text-primary hover:underline">7-day return policy</Link>
+            </div>
 
             <div className="mt-4 space-y-2">
               <div className="flex justify-between text-sm">

@@ -26,6 +26,8 @@ import {
   ImageIcon,
   PanelLeft,
   LayoutGrid,
+  HeartPulse,
+  Bug,
 } from "lucide-react";
 import { adminSidebarConfig, StoreIcon } from "@/lib/admin-config";
 

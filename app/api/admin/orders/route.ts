@@ -3,8 +3,9 @@
  * Fetch orders from Prisma. Supports queue filters: tab, status.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,8 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search") ?? "";
 
   try {
-    const where: Record<string, unknown> = {};
+    const tenantId = getDefaultTenantId();
+    const where: Record<string, unknown> = { tenantId };
 
     if (tab && tab !== "all" && QUEUE_STATUS[tab]) {
       where.status = { in: QUEUE_STATUS[tab] };

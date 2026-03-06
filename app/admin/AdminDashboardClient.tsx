@@ -19,10 +19,10 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useCategories } from "@/context/CategoriesContext";
-import { useBlog } from "@/context/BlogContext";
-import { useOffers } from "@/context/OffersContext";
-import { useVouchers } from "@/context/VouchersContext";
+import { useCategories } from "@store/CategoriesContext";
+import { useBlog } from "@store/BlogContext";
+import { useOffers } from "@store/OffersContext";
+import { useVouchers } from "@store/VouchersContext";
 import {
   LineChart,
   Line,

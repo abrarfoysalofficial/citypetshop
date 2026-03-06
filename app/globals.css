@@ -3,20 +3,61 @@
 @tailwind utilities;
 
 :root {
-  /* Brand – from logo: cyan fill + dark indigo contrast */
-  --brand: #00bcd4;
+  /* Brand palette: Deep Navy, Teal/Cyan gradient, Off-white */
+  --navy: #0B1C3D;
+  --navy-light: #142a4d;
+  --teal-from: #00BBD4;
+  --teal-to: #2EE6A6;
+  --accent-500: #00BBD4;
+  --accent-300: #2EE6A6;
+  --bg-page: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --border-light: #E5E7EB;
+
+  /* Header/Footer: Deep Navy */
+  --header-bg: #0B1C3D;
+  --footer-bg: #0B1C3D;
+
+  /* Primary = Teal gradient for CTAs */
+  --primary: var(--teal-from);
+  --primary-foreground: #ffffff;
+  --primary-light: #e0f7fa;
+  --primary-hover: #00d4a8;
+  --primary-900: var(--teal-to);
+  --primary-700: #00d4a8;
+  --primary-gradient-from: #00BBD4;
+  --primary-gradient-to: #2EE6A6;
+
+  /* Brand aliases */
+  --brand: var(--teal-from);
   --brand-foreground: #ffffff;
   --brand-muted: #e0f7fa;
-  --brand-accent: #0097a7;
-  --brand-dark: #1a237e;
-  --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  /* Legacy aliases for compatibility */
-  --primary: var(--brand);
-  --secondary: var(--brand-accent);
-  --accent: var(--brand); /* accent = brand (no orange) */
+  --brand-accent: var(--teal-to);
+  --brand-dark: #0097a7;
+  --secondary: var(--navy);
+  --surface: var(--bg-card);
+  --surface-muted: var(--bg-page);
+  --text: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --accent: var(--teal-from);
+
+  /* CTA: teal gradient */
+  --cta: var(--teal-from);
+  --cta-hover: var(--teal-to);
+  --cta-foreground: #ffffff;
+
+  /* Brand background */
+  --brand-bg: var(--teal-from);
+  --brand-bg-hover: var(--teal-to);
+  --brand-bg-foreground: #ffffff;
+
+  /* Design tokens */
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --shadow-soft: 0 2px 8px rgba(11, 28, 61, 0.06);
+  --shadow-card: 0 4px 12px rgba(11, 28, 61, 0.08);
 }
 
 @layer base {
@@ -27,6 +68,7 @@
 
   body {
     @apply antialiased;
+    background-color: var(--bg-page);
     color: var(--text);
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
@@ -66,6 +108,10 @@
   .bg-brand { background-color: var(--brand); }
   .bg-brand-muted { background-color: var(--brand-muted); }
   .border-brand { border-color: var(--brand); }
+  .bg-gradient-teal { background: linear-gradient(135deg, var(--teal-from) 0%, var(--teal-to) 100%); }
+  .rounded-card { border-radius: var(--radius-card); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-card { box-shadow: var(--shadow-card); }
 
   /* Hide scrollbar while keeping scroll (mobile category chips) */
   .no-scrollbar {

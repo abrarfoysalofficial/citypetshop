@@ -3,7 +3,7 @@
  * Redirect to NextAuth signout, then to admin login.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { buildRedirectUrl } from "@/lib/site-url";
+import { buildRedirectUrl } from "@lib/site-url";
 
 export const dynamic = "force-dynamic";
 

@@ -1,4 +1,5 @@
-export const dynamic = "force-dynamic";
+// Phase 1: ISR — revalidate every 2 min (no force-dynamic)
+export const revalidate = 120;
 
 import {
   getHomeData,
@@ -7,11 +8,11 @@ import {
   getClearanceProducts,
   getComboOffers,
 } from "@/src/data/provider";
-import { getStorefrontSettings } from "@/lib/storefront-settings-server";
+import { getStorefrontSettings } from "@lib/storefront-settings-server";
 import HeroSlider from "@/components/home/HeroSlider";
 import CategoryMegaMenu from "@/components/home/CategoryMegaMenu";
-import CategoryChipsRow from "@/components/home/CategoryChipsRow";
 import TopSellerCard from "@/components/home/TopSellerCard";
+import CategoryChipsRow from "@/components/home/CategoryChipsRow";
 import PromoBanners from "@/components/home/PromoBanners";
 import PopularCategoryRow from "@/components/home/PopularCategoryRow";
 import HomeProductGrid from "@/components/home/HomeProductGrid";
@@ -22,21 +23,27 @@ import LazyBelowFold from "@/components/ui/LazyBelowFold";
 const FeaturedBrandsSlider = nextDynamic(() => import("@/components/home/FeaturedBrandsSlider"), { ssr: true });
 const HomeReviewSection = nextDynamic(() => import("@/components/home/HomeReviewSection"), { ssr: true });
 import DiscountStrip from "@/components/home/DiscountStrip";
+import TrustBar from "@/components/home/TrustBar";
+import WhyChooseUs from "@/components/home/WhyChooseUs";
 import type { DisplayProduct } from "@/components/ProductCard";
 
-// Phase 1: Intelligent caching – 2 min revalidate for homepage
-export const revalidate = 120;
-
 async function getHomepageData() {
-  const [storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers] =
-    await Promise.all([
-      getStorefrontSettings(),
-      getHomeData(),
-      getFeaturedProducts(),
-      getFlashSaleProducts(8),
-      getClearanceProducts(8),
-      getComboOffers(),
-    ]);
+  const storefrontSettings = await getStorefrontSettings();
+  const [homeData, clearanceProducts, comboOffers] = await Promise.all([
+    getHomeData(),
+    getClearanceProducts(8),
+    getComboOffers(),
+  ]);
+
+  const featuredBlock = storefrontSettings.homepageBlocks.find((b) => b.type === "featured");
+  const featuredProductIds = featuredBlock?.featuredProductIds;
+  const featuredProducts =
+    featuredProductIds && featuredProductIds.length > 0
+      ? await (await import("@/src/data/provider")).getProductsByIds(featuredProductIds)
+      : await getFeaturedProducts();
+
+  const flashSaleProducts = await getFlashSaleProducts(8);
+
   return { storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers };
 }
 
@@ -72,14 +79,14 @@ export default async function HomePage() {
   const { storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers } =
     await getHomepageData();
 
-  const heroSlides = homeData.heroSlides.map((s) => ({
+  const heroSlides = homeData.heroSlides.map((s, i) => ({
     id: s.id,
-    title: s.title,
-    subheadline: s.subheadline,
+    title: i === 0 ? "Premium Pet Care Starts Here" : s.title,
+    subheadline: i === 0 ? "Authentic Dog & Cat Food | Trusted Accessories | Fast Delivery Across Bangladesh" : (s.subheadline ?? ""),
     image: s.image,
     href: s.href,
     cta: s.cta ?? "Shop Now",
-    discountText: "SAVE UP 30%",
+    discountText: i === 0 ? undefined : "SAVE UP 30%",
   }));
 
   const featuredDisplay: DisplayProduct[] = featuredProducts
@@ -95,28 +102,34 @@ export default async function HomePage() {
   const { homepageBlocks } = storefrontSettings;
 
   return (
-    <div className="min-h-screen">
-      {/* Hero row: Category sidebar + Slider + Top Seller card (desktop) | Slider only (mobile) */}
-      <section className="border-b border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-7xl px-3 py-4 md:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
-            <div className="hidden lg:block">
+    <div className="min-h-screen bg-[var(--bg-page)]">
+      {/* 3-column grid: Categories | Hero | Top Sellers */}
+      <section className="border-b border-[var(--border-light)] bg-white py-4 md:py-6">
+        <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-6">
+            <div className="hidden shrink-0 lg:block">
               <CategoryMegaMenu />
             </div>
             <div className="min-w-0 flex-1">
               <HeroSlider slides={heroSlides} />
             </div>
-            <div className="hidden lg:block">
-              <TopSellerCard />
+            <div className="shrink-0 lg:w-72">
+              <TopSellerCard products={featuredDisplay.slice(0, 6)} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mobile: horizontal category chips (Daraz/Shopee style) */}
+      {/* Category chips (mobile) */}
       <CategoryChipsRow />
 
+      {/* Trust badges row */}
+      <TrustBar />
+
+      {/* Promo banners */}
       <PromoBanners />
+
+      {/* Shop by Category tiles */}
       <PopularCategoryRow />
 
       {/* Dynamic homepage blocks (order + enable/disable from Admin) */}
@@ -180,6 +193,7 @@ export default async function HomePage() {
         }
         return null;
       })}
+      <WhyChooseUs />
       <DiscountStrip />
     </div>
   );

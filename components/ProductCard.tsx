@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, Star, Heart, Zap } from "lucide-react";
-import { useCart } from "@/context/CartContext";
-import { useWishlist } from "@/context/WishlistContext";
-import type { Product } from "@/lib/types";
+import { useCart } from "@store/CartContext";
+import { useWishlist } from "@store/WishlistContext";
+import type { Product } from "@lib/types";
 import SafeImage, { PRODUCT_PLACEHOLDER } from "@/components/media/SafeImage";
 
 /** Accepts both lib/types Product (image) and src/data/types Product (images[], comparePrice, tags, rating) */
@@ -83,14 +83,13 @@ export default function ProductCard({ product, showBuyNow = false }: ProductCard
   return (
     <Link
       href={`/product/${product.id}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+      className="group flex flex-col overflow-hidden rounded-card border border-[var(--border-light)] bg-white shadow-soft transition-all duration-200 hover:shadow-card"
     >
-      {/* aspect-square: consistent height in 2-col grid, prevents CLS */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+      <div className="relative aspect-square overflow-hidden bg-slate-50">
         <button
           type="button"
           onClick={handleWishlist}
-          className="absolute right-1 top-1 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/90 shadow-sm transition-colors hover:bg-white"
+          className="absolute right-1 top-1 z-10 flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full bg-white/95 shadow-sm transition-colors hover:bg-white"
           aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
         >
           <Heart
@@ -107,58 +106,51 @@ export default function ProductCard({ product, showBuyNow = false }: ProductCard
           className="object-cover"
         />
         {showDiscount && (
-          <span className="absolute right-1.5 top-10 rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white md:right-2 md:top-12 md:px-2 md:text-xs">
+          <span className="absolute left-2 top-2 rounded-lg bg-gradient-teal px-1.5 py-0.5 text-[10px] font-bold text-white shadow-soft">
             {Math.round(((product.comparePrice! - product.price) / product.comparePrice!) * 100)}% OFF
           </span>
         )}
-        {product.tags && product.tags.length > 0 && (
-          <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-            {product.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-brand/90 px-2 py-0.5 text-xs font-semibold text-white"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+        {product.inStock === false && (
+          <span className="absolute left-2 top-2 rounded bg-slate-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+            Out of stock
+          </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-3 md:p-4">
-        <h3 className="line-clamp-1 text-xs font-bold text-[var(--text)] group-hover:text-brand md:line-clamp-2 md:text-sm lg:text-base">
+      <div className="flex flex-1 flex-col p-3">
+        <h3 className="line-clamp-2 text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--teal-from)]">
           {product.name}
         </h3>
-        <div className="mt-1 flex items-center gap-1.5 md:gap-2">
-          <p className="text-sm font-bold text-[var(--brand-accent)] md:text-base lg:text-lg">
+        <div className="mt-1 flex items-center gap-2">
+          <p className="text-base font-bold text-[var(--teal-from)]">
             ৳{product.price.toLocaleString("en-BD")}
           </p>
           {product.comparePrice != null && product.comparePrice > product.price && (
-            <p className="text-sm text-[var(--text-muted)] line-through">৳{product.comparePrice.toLocaleString("en-BD")}</p>
+            <p className="text-xs text-[var(--text-muted)] line-through">৳{product.comparePrice.toLocaleString("en-BD")}</p>
           )}
         </div>
         {product.rating != null && (
           <div className="mt-0.5 flex items-center gap-1 text-amber-500">
-            <Star className="h-3 w-3 fill-amber-400 md:h-4 md:w-4" />
-            <span className="text-xs font-medium text-slate-600 md:text-sm">{product.rating.toFixed(1)}</span>
+            <Star className="h-3.5 w-3.5 fill-amber-400" />
+            <span className="text-xs font-medium text-slate-600">{product.rating.toFixed(1)}</span>
           </div>
         )}
-        <div className={`mt-2 flex gap-1.5 md:mt-3 md:gap-2 ${showBuyNow ? "flex-col sm:flex-row" : ""}`}>
+        <div className={`mt-2 flex gap-2 ${showBuyNow ? "flex-col sm:flex-row" : ""}`}>
           <button
             onClick={handleAddToCart}
-            className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand text-xs font-bold text-white transition-colors hover:bg-brand/90 md:gap-2 md:text-sm"
+            className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-card bg-gradient-teal text-xs font-semibold text-white shadow-soft transition-opacity hover:opacity-95 md:text-sm"
             aria-label="Add to cart"
           >
-            <ShoppingCart className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <ShoppingCart className="h-4 w-4" />
             Add to Cart
           </button>
           {showBuyNow && (
             <button
               onClick={handleBuyNow}
               disabled={!canBuyNow}
-              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg border-2 border-brand text-xs font-bold text-brand transition-colors hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent md:gap-2 md:text-sm"
+              className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-card border-2 border-[var(--teal-from)] text-xs font-semibold text-[var(--teal-from)] transition-colors hover:bg-[var(--brand-muted)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent md:text-sm"
               aria-label="Buy now"
             >
-              <Zap className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <Zap className="h-4 w-4" />
               Buy Now
             </button>
           )}

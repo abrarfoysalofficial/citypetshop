@@ -4,8 +4,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { OrderStatus, Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,11 @@ export async function GET(request: NextRequest) {
   const statusParam = searchParams.get("status");
   const format = searchParams.get("format"); // csv | json
 
+  const tenantId = getDefaultTenantId();
   const dateFilter: { gte?: Date; lte?: Date } = {};
   if (from) dateFilter.gte = new Date(from);
   if (to) dateFilter.lte = new Date(to);
-  const where: Prisma.OrderWhereInput = {};
+  const where: Prisma.OrderWhereInput = { tenantId };
   if (Object.keys(dateFilter).length > 0) where.createdAt = dateFilter;
   if (statusParam && VALID_ORDER_STATUSES.includes(statusParam as OrderStatus)) {
     where.status = statusParam as OrderStatus;
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest) {
       o.status,
       Number(o.total),
       o.guestName ?? o.shippingName ?? "",
-      o.guestPhone ?? "",
+      o.guestPhone ?? o.shippingPhone ?? "",
       o.paymentMethod ?? "",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
@@ -75,7 +77,7 @@ export async function GET(request: NextRequest) {
       status: o.status,
       total: Number(o.total),
       customerName: o.guestName ?? o.shippingName,
-      phone: o.guestPhone,
+      phone: o.guestPhone ?? o.shippingPhone ?? "",
       paymentMethod: o.paymentMethod,
       itemCount: o.items.length,
     })),

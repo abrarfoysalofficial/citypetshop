@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,10 @@ export async function GET(req: NextRequest) {
     take: 100,
   });
 
+  const tenantId = getDefaultTenantId();
   const orderIds = Array.from(new Set(flags.map((f) => f.orderId)));
   const orders = await prisma.order.findMany({
-    where: { id: { in: orderIds } },
+    where: { tenantId, id: { in: orderIds } },
     select: {
       id: true,
       shippingName: true,

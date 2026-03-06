@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ valid: false, discount: 0, error: "Invalid request" });
   }
 
+  const tenantId = getDefaultTenantId();
   const voucher = await prisma.voucher.findFirst({
     where: {
+      tenantId,
       code: code,
       isActive: true,
       OR: [

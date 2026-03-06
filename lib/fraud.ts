@@ -2,7 +2,7 @@
  * Phase 10: Fraud detection engine.
  * Thresholds from DB (FraudPolicy). Runs before order confirmation.
  */
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
 
 export interface FraudCheckResult {
   passed: boolean;

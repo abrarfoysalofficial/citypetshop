@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X, Gift, ShoppingCart, Heart, Package } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/store/CartContext";
 import { useState, useEffect } from "react";
 
 const MAIN_NAV = [
@@ -34,7 +34,7 @@ export default function MainNavbar() {
   }, [mobileOpen]);
 
   return (
-    <div className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
+    <div className="sticky top-0 z-50 border-b border-slate-200 bg-bg-card shadow-sm">
       {/* Desktop: [Logo left] [Nav center] [Actions right] | Mobile: [Hamburger] [Logo center] [Cart] */}
       <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-3 py-3 md:grid-cols-[auto_1fr_auto] md:px-6 lg:px-8">
         {/* Left: Hamburger (mobile) | Logo (desktop) */}
@@ -89,7 +89,7 @@ export default function MainNavbar() {
           </Link>
           <Link
             href="/offers"
-            className="hidden items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 md:flex"
+            className="hidden items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-300 md:flex"
             aria-label="Special Offer"
           >
             <Gift className="h-4 w-4" />
@@ -115,7 +115,7 @@ export default function MainNavbar() {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="border-t border-slate-200 bg-white md:hidden">
+        <div className="border-t border-slate-200 bg-bg-card md:hidden">
           <nav className="flex flex-col gap-1 px-4 py-4" aria-label="Mobile navigation">
             {MAIN_NAV.map(({ href, label }) => (
               <Link

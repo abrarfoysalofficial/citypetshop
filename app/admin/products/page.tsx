@@ -16,7 +16,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import type { ProductRow } from "@/lib/schema";
+import type { ProductRow } from "@lib/schema";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,21 +191,29 @@ export default function AdminProductsPage() {
       return matchesStatus;
     });
 
-    // Sort
+    // Sort: null-safe, nulls last on asc, nulls first on desc
     filtered.sort((a, b) => {
-      let aVal: any = a[sortBy as keyof ProductRow];
-      let bVal: any = b[sortBy as keyof ProductRow];
-      
-      if (sortBy === "selling_price" || sortBy === "stock") {
-        aVal = Number(aVal);
-        bVal = Number(bVal);
+      const aVal = a[sortBy as keyof ProductRow];
+      const bVal = b[sortBy as keyof ProductRow];
+
+      const aNull = aVal == null;
+      const bNull = bVal == null;
+      if (aNull && bNull) return 0;
+      if (aNull) return sortOrder === "asc" ? 1 : -1;
+      if (bNull) return sortOrder === "asc" ? -1 : 1;
+
+      const isNumeric = sortBy === "selling_price" || sortBy === "stock";
+      if (isNumeric) {
+        const aNum = Number(aVal ?? 0);
+        const bNum = Number(bVal ?? 0);
+        const cmp = aNum - bNum;
+        return sortOrder === "asc" ? cmp : -cmp;
       }
 
-      if (sortOrder === "asc") {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
+      const aStr = String(aVal ?? "");
+      const bStr = String(bVal ?? "");
+      const cmp = aStr.localeCompare(bStr, undefined, { numeric: true });
+      return sortOrder === "asc" ? cmp : -cmp;
     });
 
     return filtered;

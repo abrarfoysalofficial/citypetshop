@@ -1,45 +1,57 @@
 /**
- * Auth service implementations: Prisma/NextAuth (production) and Demo (cookie-based).
+ * Auth service: NextAuth (Prisma/PostgreSQL) only.
  */
 import type { AuthService, AuthSession } from "./types";
 
-/** Demo auth: cookie-based via /api/auth/demo-login and /api/auth/session. */
-export function createDemoAuthService(): AuthService {
+/** NextAuth-backed auth service. Uses credentials provider. */
+export function createNextAuthAuthService(): AuthService {
   return {
     async signIn(email, password) {
-      const res = await fetch("/api/auth/demo-login", {
+      const csrfRes = await fetch("/api/auth/csrf");
+      const { csrfToken } = (await csrfRes.json()) as { csrfToken?: string };
+      const res = await fetch("/api/auth/callback/credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, type: "user" }),
+        body: JSON.stringify({
+          csrfToken: csrfToken ?? "",
+          email: email.trim().toLowerCase(),
+          password,
+          redirect: false,
+          json: true,
+        }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { error: (data as { error?: string }).error ?? "Login failed" };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+      if (!res.ok || data?.error) {
+        return { error: data?.error ?? "Login failed" };
+      }
       return {};
     },
     async signOut() {
-      if (typeof window !== "undefined") window.location.href = "/api/auth/demo-logout?next=/";
-      else await fetch("/api/auth/demo-logout", { method: "GET" });
+      if (typeof window !== "undefined") {
+        window.location.href = "/api/auth/signout?callbackUrl=/";
+      } else {
+        await fetch("/api/auth/signout", { method: "GET" });
+      }
     },
     async signUp() {
-      return { error: "Sign up is not available in demo mode. Use Supabase for registration." };
+      return { error: "Sign up is not available. Use the registration flow." };
     },
     async otpSignIn() {
-      return { error: "OTP login is not available in demo mode. Use Supabase for OTP." };
+      return { error: "OTP login is not available." };
     },
     async getSession(): Promise<AuthSession | null> {
       const res = await fetch("/api/auth/session");
-      const data = await res.json().catch(() => ({}));
-      const session = (data as { session?: string; isLoggedIn?: boolean }).session;
-      const isLoggedIn = (data as { isLoggedIn?: boolean }).isLoggedIn;
-      if (!isLoggedIn || !session) return null;
-      const role = session === "admin" ? "admin" : undefined;
-      const id = typeof session === "object" && session !== null && "id" in session
-        ? (session as { id: string }).id
-        : "demo-user";
-      const email = typeof session === "object" && session !== null && "email" in session
-        ? (session as { email?: string }).email
-        : undefined;
-      return { user: { id, email, role } };
+      const data = (await res.json().catch(() => ({}))) as { user?: { id?: string; email?: string }; expires?: string };
+      const user = data?.user;
+      if (!user) return null;
+      const role = (user as { role?: string }).role;
+      return {
+        user: {
+          id: user.id ?? "",
+          email: user.email,
+          role: role === "admin" || role === "adm" || role === "super_admin" ? "admin" : undefined,
+        },
+      };
     },
   };
 }

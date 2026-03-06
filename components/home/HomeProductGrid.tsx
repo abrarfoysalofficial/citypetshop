@@ -30,8 +30,8 @@ export default function HomeProductGrid({ products, title = "Most Popular Produc
     <section className="py-8 md:py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8">
         <div className="text-center">
-          <h2 className="text-xl font-extrabold text-slate-900 md:text-2xl lg:text-3xl">{title}</h2>
-          {subtitle && <p className="mx-auto mt-1 max-w-xl text-sm text-slate-600 md:mt-2 md:text-base">{subtitle}</p>}
+          <h2 className="text-xl font-extrabold text-[var(--text-primary)] md:text-2xl lg:text-3xl">{title}</h2>
+          {subtitle && <p className="mx-auto mt-1 max-w-xl text-sm text-[var(--text-secondary)] md:mt-2 md:text-base">{subtitle}</p>}
         </div>
         <motion.div
           className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-3 md:gap-6 lg:grid-cols-4"

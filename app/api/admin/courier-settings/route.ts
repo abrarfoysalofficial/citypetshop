@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth, isDemoAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 import { isPrismaConfigured } from "@/src/config/env";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
 const providerSchema = z.enum(["pathao", "steadfast", "redx"]);
+const activeSchema = z.enum(["pathao", "steadfast", "redx", "none"]);
 
 const defaults = {
   providers: [
@@ -16,6 +18,7 @@ const defaults = {
     { id: "redx", name: "RedX", enabled: true },
   ],
   defaultProvider: "pathao" as const,
+  activeCourierProvider: "pathao" as const,
   sandbox: true,
 };
 
@@ -26,7 +29,7 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isPrismaConfigured()) {
+  if (!isPrismaConfigured()) {
     return NextResponse.json(defaults);
   }
 
@@ -34,17 +37,24 @@ export async function GET() {
     const configs = await prisma.courierConfig.findMany({
       where: { provider: { in: ["pathao", "steadfast", "redx"] } },
     });
-    const settings = await prisma.siteSettings.findUnique({
-      where: { id: "default" },
+    const settings = await prisma.tenantSettings.findUnique({
+      where: { tenantId: getDefaultTenantId() },
     });
 
-    const adv = (settings?.advancedSettings ?? {}) as { courier_default_provider?: string; courier_sandbox?: boolean };
+    const adv = (settings?.advancedSettings ?? {}) as {
+      courier_default_provider?: string;
+      activeCourierProvider?: string;
+      courier_sandbox?: boolean;
+    };
     const providerMap: Record<string, boolean> = { pathao: true, steadfast: true, redx: true };
     configs.forEach((c) => { providerMap[c.provider] = c.isActive; });
 
     const defaultProvider = providerSchema.safeParse(adv.courier_default_provider).success
       ? adv.courier_default_provider
       : defaults.defaultProvider;
+    const activeProvider = activeSchema.safeParse(adv.activeCourierProvider).success
+      ? adv.activeCourierProvider
+      : defaults.activeCourierProvider;
 
     return NextResponse.json({
       providers: [
@@ -53,6 +63,7 @@ export async function GET() {
         { id: "redx", name: "RedX", enabled: providerMap.redx !== false },
       ],
       defaultProvider: defaultProvider ?? defaults.defaultProvider,
+      activeCourierProvider: activeProvider ?? defaults.activeCourierProvider,
       sandbox: adv.courier_sandbox ?? defaults.sandbox,
     });
   } catch {
@@ -62,6 +73,7 @@ export async function GET() {
 
 const patchSchema = z.object({
   defaultProvider: providerSchema.optional(),
+  activeCourierProvider: activeSchema.optional(),
   sandbox: z.boolean().optional(),
   providers: z.array(z.object({ id: providerSchema, enabled: z.boolean() })).optional(),
 });
@@ -73,7 +85,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (isDemoAuth(auth) || !isPrismaConfigured()) {
+  if (!isPrismaConfigured()) {
     return NextResponse.json(defaults);
   }
 
@@ -84,15 +96,21 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    if (parsed.data.defaultProvider != null || parsed.data.sandbox != null) {
-      const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+    if (
+      parsed.data.defaultProvider != null ||
+      parsed.data.activeCourierProvider != null ||
+      parsed.data.sandbox != null
+    ) {
+      const tenantId = getDefaultTenantId();
+      const settings = await prisma.tenantSettings.findUnique({ where: { tenantId } });
       const adv = (settings?.advancedSettings ?? {}) as Record<string, unknown>;
       if (parsed.data.defaultProvider != null) adv.courier_default_provider = parsed.data.defaultProvider;
+      if (parsed.data.activeCourierProvider != null) adv.activeCourierProvider = parsed.data.activeCourierProvider;
       if (parsed.data.sandbox != null) adv.courier_sandbox = parsed.data.sandbox;
-      const jsonAdv = adv as Prisma.InputJsonValue;
-      await prisma.siteSettings.upsert({
-        where: { id: "default" },
-        create: { id: "default", advancedSettings: jsonAdv },
+      const jsonAdv = JSON.parse(JSON.stringify(adv)) as Prisma.InputJsonValue;
+      await prisma.tenantSettings.upsert({
+        where: { tenantId },
+        create: { tenantId, advancedSettings: jsonAdv },
         update: { advancedSettings: jsonAdv },
       });
     }
@@ -109,7 +127,10 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[courier-settings] PATCH error:", err);
+    const { logError } = await import("@lib/logger");
+    logError("admin/courier-settings", "PATCH failed", {
+      error: err instanceof Error ? err.message : "unknown",
+    });
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 }

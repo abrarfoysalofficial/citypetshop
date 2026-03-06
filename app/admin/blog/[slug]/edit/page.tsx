@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useBlog } from "@/context/BlogContext";
+import { useBlog } from "@store/BlogContext";
 import { useState, useEffect } from "react";
 
 export default function AdminEditBlogPage() {

@@ -18,15 +18,22 @@ import { DEFAULT_TENANT_ID } from "../lib/tenant";
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@citypetshop.bd";
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "Admin@12345";
+  const adminEmail =
+    process.env.INITIAL_ADMIN_EMAIL ?? process.env.ADMIN_EMAIL ?? "admin@citypetshop.bd";
+  const adminPassword =
+    process.env.INITIAL_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? "Admin@12345";
+  const adminName = process.env.INITIAL_ADMIN_NAME ?? process.env.ADMIN_NAME ?? "Admin";
 
   if (process.env.NODE_ENV === "production") {
     if (!adminPassword || adminPassword.length < 12) {
-      throw new Error("ADMIN_PASSWORD must be set and at least 12 characters in production");
+      throw new Error(
+        "INITIAL_ADMIN_PASSWORD or ADMIN_PASSWORD must be set and at least 12 characters in production"
+      );
     }
     if (adminPassword === "Admin@12345") {
-      throw new Error("ADMIN_PASSWORD cannot be the default 'Admin@12345' in production");
+      throw new Error(
+        "INITIAL_ADMIN_PASSWORD/ADMIN_PASSWORD cannot be the default 'Admin@12345' in production"
+      );
     }
   }
 
@@ -101,7 +108,7 @@ async function main() {
     create: {
       email: adminEmail,
       passwordHash,
-      name: "Admin",
+      name: adminName,
       role: "super_admin",
     },
     update: {}, // never overwrite password on re-seed

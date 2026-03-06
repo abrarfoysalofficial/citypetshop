@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/db";
-import { getDefaultTenantId } from "@/lib/tenant";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { createAuditLog } from "@/lib/audit";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { createAuditLog } from "@lib/audit";
 import { isPrismaConfigured } from "@/src/config/env";
 import { z } from "zod";
 
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/settings
- * Admin: Prisma or Supabase. Fetches from site_settings.
+ * Admin: Prisma TenantSettings (tenant-scoped).
  */
 export async function GET() {
   const auth = await requireAdminAuth();
@@ -76,6 +76,7 @@ export async function GET() {
         facebook_capi_token: s.facebookCapiToken,
         google_analytics_id: s.googleAnalyticsId,
         google_tag_manager_id: s.googleTagManagerId,
+        tiktok_pixel_id: s.tiktokPixelId,
         default_meta_title: s.defaultMetaTitle,
         default_meta_description: s.defaultMetaDescription,
         default_og_image_url: s.defaultOgImageUrl,
@@ -103,7 +104,7 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/settings
- * Update site_settings. Prisma or Supabase.
+ * Update TenantSettings. Prisma only.
  */
 export async function PATCH(request: Request) {
   const auth = await requireAdminAuth();
@@ -135,8 +136,9 @@ export async function PATCH(request: Request) {
         address_bn: "addressBn", phone: "phone", email: "email", whatsapp_number: "whatsappNumber",
         sales_top_bar_text: "salesTopBarText", sales_top_bar_enabled: "salesTopBarEnabled", hero_slider: "heroSlider", side_banners: "sideBanners", cta_buttons: "ctaButtons",
         popup_enabled: "popupEnabled", popup_content_en: "popupContentEn", popup_content_bn: "popupContentBn",
-        popup_image_url: "popupImageUrl", facebook_pixel_id: "facebookPixelId", facebook_capi_token: "facebookCapiToken",
+        popup_image_url: "popupImageUrl",         facebook_pixel_id: "facebookPixelId", facebook_capi_token: "facebookCapiToken",
         google_analytics_id: "googleAnalyticsId", google_tag_manager_id: "googleTagManagerId",
+        tiktok_pixel_id: "tiktokPixelId",
         default_meta_title: "defaultMetaTitle", default_meta_description: "defaultMetaDescription",
         default_og_image_url: "defaultOgImageUrl", homepage_blocks: "homepageBlocks",
         delivery_inside_dhaka: "deliveryInsideDhaka", delivery_outside_dhaka: "deliveryOutsideDhaka",

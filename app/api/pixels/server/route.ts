@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 import { isPrismaConfigured } from "@/src/config/env";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +8,8 @@ export const dynamic = "force-dynamic";
 /**
  * Phase 8: Server-side pixel events.
  * POST body: { event_name, event_id?, user_data?, custom_data? }
- * Forwards to Facebook CAPI and GA4 Measurement Protocol when configured.
+ * Forwards to Facebook CAPI when configured (Admin → Tracking).
+ * GA4 Measurement Protocol: requires GA4_MEASUREMENT_ID + GA4_MEASUREMENT_SECRET in env (not yet admin-manageable).
  */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
@@ -36,9 +38,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Facebook CAPI
-  const pixelId = process.env.FACEBOOK_PIXEL_ID;
-  const capiToken = process.env.FACEBOOK_CAPI_TOKEN;
+  // Facebook CAPI: admin settings from TenantSettings (Admin → Tracking)
+  let pixelId: string | null = null;
+  let capiToken: string | null = null;
+  if (isPrismaConfigured()) {
+    try {
+      const tenantId = getDefaultTenantId();
+      const s = await prisma.tenantSettings.findUnique({ where: { tenantId } });
+      pixelId = s?.facebookPixelId ?? null;
+      capiToken = s?.facebookCapiToken ?? null;
+    } catch {
+      // Non-blocking
+    }
+  }
   if (pixelId && capiToken) {
     try {
       const res = await fetch(

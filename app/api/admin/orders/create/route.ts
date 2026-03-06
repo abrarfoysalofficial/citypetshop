@@ -4,9 +4,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
-import { requireAdminAuthAndPermission } from "@/lib/admin-auth";
-import { logAdminAction } from "@/lib/rbac";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuthAndPermission } from "@lib/admin-auth";
+import { logAdminAction } from "@lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -65,9 +66,11 @@ export async function POST(request: NextRequest) {
   const total = data.total ?? subtotal + deliveryCharge - discountAmount;
 
   try {
+    const tenantId = getDefaultTenantId();
     const result = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
+          tenantId,
           userId: null,
           guestEmail: data.email?.trim() || null,
           guestPhone: data.phone.trim(),

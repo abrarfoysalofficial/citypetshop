@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { prisma } from "@/lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,8 @@ export async function POST(
   try {
     const body = z.object({ tag: z.string().min(1).max(50) }).parse(await request.json());
 
-    const order = await prisma.order.findUnique({ where: { id }, select: { id: true } });
+    const tenantId = getDefaultTenantId();
+    const order = await prisma.order.findFirst({ where: { id, tenantId }, select: { id: true } });
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
     const existing = await prisma.orderTag.findFirst({

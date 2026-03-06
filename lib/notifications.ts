@@ -12,7 +12,6 @@
  */
 
 import { Resend } from "resend";
-import { DEFAULT_EMAIL_FROM, DEFAULT_SUPPORT_EMAIL } from "@/lib/constants";
 
 export interface NotificationResult {
   ok: boolean;
@@ -134,7 +133,7 @@ function getResend(): Resend | null {
 }
 
 function getFromEmail(): string {
-  return process.env.EMAIL_FROM ?? DEFAULT_EMAIL_FROM;
+  return process.env.EMAIL_FROM ?? "noreply@citypluspetshop.com";
 }
 
 export async function sendEmail(opts: {
@@ -179,8 +178,8 @@ export async function sendOrderConfirmationEmail(opts: {
   const shortId = orderId.slice(-8).toUpperCase();
 
   let siteName = "City Plus Pet Shop";
-  let supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? DEFAULT_SUPPORT_EMAIL;
-  let primaryColor = "#5cd4ff";
+  let supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@citypluspetshop.com";
+  let primaryColor = "#0f172a";
   let secondaryColor = "#06b6d4";
 
   if (process.env.DATABASE_URL) {

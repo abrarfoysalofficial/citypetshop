@@ -13,6 +13,10 @@ export interface HomepageBlockConfig {
   titleEn?: string;
   titleBn?: string;
   subtitle?: string;
+  featuredProductIds?: string[];
+  trustBadges?: string[];
+  newArrivalsCount?: number;
+  collectionIds?: string[];
 }
 
 /** Default block order and labels when Admin has not configured. */

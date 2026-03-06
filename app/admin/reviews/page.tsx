@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
 import AdminReviewsClient from "./AdminReviewsClient";
 
 export default async function AdminReviewsPage() {

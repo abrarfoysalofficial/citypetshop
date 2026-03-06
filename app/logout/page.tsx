@@ -1,5 +1,15 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { signOut } from "next-auth/react";
 
 export default function LogoutPage() {
-  redirect("/api/auth/demo-logout?next=/");
+  useEffect(() => {
+    signOut({ callbackUrl: "/" });
+  }, []);
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <p className="text-slate-600">Signing out…</p>
+    </div>
+  );
 }

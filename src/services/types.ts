@@ -25,7 +25,7 @@ export interface CreateOrderInput {
 
 export interface OrdersRepository {
   createOrder(input: CreateOrderInput): Promise<{ orderId: string } | { error: string }>;
-  getOrderById(id: string): Promise<DemoOrder | null>;
+  getOrderById(id: string, userId?: string | null): Promise<DemoOrder | null>;
   listOrdersByUser(userId: string): Promise<DemoOrder[]>;
   adminListOrders(): Promise<DemoOrder[]>;
 }

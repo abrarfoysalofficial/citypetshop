@@ -18,7 +18,7 @@ import type {
 } from "./types";
 import type { ProductRow, SiteSettingsRow, PaymentGatewayRow } from "@/lib/schema";
 import type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
-import { DATA_SOURCE, AUTH_MODE } from "@/src/config/runtime";
+import { DATA_SOURCE } from "@/src/config/runtime";
 import { isPrismaConfigured } from "@/src/config/env";
 
 export type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
@@ -28,10 +28,21 @@ function shouldUsePrisma() {
   return isPrismaConfigured() || DATA_SOURCE === "prisma";
 }
 
-export async function getProducts(): Promise<Product[]> {
+export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+  if (ids.length === 0) return [];
+  if (shouldUsePrisma()) {
+    const { getProductsByIds: getPrisma } = await import("./provider-db");
+    return getPrisma(ids);
+  }
+  return [];
+}
+
+export async function getProducts(
+  options?: { limit?: number; categorySlug?: string } | number
+): Promise<Product[]> {
   if (shouldUsePrisma()) {
     const { getProducts: getPrisma } = await import("./provider-db");
-    return getPrisma();
+    return getPrisma(options);
   }
   return [];
 }
@@ -70,6 +81,18 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     return getPrisma(slug);
   }
   return null;
+}
+
+export async function searchProducts(
+  q: string,
+  limit = 24,
+  page = 1
+): Promise<{ products: Product[]; total: number }> {
+  if (shouldUsePrisma()) {
+    const { searchProducts: searchPrisma } = await import("./provider-db");
+    return searchPrisma(q, limit, page);
+  }
+  return { products: [], total: 0 };
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
@@ -128,9 +151,9 @@ export async function getClearanceProducts(limit = 8): Promise<Product[]> {
   return [];
 }
 
-// Admin / user data: Prisma first; demo/fallback returns empty. No local/supabase imports.
+// Admin / user data: Prisma only.
 export async function getAdminDashboard(): Promise<DemoDashboard> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminDashboard: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -138,7 +161,7 @@ export async function getAdminDashboard(): Promise<DemoDashboard> {
 }
 
 export async function getAdminOrders(): Promise<DemoOrder[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminOrders: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -146,7 +169,7 @@ export async function getAdminOrders(): Promise<DemoOrder[]> {
 }
 
 export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminOrderById: getPrisma } = await import("./provider-db");
     return getPrisma(id);
   }
@@ -154,7 +177,7 @@ export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
 }
 
 export async function getAdminCustomers(): Promise<DemoCustomer[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminCustomers: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -162,7 +185,7 @@ export async function getAdminCustomers(): Promise<DemoCustomer[]> {
 }
 
 export async function getAdminVouchers(): Promise<DemoVoucher[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminVouchers: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -170,7 +193,7 @@ export async function getAdminVouchers(): Promise<DemoVoucher[]> {
 }
 
 export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminAuditLogs: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -179,39 +202,27 @@ export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
 
 /** Admin products list. */
 export async function getAdminProducts(): Promise<ProductRow[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminProducts: getPrisma } = await import("./provider-db");
     return getPrisma();
-  }
-  if (AUTH_MODE === "demo") {
-    const { DEMO_PRODUCTS } = await import("@/lib/demo-data");
-    return DEMO_PRODUCTS;
   }
   return [];
 }
 
 /** Admin site settings. */
 export async function getAdminSettings(): Promise<Partial<SiteSettingsRow> | null> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminSettings: getPrisma } = await import("./provider-db");
     return getPrisma();
-  }
-  if (AUTH_MODE === "demo") {
-    const { DEMO_SITE_SETTINGS } = await import("@/lib/demo-data");
-    return DEMO_SITE_SETTINGS;
   }
   return null;
 }
 
 /** Admin payment gateways. */
 export async function getAdminPaymentGateways(): Promise<PaymentGatewayRow[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminPaymentGateways: getPrisma } = await import("./provider-db");
     return getPrisma();
-  }
-  if (AUTH_MODE === "demo") {
-    const { DEMO_PAYMENT_GATEWAYS } = await import("@/lib/demo-data");
-    return DEMO_PAYMENT_GATEWAYS;
   }
   return [];
 }
@@ -223,61 +234,18 @@ export async function getAdminAnalyticsEvents(params: {
   event?: string;
   source?: string;
 }): Promise<AdminAnalyticsResult> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminAnalyticsEvents: getPrisma } = await import("./provider-db");
     return getPrisma(params);
-  }
-  if (AUTH_MODE === "demo") {
-    const { DEMO_ANALYTICS_EVENTS } = await import("@/lib/demo-data");
-    return {
-      events: DEMO_ANALYTICS_EVENTS.events,
-      counts: DEMO_ANALYTICS_EVENTS.counts,
-      lastReceivedByEvent: DEMO_ANALYTICS_EVENTS.lastReceivedByEvent,
-      diagnostics: DEMO_ANALYTICS_EVENTS.diagnostics,
-    };
   }
   return { events: [], counts: {}, lastReceivedByEvent: {}, diagnostics: { pixelConfigured: false, capiConfigured: false, warnings: [] } };
 }
 
 /** Admin dashboard stats (KPIs, charts, recent orders). */
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getAdminDashboardStats: getPrisma } = await import("./provider-db");
     return getPrisma();
-  }
-  if (AUTH_MODE === "demo") {
-    return {
-      stats: {
-        totalRevenue: 45231.89,
-        totalOrders: 127,
-        totalProducts: 234,
-        totalCustomers: 89,
-        revenueChange: 12.5,
-        ordersChange: 8.2,
-      },
-      salesData: [
-        { name: "Jan", revenue: 4000, orders: 24 },
-        { name: "Feb", revenue: 3000, orders: 18 },
-        { name: "Mar", revenue: 5000, orders: 32 },
-        { name: "Apr", revenue: 4500, orders: 28 },
-        { name: "May", revenue: 6000, orders: 38 },
-        { name: "Jun", revenue: 5500, orders: 35 },
-      ],
-      categoryData: [
-        { name: "Dog Food", value: 400, count: 45 },
-        { name: "Cat Food", value: 300, count: 38 },
-        { name: "Toys", value: 200, count: 52 },
-        { name: "Accessories", value: 278, count: 41 },
-        { name: "Healthcare", value: 189, count: 28 },
-      ],
-      recentOrders: [
-        { id: "ORD-001", customer: "John Doe", total: 1250, status: "delivered", date: "2026-02-05" },
-        { id: "ORD-002", customer: "Jane Smith", total: 890, status: "processing", date: "2026-02-05" },
-        { id: "ORD-003", customer: "Mike Johnson", total: 2100, status: "shipped", date: "2026-02-04" },
-        { id: "ORD-004", customer: "Sarah Williams", total: 450, status: "pending", date: "2026-02-04" },
-        { id: "ORD-005", customer: "Tom Brown", total: 1680, status: "delivered", date: "2026-02-03" },
-      ],
-    };
   }
   return { stats: { totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0 }, salesData: [], categoryData: [], recentOrders: [] };
 }
@@ -287,7 +255,7 @@ export async function getUserAccountOverview(): Promise<{
   recentOrders: DemoOrder[];
   orderCount: number;
 }> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getUserAccountOverview: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
@@ -295,31 +263,27 @@ export async function getUserAccountOverview(): Promise<{
 }
 
 export async function getUserOrders(): Promise<DemoOrder[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getUserOrders: getPrisma } = await import("./provider-db");
     return getPrisma();
   }
   return [];
 }
 
-export async function getUserOrderById(id: string): Promise<DemoOrder | null> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
-    const { getUserOrderById: getPrisma } = await import("./provider-db");
-    return getPrisma(id);
-  }
-  return null;
+export async function getUserOrderById(id: string, userId: string | null): Promise<DemoOrder | null> {
+  if (!userId || !shouldUsePrisma()) return null;
+  const { getUserOrderById: getPrisma } = await import("./provider-db");
+  return getPrisma(id, userId);
 }
 
-export async function getUserInvoices(): Promise<DemoInvoice[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
-    const { getUserInvoices: getPrisma } = await import("./provider-db");
-    return getPrisma();
-  }
-  return [];
+export async function getUserInvoices(userId: string | null): Promise<DemoInvoice[]> {
+  if (!userId || !shouldUsePrisma()) return [];
+  const { getUserInvoices: getPrisma } = await import("./provider-db");
+  return getPrisma(userId);
 }
 
 export async function getUserReturns(): Promise<DemoReturn[]> {
-  if (AUTH_MODE === "prisma" || shouldUsePrisma()) {
+  if (shouldUsePrisma()) {
     const { getUserReturns: getPrisma } = await import("./provider-db");
     return getPrisma();
   }

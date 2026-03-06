@@ -1,24 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useProducts } from "@/context/ProductsContext";
-import { featuredProductIds } from "@/lib/data";
 import ProductCard from "@/components/ProductCard";
 import type { DisplayProduct } from "@/components/ProductCard";
 
 interface FeaturedProductsProps {
-  /** When provided (from provider), use these; otherwise use context + featuredProductIds */
+  /** Products to display. Must be passed from server (DB-backed). No lib/data fallback. */
   products?: DisplayProduct[];
 }
 
 export default function FeaturedProducts({ products: propProducts }: FeaturedProductsProps) {
-  const { products: contextProducts } = useProducts();
-  const products =
-    propProducts && propProducts.length > 0
-      ? propProducts
-      : contextProducts
-          .filter((p) => featuredProductIds.includes(p.id))
-          .map((p) => ({ ...p, image: (p as { image?: string }).image }));
+  const products = propProducts ?? [];
 
   return (
     <>
@@ -30,7 +22,7 @@ export default function FeaturedProducts({ products: propProducts }: FeaturedPro
       <div className="mt-10 text-center">
         <Link
           href="/shop"
-          className="inline-flex rounded-lg border-2 border-primary px-6 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white sm:text-base"
+          className="inline-flex rounded-lg border-2 border-primary-900 px-6 py-2.5 text-sm font-bold text-primary-900 transition-colors hover:bg-primary-900 hover:text-primary-foreground sm:text-base"
         >
           View All Products
         </Link>

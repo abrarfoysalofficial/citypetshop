@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
+import { auth } from "@lib/auth";
 import { getUserOrderById } from "@/src/data/provider";
 import { notFound } from "next/navigation";
 import { OrderActions } from "./OrderActions";
@@ -10,7 +11,9 @@ export default async function AccountOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = await getUserOrderById(id);
+  const session = await auth();
+  const userId = (session?.user as { id?: string })?.id ?? null;
+  const order = await getUserOrderById(id, userId);
   if (!order) notFound();
 
   return (
@@ -47,7 +50,13 @@ export default async function AccountOrderDetailPage({
         </div>
       )}
       <div className="flex flex-wrap gap-3">
-        <a href="#" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">Download invoice (mock PDF)</a>
+        <a
+          href={`/api/invoice?orderId=${encodeURIComponent(order.id)}`}
+          download
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+        >
+          Download invoice
+        </a>
         <OrderActions orderId={order.id} status={order.status} />
       </div>
     </div>

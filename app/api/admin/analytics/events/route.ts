@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { prisma } from "@lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +21,11 @@ export async function GET(request: NextRequest) {
   const source = searchParams.get("source");
 
   try {
-    const where: any = {};
-    if (from) where.createdAt = { gte: new Date(from) };
-    if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
+    const where: Prisma.AnalyticsEventWhereInput = {};
+    const createdAt: { gte?: Date; lte?: Date } = {};
+    if (from) createdAt.gte = new Date(from);
+    if (to) createdAt.lte = new Date(to);
+    if (Object.keys(createdAt).length) where.createdAt = createdAt;
     if (event) where.eventName = event;
     if (source) where.source = source;
 

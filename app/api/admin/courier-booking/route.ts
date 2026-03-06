@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { prisma } from "@/lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { bookCourier } from "@lib/courier/booking";
+import { createAuditLog } from "@lib/audit";
 import { z } from "zod";
+import type { CourierProvider } from "@lib/courier/key-registry";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +14,7 @@ const schema = z.object({
   provider: z.enum(["pathao", "steadfast", "redx"]),
 });
 
-/** POST: Book courier for one order. Adapter pattern – provider modules are stub until API keys set. */
+/** POST: Book courier for one order. Idempotent. Returns 409 if provider not configured. */
 export async function POST(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) {
@@ -22,54 +26,33 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
   }
-  const { orderId, provider } = parsed.data;
+  const { orderId, provider } = parsed.data as { orderId: string; provider: CourierProvider };
 
-  // Verify order exists
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
-  }
+  const tenantId = getDefaultTenantId();
+  const result = await bookCourier(tenantId, orderId, provider);
 
-  // Stub booking – real providers plug in here via adapter when API keys configured
-  const consignmentId = `BOOK-${orderId.slice(0, 8).toUpperCase()}-${Date.now()}`;
-  const trackingCode = `TRK-${provider.toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-
-  // Upsert courier config check (warn if not configured)
-  const courierCfg = await prisma.courierConfig.findUnique({ where: { provider } });
-  if (!courierCfg?.isActive) {
+  if (result.success) {
+    await createAuditLog({
+      userId: auth.userId,
+      action: "create",
+      resource: "courier_booking",
+      resourceId: orderId,
+      newValues: { provider, trackingCode: result.trackingCode, consignmentId: result.consignmentId, idempotent: result.idempotent },
+    });
     return NextResponse.json({
-      error: `Courier provider '${provider}' is not configured or not active. Add API key in Admin → Couriers.`,
-      providerNotConfigured: true,
-    }, { status: 422 });
+      success: true,
+      trackingCode: result.trackingCode,
+      provider,
+      consignmentId: result.consignmentId,
+      idempotent: result.idempotent,
+    });
   }
 
-  // Update order with courier details (atomic)
-  await prisma.$transaction([
-    prisma.order.update({
-      where: { id: orderId },
-      data: {
-        courierProvider: provider,
-        courierBookingId: consignmentId,
-        trackingCode,
-        status: "handed_to_courier",
-      },
-    }),
-    prisma.orderStatusEvent.create({
-      data: {
-        orderId,
-        provider,
-        status: "handed_to_courier",
-        payloadSummary: { tracking_code: trackingCode, consignment_id: consignmentId },
-      },
-    }),
-  ]);
-
-  return NextResponse.json({
-    success: true,
-    trackingCode,
-    provider,
-    consignmentId,
-  });
+  const status = result.status ?? 500;
+  return NextResponse.json(
+    { error: result.error, providerNotConfigured: status === 409 },
+    { status: status as 404 | 409 | 500 }
+  );
 }
 
 /** GET: List bookings for an order */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useVouchers } from "@/context/VouchersContext";
+import { useVouchers } from "@/store/VouchersContext";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import type { Voucher } from "@/lib/types";
 
@@ -167,7 +167,7 @@ export default function AdminVouchersPage() {
           <h1 className="text-2xl font-bold text-slate-900">Vouchers</h1>
           <p className="mt-1 text-slate-600">
             Create voucher codes: fixed/percent, min spend, usage limits, validity.
-            {useApi ? " Stored in database." : " Stored locally (demo mode)."}
+            Stored in database.
           </p>
         </div>
         <button

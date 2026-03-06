@@ -3,8 +3,9 @@
  * Returns customers with risk indicators: duplicate phone/address, COD history.
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,9 @@ export async function GET() {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
+  const tenantId = getDefaultTenantId();
   const orders = await prisma.order.findMany({
-    where: { status: { notIn: ["cancelled", "failed"] } },
+    where: { tenantId, status: { notIn: ["cancelled", "failed"] } },
     select: {
       id: true,
       guestPhone: true,

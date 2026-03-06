@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getRecentlyViewed } from "@/lib/recently-viewed";
+import { getRecentlyViewed } from "@lib/recently-viewed";
 import ProductCard from "@/components/ProductCard";
 import type { DisplayProduct } from "@/components/ProductCard";
 import type { Product } from "@/src/data/types";

@@ -22,7 +22,7 @@ export default async function AdminAuditLogsPage() {
             {logs.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-6 text-center text-slate-500">
-                  No audit logs. Use DATA_SOURCE=local for demo data.
+                  No audit logs.
                 </td>
               </tr>
             ) : (

@@ -4,8 +4,8 @@
  * Menu items are built from PermissionGroups + Permissions with menuLabel/menuHref.
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export type MenuItem = {
   name: string;
@@ -21,14 +21,6 @@ export async function GET() {
   }
 
   const userId = auth.userId;
-
-  // Demo user: return full static menu (no DB roles)
-  if (userId === "demo-admin") {
-    return NextResponse.json({
-      menu: getStaticMenu(),
-      source: "static",
-    });
-  }
 
   try {
     const menu = await buildMenuFromPermissions(userId);

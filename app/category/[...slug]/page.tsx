@@ -1,11 +1,13 @@
-export const dynamic = "force-dynamic";
+// Phase 1: ISR — revalidate every 5 min
+export const revalidate = 300;
+
 import Link from "next/link";
 import { getProducts } from "@/src/data/provider";
 import CategoryClient from "./CategoryClient";
-import { getCategoryBySlug, getSubcategoryByFullSlug } from "@/lib/categories-master";
-import { getCategoryShortDescription, CATEGORY_FALLBACK_IMAGE } from "@/lib/category-meta";
+import { getCategoryBySlug, getSubcategoryByFullSlug } from "@lib/categories-master";
+import { getCategoryShortDescription, CATEGORY_FALLBACK_IMAGE } from "@lib/category-meta";
 
-import { getServerBaseUrl } from "@/lib/site-url";
+import { getServerBaseUrl } from "@lib/site-url";
 
 function normalizeSlug(slug: string | string[]): string {
   return Array.isArray(slug) ? slug.join("/") : slug;
@@ -48,10 +50,10 @@ export default async function CategoryPage({
 }) {
   const raw = await params;
   const slug = normalizeSlug(raw.slug);
-  const products = await getProducts();
-
   const isSubcategory = slug.includes("/");
   const categorySlug = isSubcategory ? slug.split("/")[0]! : slug;
+
+  const products = await getProducts({ categorySlug, limit: 48 });
   const subSlug = isSubcategory ? slug.split("/")[1]! : null;
 
   const cat = getCategoryBySlug(categorySlug);

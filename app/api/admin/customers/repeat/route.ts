@@ -3,8 +3,9 @@
  * Returns repeat customers: grouped by phone, with order count, last order, COD stats.
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,9 @@ export async function GET() {
   }
 
   try {
+    const tenantId = getDefaultTenantId();
     const orders = await prisma.order.findMany({
-      where: { status: { notIn: ["cancelled", "failed"] } },
+      where: { tenantId, status: { notIn: ["cancelled", "failed"] } },
       select: {
         id: true,
         guestPhone: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,9 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
 
   try {
+    const tenantId = getDefaultTenantId();
     const products = await prisma.product.findMany({
+      where: { tenantId, deletedAt: null },
       skip: offset,
       take: limit,
       orderBy: { createdAt: "desc" },

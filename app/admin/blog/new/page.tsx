@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useBlog } from "@/context/BlogContext";
-import type { BlogPost } from "@/lib/content";
+import { useBlog } from "@/store/BlogContext";
+import type { BlogPost } from "@lib/content";
 
 export default function AdminNewBlogPage() {
   const router = useRouter();

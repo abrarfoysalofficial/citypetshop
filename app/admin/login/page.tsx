@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
+
+function isSafeAdminPath(path: string): boolean {
+  return path === "/admin" || (path.startsWith("/admin/") && !path.includes(".."));
+}
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -12,6 +16,8 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +40,19 @@ export default function AdminLoginPage() {
         setLoading(false);
         return;
       }
-      router.replace("/admin");
+      let target = "/admin";
+      if (typeof callbackUrl === "string" && callbackUrl.trim()) {
+        let path = callbackUrl.trim();
+        if (!path.startsWith("/")) {
+          try {
+            path = new URL(callbackUrl).pathname;
+          } catch {
+            path = `/${callbackUrl}`;
+          }
+        }
+        if (isSafeAdminPath(path)) target = path;
+      }
+      router.replace(target);
       router.refresh();
     } catch (err) {
       console.error("Admin login error:", err);
@@ -47,7 +65,9 @@ export default function AdminLoginPage() {
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-slate-900">Admin Login</h1>
-        <p className="mt-1 text-sm text-slate-600">Sign in to access the admin panel.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Sign in to access the admin panel.
+        </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>

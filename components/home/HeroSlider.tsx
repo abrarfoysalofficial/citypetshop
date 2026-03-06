@@ -17,9 +17,9 @@ export interface HeroSlide {
 }
 
 const DEFAULT_SLIDES: HeroSlide[] = [
-  { id: "1", title: "Premium Pet Food", subheadline: "Quality nutrition for your furry friends", image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=1200", href: "/shop", cta: "Shop Now", discountText: "SAVE UP 30%" },
-  { id: "2", title: "Cat & Dog Essentials", subheadline: "Everything you need in one place", image: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1200", href: "/category/dog-food", cta: "Shop Now", discountText: "UP TO 25% OFF" },
-  { id: "3", title: "New Arrivals", subheadline: "Fresh stock every week", image: "https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=1200", href: "/combo-offers", cta: "View Combos", discountText: "SAVE UP 30%" },
+  { id: "1", title: "Premium Pet Food", subheadline: "Quality nutrition for your furry friends", image: "/ui/hero-16x9.svg", href: "/shop", cta: "Shop Now", discountText: "SAVE UP 30%" },
+  { id: "2", title: "Cat & Dog Essentials", subheadline: "Everything you need in one place", image: "/ui/hero-16x9.svg", href: "/category/dog-food", cta: "Shop Now", discountText: "UP TO 25% OFF" },
+  { id: "3", title: "New Arrivals", subheadline: "Fresh stock every week", image: "/ui/hero-16x9.svg", href: "/combo-offers", cta: "View Combos", discountText: "SAVE UP 30%" },
 ];
 
 const AUTO_PLAY_MS = 5500;
@@ -41,7 +41,7 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
   }, [goNext]);
 
   return (
-    <section className="relative w-full overflow-hidden rounded-xl bg-slate-900 md:rounded-none">
+    <section className="relative w-full overflow-hidden rounded-card bg-slate-900">
       {/* aspect-[16/9] on mobile reserves space before images load → prevents CLS */}
       <div className="relative w-full aspect-[16/9] min-h-[180px] sm:min-h-[220px] md:aspect-[21/9] md:min-h-[320px] lg:min-h-[400px]">
         {list.map((slide, i) => (
@@ -59,10 +59,10 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
               sizes="100vw"
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
             <div className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 md:px-10 lg:px-24">
               {slide.discountText && (
-                <span className="mb-2 inline-block w-fit rounded-md bg-brand px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white shadow-lg sm:mb-3 sm:px-4 sm:py-2 sm:text-lg md:text-xl">
+                <span className="mb-2 inline-block w-fit rounded-lg bg-gradient-teal px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white shadow-soft sm:mb-3 sm:px-4 sm:py-2 sm:text-lg md:text-xl">
                   {slide.discountText}
                 </span>
               )}
@@ -72,7 +72,7 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
               {slide.subheadline && (
                 <p className="mt-1 max-w-xs text-sm font-semibold text-white/95 sm:mt-2 sm:max-w-md sm:text-lg md:text-xl">{slide.subheadline}</p>
               )}
-              <span className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-xl transition hover:bg-slate-100 sm:mt-6 sm:px-6 sm:py-3 sm:text-base">
+              <span className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-gradient-teal px-4 py-2 text-sm font-bold text-white shadow-soft transition-opacity hover:opacity-95 sm:mt-6 sm:px-6 sm:py-3 sm:text-base">
                 {slide.cta ?? "Shop Now"}
               </span>
             </div>

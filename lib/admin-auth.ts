@@ -1,37 +1,15 @@
 /**
- * Admin API authorization - Prisma (NextAuth) or demo (cookie) only.
+ * Admin API authorization – NextAuth with Prisma.
  * Uses RBAC for granular permissions.
  */
-import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
-import { AUTH_MODE } from "@/src/config/runtime";
 import { hasPermission } from "@/lib/rbac";
 import type { AdminAuthResult } from "./admin-auth-types";
 
 export type { AdminAuthResult };
 
-export function isDemoAuth(auth: AdminAuthResult): boolean {
-  return auth.ok && (auth as { _demo?: boolean })._demo === true;
-}
-
 export async function requireAdminAuth(): Promise<AdminAuthResult> {
   try {
-    // Demo mode: check demo_session cookie (dev only)
-    if (AUTH_MODE === "demo") {
-      const cookieStore = await cookies();
-      const session = cookieStore.get("demo_session")?.value;
-      if (session === "admin") {
-        return {
-          ok: true,
-          userId: "demo-admin",
-          email: "admin@cityplus.local",
-          _demo: true,
-        } as AdminAuthResult & { _demo?: boolean };
-      }
-      return { ok: false, status: 401, message: "Sign in required" };
-    }
-
-    // Prisma mode: NextAuth credentials
     const session = await auth();
     const user = session?.user;
     if (!user) {

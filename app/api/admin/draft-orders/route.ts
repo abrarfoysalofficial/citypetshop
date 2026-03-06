@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +14,10 @@ export async function GET(req: NextRequest) {
   const minAgeMinutes = parseInt(searchParams.get("minAge") ?? "30", 10);
   const cutoff = new Date(Date.now() - minAgeMinutes * 60 * 1000);
 
+  const tenantId = getDefaultTenantId();
   const [drafts, draftOrders] = await Promise.all([
     prisma.order.findMany({
-      where: { status: "draft", createdAt: { lte: cutoff } },
+      where: { tenantId, status: "draft", createdAt: { lte: cutoff } },
       take: 50,
       orderBy: { updatedAt: "desc" },
       select: {

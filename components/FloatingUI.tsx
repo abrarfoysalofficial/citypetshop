@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MessageCircle, PackageSearch } from "lucide-react";
-import { useSiteSettings } from "@/context/SiteSettingsContext";
+import { useSiteSettings } from "@/store/SiteSettingsContext";
 
 export default function FloatingUI() {
   const { settings } = useSiteSettings();

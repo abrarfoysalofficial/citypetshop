@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MASTER_CATEGORIES, type CategoryItem, type SubcategoryItem } from "@/lib/categories-master";
+import { MASTER_CATEGORIES, type CategoryItem, type SubcategoryItem } from "@lib/categories-master";
 import SafeImage from "@/components/media/SafeImage";
 
 type SubProduct = { id: string; name: string; price: number; image: string; slug: string };
@@ -115,8 +115,8 @@ export default function CategoryMegaMenu() {
       className="relative flex w-full shrink-0 lg:w-64"
       onMouseLeave={handleCategoryLeave}
     >
-      <aside className="w-full rounded-xl border border-slate-200 bg-white shadow-sm lg:w-56">
-        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+      <aside className="w-full rounded-card border border-[var(--border-light)] bg-white shadow-soft lg:w-56">
+        <div className="border-b border-[var(--border-light)] bg-slate-50 px-4 py-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
             Categories
           </h2>
@@ -139,7 +139,7 @@ export default function CategoryMegaMenu() {
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => handleKeyDown(e, cat, index)}
-                      className="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-primary/5 hover:text-primary"
+                      className="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-[var(--brand-muted)] hover:text-[var(--teal-from)]"
                       aria-haspopup="true"
                       aria-expanded={activeCategory?.slug === cat.slug}
                     >
@@ -150,7 +150,7 @@ export default function CategoryMegaMenu() {
                   ) : (
                     <Link
                       href={`/category/${cat.slug}`}
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-primary/5 hover:text-primary"
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-[var(--brand-muted)] hover:text-[var(--teal-from)]"
                     >
                       <Icon className="h-5 w-5 shrink-0 text-slate-500" />
                       <span className="flex-1">{cat.name}</span>
@@ -179,7 +179,7 @@ export default function CategoryMegaMenu() {
                         <div className="border-t border-slate-100 bg-slate-50/50 pb-2 pl-8 pr-4">
                           <Link
                             href={`/category/${cat.slug}`}
-                            className="block py-2 text-sm text-slate-600 hover:text-primary"
+                            className="block py-2 text-sm text-slate-600 hover:text-[var(--teal-from)]"
                             onClick={() => setMobileOpen(null)}
                           >
                             All {cat.name}
@@ -188,7 +188,7 @@ export default function CategoryMegaMenu() {
                             <Link
                               key={sub.fullSlug}
                               href={`/category/${sub.fullSlug}`}
-                              className="block py-2 text-sm text-slate-600 hover:text-primary"
+                              className="block py-2 text-sm text-slate-600 hover:text-[var(--teal-from)]"
                               onClick={() => setMobileOpen(null)}
                             >
                               {sub.name}
@@ -218,7 +218,7 @@ export default function CategoryMegaMenu() {
       {activeCategory && activeCategory.subcategories.length > 0 && (
         <div
           ref={panelRef}
-          className="absolute left-full top-0 z-50 ml-1 hidden rounded-xl border border-slate-200 bg-white shadow-lg lg:flex"
+          className="absolute left-full top-0 z-50 ml-1 hidden rounded-card border border-[var(--border-light)] bg-white shadow-card lg:flex"
           onMouseEnter={handlePanelEnter}
           onMouseLeave={handlePanelLeave}
           role="menu"
@@ -227,7 +227,7 @@ export default function CategoryMegaMenu() {
           <div className="min-w-[200px] border-r border-slate-100 py-3">
             <Link
               href={`/category/${activeCategory.slug}`}
-              className="block px-4 py-2 text-sm font-semibold text-[var(--brand)] hover:bg-brand/5"
+              className="block px-4 py-2 text-sm font-semibold text-[var(--teal-from)] hover:bg-[var(--brand-muted)]"
               role="menuitem"
             >
               All {activeCategory.name}
@@ -238,8 +238,8 @@ export default function CategoryMegaMenu() {
                 href={`/category/${sub.fullSlug}`}
                 onMouseEnter={() => handleSubEnter(sub)}
                 onMouseLeave={handleSubLeave}
-                className={`block px-4 py-2 text-sm hover:bg-brand/5 ${
-                  activeSubcategory?.fullSlug === sub.fullSlug ? "bg-brand/5 font-medium text-[var(--brand)]" : "text-slate-700"
+                className={`block px-4 py-2 text-sm hover:bg-[var(--brand-muted)] ${
+                  activeSubcategory?.fullSlug === sub.fullSlug ? "bg-[var(--brand-muted)] font-medium text-[var(--teal-from)]" : "text-slate-700"
                 }`}
                 role="menuitem"
               >
@@ -263,7 +263,7 @@ export default function CategoryMegaMenu() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-slate-800">{p.name}</p>
-                        <p className="text-xs font-bold text-[var(--brand-accent)]">৳{p.price.toLocaleString("en-BD")}</p>
+                        <p className="text-xs font-bold text-[var(--teal-from)]">৳{p.price.toLocaleString("en-BD")}</p>
                       </div>
                     </Link>
                   ))}

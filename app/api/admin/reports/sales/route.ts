@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +13,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const tenantId = getDefaultTenantId();
   const fromDate = from ? new Date(from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const toDate = to ? new Date(to) : new Date();
 
   const [totalRevenue, orderCount, orders] = await Promise.all([
     prisma.order.aggregate({
       where: {
+        tenantId,
         status: { in: ["delivered", "processing", "shipped", "handed_to_courier"] },
         createdAt: { gte: fromDate, lte: toDate },
       },
@@ -25,12 +28,13 @@ export async function GET(req: NextRequest) {
     }),
     prisma.order.count({
       where: {
+        tenantId,
         status: { not: "cancelled" },
         createdAt: { gte: fromDate, lte: toDate },
       },
     }),
     prisma.order.findMany({
-      where: { createdAt: { gte: fromDate, lte: toDate } },
+      where: { tenantId, createdAt: { gte: fromDate, lte: toDate } },
       select: { id: true, total: true, status: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -39,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   const byStatus = await prisma.order.groupBy({
     by: ["status"],
-    where: { createdAt: { gte: fromDate, lte: toDate } },
+    where: { tenantId, createdAt: { gte: fromDate, lte: toDate } },
     _count: { id: true },
   });
 

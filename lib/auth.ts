@@ -1,8 +1,6 @@
 /**
  * NextAuth v4 configuration - self-hosted credentials auth.
  * Prisma/PostgreSQL as identity store.
- * Production: trustHost + secure cookies for reverse proxy (CloudPanel/Nginx).
- * Cookies: secure, sameSite=lax, optional domain for www+non-www.
  */
 import type { AuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
@@ -10,37 +8,12 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
 import { getAuthBaseUrl } from "@/lib/site-url";
-import { logError } from "@/lib/logger";
-
-const isProduction = process.env.NODE_ENV === "production";
-/** AUTH_TRUST_HOST=true required behind Nginx for X-Forwarded-Proto/Host. Set in env. */
-
-/** Optional: .citypetshop.bd for www+non-www. Omit = current host only. */
-const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 
 export const authOptions: AuthOptions = {
-  trustHost: isProduction || process.env.AUTH_TRUST_HOST === "true",
-  useSecureCookies: isProduction,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours - refresh session daily
   },
-  cookies: isProduction
-    ? {
-        sessionToken: {
-          name: "__Secure-next-auth.session-token",
-          options: {
-            httpOnly: true,
-            sameSite: "lax",
-            path: "/",
-            secure: true,
-            maxAge: 30 * 24 * 60 * 60,
-            ...(cookieDomain && { domain: cookieDomain }),
-          },
-        },
-      }
-    : undefined,
   pages: {
     signIn: "/login",
   },
@@ -68,13 +41,7 @@ export const authOptions: AuthOptions = {
             name: user.name,
             role: user.role,
           };
-        } catch (e) {
-          const err = e instanceof Error ? e : new Error(String(e));
-          const code = (e as { code?: string }).code;
-          logError("auth", "authorize failed", {
-            errorType: err.name,
-            errorCode: code ?? "unknown",
-          });
+        } catch {
           return null;
         }
       },
@@ -95,15 +62,16 @@ export const authOptions: AuthOptions = {
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
+    async redirect({ url }) {
       const authBase = getAuthBaseUrl();
-      if (url.startsWith("/")) return `${authBase}${url}`;
+      if (url.startsWith("/") && !url.includes("..")) {
+        return `${authBase}${url}`;
+      }
       try {
         const u = new URL(url);
-        if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return `${authBase}/admin`;
         if (u.origin === authBase) return url;
       } catch {
-        return `${authBase}/admin`;
+        /* ignore */
       }
       return `${authBase}/admin`;
     },
@@ -111,7 +79,7 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-/** Get session (for admin-auth fallback when Supabase not configured). */
+/** Get session (NextAuth with Prisma). */
 export async function auth() {
   return getServerSession(authOptions);
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useCompare } from "@/context/CompareContext";
+import { useCompare } from "@/store/CompareContext";
 
 export default function ComparePage() {
   const { items, removeFromCompare } = useCompare();

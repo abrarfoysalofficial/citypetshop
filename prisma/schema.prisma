@@ -42,26 +42,57 @@ enum ReviewStatus {
 }
 
 // =============================================================================
+// TENANT (Multi-tenant SaaS - Organization/Store)
+// =============================================================================
+model Tenant {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  slug      String   @unique // subdomain or path prefix
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+
+  users              User[]
+  categories         Category[]
+  products           Product[]
+  orders             Order[]
+  vouchers           Voucher[]
+  media              Media[]
+  settings           TenantSettings?
+  secureConfigs      SecureConfig[]
+  secureConfigAudits SecureConfigAuditLog[]
+  courierBookingLogs CourierBookingLog[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("tenants")
+}
+
+// =============================================================================
 // USERS (Auth.js credentials - replaces Supabase Auth)
 // =============================================================================
 model User {
   id            String    @id @default(uuid())
-  email         String    @unique
+  email         String    @unique // globally unique
   passwordHash  String    @map("password_hash")
   name          String?
   role          String    @default("user") // admin | user
   emailVerified DateTime? @map("email_verified")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
+  tenantId      String?   @map("tenant_id")
 
+  tenant    Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   accounts  Account[]
   sessions  Session[]
   orders    Order[]
   roles     UserRole[]
-  auditLogs AuditLog[]
-  tickets   SupportTicket[]
-  messages  TicketMessage[]
+  auditLogs          AuditLog[]
+  tickets            SupportTicket[]
+  messages           TicketMessage[]
+  secureConfigAudits SecureConfigAuditLog[]
 
+  @@index([tenantId])
   @@map("users")
 }
 
@@ -106,10 +137,11 @@ model VerificationToken {
 }
 
 // =============================================================================
-// SITE SETTINGS
+// TENANT SETTINGS (tenant-scoped, replaces SiteSettings)
 // =============================================================================
-model SiteSettings {
-  id        String   @id @default("default")
+model TenantSettings {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique @map("tenant_id")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   logoUrl     String? @map("logo_url")
@@ -119,9 +151,9 @@ model SiteSettings {
   taglineEn   String? @map("tagline_en")
   taglineBn   String? @map("tagline_bn")
 
-  primaryColor   String  @default("#0f172a") @map("primary_color")
+  primaryColor   String  @default("#5cd4ff") @map("primary_color")
   secondaryColor String  @default("#06b6d4") @map("secondary_color")
-  accentColor    String  @default("#f97316") @map("accent_color")
+  accentColor    String  @default("#f39221") @map("accent_color")
   fontFamily     String? @map("font_family")
   buttonStyle    String? @map("button_style")
 
@@ -152,6 +184,7 @@ model SiteSettings {
   facebookCapiToken  String? @map("facebook_capi_token")
   googleAnalyticsId  String? @map("google_analytics_id")
   googleTagManagerId String? @map("google_tag_manager_id")
+  tiktokPixelId      String? @map("tiktok_pixel_id")
 
   defaultMetaTitle       String? @map("default_meta_title")
   defaultMetaDescription String? @map("default_meta_description")
@@ -169,30 +202,39 @@ model SiteSettings {
   advancedSettings        Json?    @map("advanced_settings")
   toolsExtras             Json?    @map("tools_extras")
 
-  @@map("site_settings")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("tenant_settings")
 }
 
 // =============================================================================
 // CATEGORIES
 // =============================================================================
 model Category {
-  id            String   @id @default(uuid())
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  slug          String   @unique
-  nameEn        String   @map("name_en")
-  nameBn        String?  @map("name_bn")
-  descriptionEn String?  @map("description_en")
-  descriptionBn String?  @map("description_bn")
-  imageUrl      String?  @map("image_url")
-  parentId      String?  @map("parent_id")
-  sortOrder     Int      @default(0) @map("sort_order")
-  isActive      Boolean  @default(true) @map("is_active")
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  tenantId      String    @map("tenant_id")
+  slug          String
+  nameEn        String    @map("name_en")
+  nameBn        String?   @map("name_bn")
+  descriptionEn String?   @map("description_en")
+  descriptionBn String?   @map("description_bn")
+  imageUrl      String?   @map("image_url")
+  parentId      String?   @map("parent_id")
+  sortOrder     Int       @default(0) @map("sort_order")
+  isActive      Boolean   @default(true) @map("is_active")
+  deletedAt     DateTime? @map("deleted_at")
 
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
   children Category[] @relation("CategoryToCategory")
   products Product[]
 
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([deletedAt])
   @@map("categories")
 }
 
@@ -200,15 +242,17 @@ model Category {
 // PRODUCTS
 // =============================================================================
 model Product {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  tenantId  String    @map("tenant_id")
+  deletedAt DateTime? @map("deleted_at")
 
-  nameEn        String  @map("name_en")
-  nameBn        String? @map("name_bn")
-  slug          String  @unique
-  descriptionEn String? @map("description_en")
-  descriptionBn String? @map("description_bn")
+  nameEn        String   @map("name_en")
+  nameBn        String?  @map("name_bn")
+  slug          String
+  descriptionEn String?  @map("description_en")
+  descriptionBn String?  @map("description_bn")
 
   buyingPrice  Decimal  @default(0) @map("buying_price") @db.Decimal(12, 2)
   sellingPrice Decimal  @map("selling_price") @db.Decimal(12, 2)
@@ -231,6 +275,7 @@ model Product {
   seoTags        String[] @default([]) @map("seo_tags")
   metaOgImage    String?  @map("meta_og_image")
 
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category       Category?             @relation(fields: [categoryId], references: [id])
   brand          Brand?                @relation(fields: [brandId], references: [id])
   orderItems     OrderItem[]
@@ -239,9 +284,14 @@ model Product {
   images         ProductImage[]
   tags           ProductTagOnProduct[]
 
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, createdAt(sort: Desc)])
   @@index([categorySlug])
+  @@index([nameEn])
   @@index([slug])
   @@index([isFeatured])
+  @@index([deletedAt])
   @@map("products")
 }
 
@@ -252,6 +302,7 @@ model Order {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  tenantId  String   @map("tenant_id")
 
   userId     String? @map("user_id")
   guestEmail String? @map("guest_email")
@@ -286,7 +337,8 @@ model Order {
 
   voucherCode String? @map("voucher_code")
 
-  user              User?              @relation(fields: [userId], references: [id])
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user              User?             @relation(fields: [userId], references: [id])
   items             OrderItem[]
   productReviews    ProductReview[]
   orderNotesRel     OrderNote[]
@@ -294,9 +346,10 @@ model Order {
   orderTags         OrderTag[]
   trackingEvents    TrackingEvent[]
 
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt(sort: Desc)])
   @@index([userId])
-  @@index([status])
-  @@index([createdAt(sort: Desc)])
   @@index([guestPhone])
   @@map("orders")
 }
@@ -377,6 +430,27 @@ model PaymentWebhookLog {
 }
 
 // =============================================================================
+// NOTIFICATION LOG (idempotency for order confirmation email/SMS)
+// =============================================================================
+model NotificationLog {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  tenantId  String   @map("tenant_id")
+  orderId  String   @map("order_id")
+  type      String   // order_confirmation_email | order_status_sms_confirmed | ...
+  channel   String   // email | sms
+  recipient String?  @map("recipient") // truncated/hashed only (no full email/phone)
+  sentAt    DateTime @default(now()) @map("sent_at")
+  provider  String?
+  messageId String?  @map("message_id")
+
+  @@unique([tenantId, orderId, type])
+  @@index([tenantId])
+  @@index([orderId])
+  @@map("notification_logs")
+}
+
+// =============================================================================
 // PAYMENT GATEWAYS
 // =============================================================================
 model PaymentGateway {
@@ -399,7 +473,8 @@ model Voucher {
   id             String    @id @default(uuid())
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
-  code           String    @unique
+  tenantId       String    @map("tenant_id")
+  code           String
   discountType   String    @map("discount_type") // fixed | percent
   discountValue  Decimal   @map("discount_value") @db.Decimal(12, 2)
   minOrderAmount Decimal?  @map("min_order_amount") @db.Decimal(12, 2)
@@ -408,7 +483,72 @@ model Voucher {
   usageCount     Int       @default(0) @map("usage_count")
   isActive       Boolean   @default(true) @map("is_active")
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@map("vouchers")
+}
+
+// =============================================================================
+// SECURE CONFIG (Encrypted secrets — AES-256-GCM at rest)
+// =============================================================================
+model SecureConfig {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  key        String
+  valueEnc   String   @map("value_enc") @db.Text
+  valueLen   Int?     @map("value_len")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@map("secure_configs")
+}
+
+model SecureConfigAuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  key       String
+  action    String   // created | updated | deleted
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([key])
+  @@index([createdAt])
+  @@map("secure_config_audit_logs")
+}
+
+// =============================================================================
+// COURIER BOOKING LOG (idempotency — unique per tenant+order+provider)
+// =============================================================================
+model CourierBookingLog {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  orderId        String   @map("order_id")
+  provider       String
+  consignmentId  String   @map("consignment_id")
+  trackingCode   String?  @map("tracking_code")
+  requestHash    String?  @map("request_hash")
+  sandbox        Boolean  @default(true) @map("sandbox")
+  status         String   @default("created")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, orderId, provider])
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("courier_booking_logs")
 }
 
 // =============================================================================
@@ -599,12 +739,16 @@ model TrackVerifiedToken {
 model Media {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now()) @map("created_at")
+  tenantId  String   @map("tenant_id")
   bucket    String
   objectKey String   @map("object_key")
   mimeType  String   @map("mime_type")
   sizeBytes Int      @map("size_bytes")
   url       String // Full URL or path for serving
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@map("media")
 }
 

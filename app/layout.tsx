@@ -10,6 +10,7 @@ import { OffersProvider } from "@/store/OffersContext";
 import { VouchersProvider } from "@/store/VouchersContext";
 import { BlogProvider } from "@/store/BlogContext";
 import StoreLayout from "@/components/StoreLayout";
+import SessionProvider from "@/components/providers/SessionProvider";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
 import { PreloadLinks, PreloadCriticalRoutes } from "@/components/PreloadLinks";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
@@ -53,10 +54,10 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen flex flex-col">
         <OrganizationSchema />
-        <AnalyticsScripts />
         <PreloadLinks />
         <PreloadCriticalRoutes />
         <SiteSettingsProvider>
+          <AnalyticsScripts />
           <ProductsProvider>
             <CategoriesProvider>
               <OffersProvider>
@@ -65,7 +66,9 @@ export default function RootLayout({
                     <CartProvider>
                       <CompareProvider>
                         <WishlistProvider>
-                          <StoreLayout>{children}</StoreLayout>
+                          <SessionProvider>
+                            <StoreLayout>{children}</StoreLayout>
+                          </SessionProvider>
                         </WishlistProvider>
                       </CompareProvider>
                     </CartProvider>

@@ -1,0 +1,31 @@
+{
+  "total": 65,
+  "seeded": [
+    "Tenant",
+    "TenantSettings",
+    "User",
+    "Role",
+    "Permission",
+    "PermissionGroup",
+    "UserRole",
+    "RolePermission",
+    "Category",
+    "Product",
+    "PaymentGateway",
+    "FraudPolicy",
+    "ProductFilter",
+    "AboutPageProfile",
+    "TeamMember",
+    "BlogCategory",
+    "CmsPage"
+  ],
+  "unused": [
+    "HomepageSection",
+    "ConversionTracking"
+  ],
+  "partial": [
+    "Reminder",
+    "InventoryLog",
+    "Conversation"
+  ]
+}

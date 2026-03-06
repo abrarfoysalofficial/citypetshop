@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { requireAdminAuth } from "@/lib/admin-auth";
-import { AUTH_MODE } from "@/src/config/runtime";
 import { isPrismaConfigured } from "@/src/config/env";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function PATCH(
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (AUTH_MODE !== "prisma" || !isPrismaConfigured()) {
+  if (!isPrismaConfigured()) {
     return NextResponse.json({ error: "Vouchers require database" }, { status: 400 });
   }
 
@@ -27,6 +27,10 @@ export async function PATCH(
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   try {
+    const tenantId = getDefaultTenantId();
+    const existing = await prisma.voucher.findFirst({ where: { id, tenantId } });
+    if (!existing) return NextResponse.json({ error: "Voucher not found" }, { status: 404 });
+
     const body = await request.json();
     const data: Record<string, unknown> = {};
     if (typeof body.discountType === "string") data.discountType = body.discountType;
@@ -70,7 +74,7 @@ export async function DELETE(
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  if (AUTH_MODE !== "prisma" || !isPrismaConfigured()) {
+  if (!isPrismaConfigured()) {
     return NextResponse.json({ error: "Vouchers require database" }, { status: 400 });
   }
 
@@ -78,6 +82,9 @@ export async function DELETE(
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   try {
+    const tenantId = getDefaultTenantId();
+    const existing = await prisma.voucher.findFirst({ where: { id, tenantId } });
+    if (!existing) return NextResponse.json({ error: "Voucher not found" }, { status: 404 });
     await prisma.voucher.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (err) {

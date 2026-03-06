@@ -1,6 +1,6 @@
 /**
- * Premium Digital Pet Shop - Supabase Database Schema
- * TypeScript types and table definitions for Admin-customizable e-commerce.
+ * Premium Digital Pet Shop - Shared TypeScript types for API responses.
+ * Aligns with Prisma TenantSettings and legacy snake_case API shapes.
  * All tables support English + Bangla content where applicable.
  */
 
@@ -21,9 +21,9 @@ export interface SiteSettingsRow {
   tagline_bn: string | null;
 
   // Theme (Theme Customizer)
-  primary_color: string;       // e.g. #0f172a
+  primary_color: string;       // e.g. #5cd4ff
   secondary_color: string;    // e.g. #06b6d4
-  accent_color: string;       // e.g. #f97316
+  accent_color: string;       // e.g. #f39221
   font_family: string | null;
   button_style: string | null; // rounded | pill | square
 
@@ -60,6 +60,7 @@ export interface SiteSettingsRow {
   facebook_capi_token: string | null;
   google_analytics_id: string | null;
   google_tag_manager_id: string | null;
+  tiktok_pixel_id: string | null;
 
   // Auth providers (Admin toggles: Google, Facebook, Phone OTP)
   auth_providers: AuthProvidersConfig | null;

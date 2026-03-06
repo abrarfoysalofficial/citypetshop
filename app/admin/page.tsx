@@ -35,42 +35,16 @@ export default function AdminDashboardPage() {
     revenueChange: 0,
     ordersChange: 0,
   });
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [salesData, setSalesData] = useState<{ name: string; revenue: number; orders: number }[]>([]);
+  const [categoryData, setCategoryData] = useState<{ name: string; value: number; count: number }[]>([]);
+  const [recentOrders, setRecentOrders] = useState<{ id: string; customer: string; total: number; status: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const setDemoData = useCallback(() => {
-    setStats({
-      totalRevenue: 45231.89,
-      totalOrders: 127,
-      totalProducts: 234,
-      totalCustomers: 89,
-      revenueChange: 12.5,
-      ordersChange: 8.2,
-    });
-    setSalesData([
-      { name: "Jan", revenue: 4000, orders: 24 },
-      { name: "Feb", revenue: 3000, orders: 18 },
-      { name: "Mar", revenue: 5000, orders: 32 },
-      { name: "Apr", revenue: 4500, orders: 28 },
-      { name: "May", revenue: 6000, orders: 38 },
-      { name: "Jun", revenue: 5500, orders: 35 },
-    ]);
-    setCategoryData([
-      { name: "Dog Food", value: 400, count: 45 },
-      { name: "Cat Food", value: 300, count: 38 },
-      { name: "Toys", value: 200, count: 52 },
-      { name: "Accessories", value: 278, count: 41 },
-      { name: "Healthcare", value: 189, count: 28 },
-    ]);
-    setRecentOrders([
-      { id: "ORD-001", customer: "John Doe", total: 1250, status: "delivered", date: "2026-02-05" },
-      { id: "ORD-002", customer: "Jane Smith", total: 890, status: "processing", date: "2026-02-05" },
-      { id: "ORD-003", customer: "Mike Johnson", total: 2100, status: "shipped", date: "2026-02-04" },
-      { id: "ORD-004", customer: "Sarah Williams", total: 450, status: "pending", date: "2026-02-04" },
-      { id: "ORD-005", customer: "Tom Brown", total: 1680, status: "delivered", date: "2026-02-03" },
-    ]);
+  const setEmptyFallback = useCallback(() => {
+    setStats({ totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0 });
+    setSalesData([]);
+    setCategoryData([]);
+    setRecentOrders([]);
   }, []);
 
   const fetchDashboardData = useCallback(async () => {
@@ -94,21 +68,35 @@ export default function AdminDashboardPage() {
 
       const result = await Promise.race([fetchPromise, timeout(8000)]);
       if (result === "timeout") {
-        setDemoData();
+        setEmptyFallback();
       }
     } catch (err) {
       console.error("Dashboard data fetch error:", err);
-      setDemoData();
+      setEmptyFallback();
     } finally {
       setLoading(false);
     }
-  }, [setDemoData]);
+  }, [setEmptyFallback]);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const StatCard = ({ title, value, change, icon: Icon, trend }: any) => (
+  const StatCard = ({
+    title,
+    value,
+    change,
+    icon: Icon,
+    trend,
+  }: {
+    title: string;
+    value: string | number;
+    change?: number;
+    icon: React.ComponentType<{ className?: string }>;
+    trend?: "up" | "down";
+  }) => {
+    const displayValue = typeof value === "number" ? value.toLocaleString() : value;
+    return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -117,7 +105,7 @@ export default function AdminDashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-slate-600">{title}</p>
-          <h3 className="mt-2 text-3xl font-bold text-slate-900">{value}</h3>
+          <h3 className="mt-2 text-3xl font-bold text-slate-900">{displayValue}</h3>
           {change !== undefined && (
             <div className="mt-2 flex items-center gap-1">
               {trend === "up" ? (
@@ -137,7 +125,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
     </motion.div>
-  );
+    );
+  };
 
   const statusColors = {
     delivered: "bg-green-100 text-green-700",

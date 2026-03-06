@@ -5,7 +5,7 @@
 import type { ProductsRepository, OrdersRepository, AuthService } from "./types";
 import { createProviderProductsRepository } from "./products";
 import { createLocalOrdersRepository } from "./orders";
-import { createDemoAuthService } from "./auth";
+import { createNextAuthAuthService } from "./auth";
 
 let _products: ProductsRepository | null = null;
 let _orders: OrdersRepository | null = null;
@@ -27,7 +27,7 @@ function getOrdersRepository(): OrdersRepository {
 
 function getAuthService(): AuthService {
   if (!_auth) {
-    _auth = createDemoAuthService();
+    _auth = createNextAuthAuthService();
   }
   return _auth;
 }
@@ -62,4 +62,4 @@ export function getServices(): Services {
 export type { ProductsRepository, OrdersRepository, AuthService, CreateOrderInput } from "./types";
 export { createProviderProductsRepository } from "./products";
 export { createLocalOrdersRepository } from "./orders";
-export { createDemoAuthService } from "./auth";
+export { createNextAuthAuthService } from "./auth";

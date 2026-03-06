@@ -17,6 +17,7 @@ import type {
   DemoReturn,
 } from "./types";
 import type { ProductRow, SiteSettingsRow, PaymentGatewayRow } from "@/lib/schema";
+import { getDefaultTenantId } from "@/lib/tenant";
 import type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 import * as dbProducts from "@/lib/data/db-products";
 import { prisma } from "@/lib/db";
@@ -25,12 +26,14 @@ export type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 
 // Products
 export const getProducts = dbProducts.getProducts;
+export const getProductsByIds = dbProducts.getProductsByIds;
 export const getFeaturedProducts = dbProducts.getFeaturedProducts;
 export const getFlashSaleProducts = dbProducts.getFlashSaleProducts;
 export const getClearanceProducts = dbProducts.getClearanceProducts;
 export const getProductById = dbProducts.getProductById;
 export const getProductBySlug = dbProducts.getProductBySlug;
 export const getRecommendedProducts = dbProducts.getRecommendedProducts;
+export const searchProducts = dbProducts.searchProducts;
 
 // Blog - from cms_pages
 export async function getBlogPosts(): Promise<BlogPost[]> {
@@ -71,10 +74,12 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
   };
 }
 
-// Home - from site_settings + home_banner_slides
+// Home - from tenant_settings + home_banner_slides
 export async function getHomeData(): Promise<HomeSection> {
-  const settings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
+  const tenantId = getDefaultTenantId();
+  const settings = await prisma.tenantSettings.findUnique({
+    where: { tenantId },
+    select: { heroSlider: true },
   });
   const heroRaw = (settings?.heroSlider as { image_url?: string; title_en?: string; link?: string; order?: number }[]) ?? [];
   const heroSlides = heroRaw.map((s, i) => ({
@@ -102,7 +107,7 @@ export async function getHomeData(): Promise<HomeSection> {
   }));
   const allSlides = fromSlides.length > 0 ? fromSlides : heroSlides;
   const categories = await prisma.category.findMany({
-    where: { isActive: true },
+    where: { tenantId, isActive: true, deletedAt: null },
     orderBy: { sortOrder: "asc" },
     take: 8,
   });
@@ -139,12 +144,14 @@ export async function getComboOffers(): Promise<ComboOffer[]> {
 
 // Admin
 export async function getAdminDashboard(): Promise<DemoDashboard> {
+  const tenantId = getDefaultTenantId();
   const [orderCount, productCount, revenue] = await Promise.all([
-    prisma.order.count(),
-    prisma.product.count(),
-    prisma.order.aggregate({ _sum: { total: true }, where: { status: "delivered" } }),
+    prisma.order.count({ where: { tenantId } }),
+    prisma.product.count({ where: { tenantId, deletedAt: null } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { tenantId, status: "delivered" } }),
   ]);
   const recentOrders = await prisma.order.findMany({
+    where: { tenantId },
     take: 5,
     orderBy: { createdAt: "desc" },
     include: { items: true },
@@ -167,7 +174,9 @@ export async function getAdminDashboard(): Promise<DemoDashboard> {
 }
 
 export async function getAdminOrders(): Promise<DemoOrder[]> {
+  const tenantId = getDefaultTenantId();
   const orders = await prisma.order.findMany({
+    where: { tenantId },
     orderBy: { createdAt: "desc" },
     include: { items: true },
   });
@@ -191,8 +200,9 @@ export async function getAdminOrders(): Promise<DemoOrder[]> {
 }
 
 export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
-  const o = await prisma.order.findUnique({
-    where: { id },
+  const tenantId = getDefaultTenantId();
+  const o = await prisma.order.findFirst({
+    where: { id, tenantId },
     include: { items: true },
   });
   if (!o) return null;
@@ -212,13 +222,17 @@ export async function getAdminOrderById(id: string): Promise<DemoOrder | null> {
     })),
     shippingAddress: o.shippingAddress,
     paymentMethod: o.paymentMethod,
+    courierBookingId: o.courierBookingId ?? undefined,
+    trackingCode: o.trackingCode ?? undefined,
+    courierProvider: o.courierProvider ?? undefined,
   };
 }
 
 export async function getAdminCustomers(): Promise<DemoCustomer[]> {
+  const tenantId = getDefaultTenantId();
   const orders = await prisma.order.groupBy({
     by: ["guestEmail", "guestName", "guestPhone"],
-    where: { guestEmail: { not: null } },
+    where: { tenantId, guestEmail: { not: null } },
     _count: { id: true },
     _max: { createdAt: true },
   });
@@ -235,7 +249,8 @@ export async function getAdminCustomers(): Promise<DemoCustomer[]> {
 }
 
 export async function getAdminVouchers(): Promise<DemoVoucher[]> {
-  const v = await prisma.voucher.findMany({ orderBy: { createdAt: "desc" } });
+  const tenantId = getDefaultTenantId();
+  const v = await prisma.voucher.findMany({ where: { tenantId }, orderBy: { createdAt: "desc" } });
   return v.map((x) => ({
     id: x.id,
     code: x.code,
@@ -274,7 +289,9 @@ export async function getAdminAuditLogs(): Promise<DemoAuditLog[]> {
 }
 
 export async function getAdminProducts(): Promise<ProductRow[]> {
+  const tenantId = getDefaultTenantId();
   const rows = await prisma.product.findMany({
+    where: { tenantId, deletedAt: null },
     orderBy: { createdAt: "desc" },
     include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },
   });
@@ -304,7 +321,8 @@ export async function getAdminProducts(): Promise<ProductRow[]> {
 }
 
 export async function getAdminSettings(): Promise<Partial<SiteSettingsRow> | null> {
-  const s = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+  const tenantId = getDefaultTenantId();
+  const s = await prisma.tenantSettings.findUnique({ where: { tenantId } });
   if (!s) return null;
   return {
     logo_url: s.logoUrl,
@@ -344,12 +362,14 @@ export async function getAdminAnalyticsEvents(_params: {
 }
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
+  const tenantId = getDefaultTenantId();
   const [orderCount, productCount, revenue] = await Promise.all([
-    prisma.order.count(),
-    prisma.product.count(),
-    prisma.order.aggregate({ _sum: { total: true }, where: { status: "delivered" } }),
+    prisma.order.count({ where: { tenantId } }),
+    prisma.product.count({ where: { tenantId, deletedAt: null } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { tenantId, status: "delivered" } }),
   ]);
   const recentOrders = await prisma.order.findMany({
+    where: { tenantId },
     take: 5,
     orderBy: { createdAt: "desc" },
   });
@@ -391,12 +411,49 @@ export async function getUserOrders(): Promise<DemoOrder[]> {
   return [];
 }
 
-export async function getUserOrderById(id: string): Promise<DemoOrder | null> {
-  return getAdminOrderById(id);
+export async function getUserOrderById(id: string, userId: string): Promise<DemoOrder | null> {
+  if (!userId) return null;
+  const tenantId = getDefaultTenantId();
+  const o = await prisma.order.findFirst({
+    where: { id, tenantId, userId },
+    include: { items: true },
+  });
+  if (!o) return null;
+  return {
+    id: o.id,
+    customerId: o.userId ?? undefined,
+    customerName: o.shippingName,
+    email: o.guestEmail ?? o.shippingEmail ?? undefined,
+    total: Number(o.total),
+    status: o.status,
+    createdAt: o.createdAt.toISOString(),
+    items: o.items.map((i) => ({
+      productId: i.productId ?? "",
+      name: i.productName,
+      qty: i.quantity,
+      price: Number(i.unitPrice),
+    })),
+    shippingAddress: o.shippingAddress,
+    paymentMethod: o.paymentMethod,
+  };
 }
 
-export async function getUserInvoices(): Promise<DemoInvoice[]> {
-  return [];
+export async function getUserInvoices(userId: string): Promise<DemoInvoice[]> {
+  if (!userId) return [];
+  const tenantId = getDefaultTenantId();
+  const orders = await prisma.order.findMany({
+    where: { tenantId, userId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, createdAt: true, total: true },
+  });
+  return orders.map((o, i) => ({
+    id: o.id,
+    orderId: o.id,
+    number: `INV-${o.id.slice(0, 8).toUpperCase()}`,
+    date: o.createdAt.toISOString().slice(0, 10),
+    total: Number(o.total),
+    downloadUrl: `/api/invoice?orderId=${o.id}`,
+  }));
 }
 
 export async function getUserReturns(): Promise<DemoReturn[]> {

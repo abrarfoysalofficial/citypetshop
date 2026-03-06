@@ -12,6 +12,7 @@ export default function AdminCourierPage() {
     { id: "redx", name: "RedX", enabled: true },
   ]);
   const [defaultProvider, setDefaultProvider] = useState("pathao");
+  const [activeCourierProvider, setActiveCourierProvider] = useState("pathao");
   const [sandbox, setSandbox] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,6 +24,7 @@ export default function AdminCourierPage() {
       .then((d) => {
         if (Array.isArray(d.providers)) setProviders(d.providers);
         if (d.defaultProvider) setDefaultProvider(d.defaultProvider);
+        if (d.activeCourierProvider) setActiveCourierProvider(d.activeCourierProvider);
         if (typeof d.sandbox === "boolean") setSandbox(d.sandbox);
       })
       .catch(() => {})
@@ -38,6 +40,7 @@ export default function AdminCourierPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           defaultProvider,
+          activeCourierProvider,
           sandbox,
           providers: providers.map((p) => ({ id: p.id, enabled: p.enabled })),
         }),
@@ -47,7 +50,7 @@ export default function AdminCourierPage() {
         setMessage((data as { error?: string }).error ?? "Failed to save");
         return;
       }
-      setMessage("Saved. API keys are configured via environment variables only.");
+        setMessage("Saved. Credentials in Admin → Integrations (encrypted).");
     } catch {
       setMessage("Request failed.");
     } finally {
@@ -72,12 +75,27 @@ export default function AdminCourierPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">Courier Integrations</h1>
       <p className="text-slate-600">
-        Enable/disable providers, set default for bulk booking. API keys and secrets are set via environment variables only (e.g. PATHAO_* , STEADFAST_* , REDX_*).
+        Enable/disable providers, set active provider for booking. Credentials in Admin → Integrations.
       </p>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Default provider &amp; mode</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">Provider selection &amp; mode</h2>
         <div className="flex flex-wrap items-center gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-slate-700">Active provider (for booking)</span>
+            <select
+              value={activeCourierProvider}
+              onChange={(e) => setActiveCourierProvider(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2"
+            >
+              <option value="none">None</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-slate-700">Default provider (bulk booking)</span>
             <select
@@ -128,7 +146,7 @@ export default function AdminCourierPage() {
                     <span className={c.enabled ? "text-emerald-600" : "text-slate-500"}>{c.enabled ? "Enabled" : "Disabled"}</span>
                   </label>
                 </td>
-                <td className="p-3 text-xs text-slate-600">API keys from env (e.g. PATHAO_API_KEY)</td>
+                <td className="p-3 text-xs text-slate-600">Credentials in Admin → Integrations</td>
               </tr>
             ))}
           </tbody>

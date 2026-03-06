@@ -1,19 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { generateInvoicePDF } from "@/lib/pdf-invoice";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { generateInvoicePDF } from "@lib/pdf-invoice";
+import { auth } from "@lib/auth";
+import { canAccessInvoice } from "@lib/invoice-auth";
+import { logError } from "@lib/logger";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/invoice?orderId=xxx — generate and return PDF invoice */
+/** GET /api/invoice?orderId=xxx — generate and return PDF invoice. Requires auth. */
 export async function GET(request: NextRequest) {
   const orderId = request.nextUrl.searchParams.get("orderId");
   if (!orderId?.trim()) {
     return NextResponse.json({ error: "orderId required" }, { status: 400 });
   }
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
+  const session = await auth();
+  const userId = (session?.user as { id?: string })?.id ?? null;
+  const userRole = (session?.user as { role?: string })?.role ?? null;
+
+  if (!session?.user) {
+    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+  }
+
+  const tenantId = getDefaultTenantId();
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, tenantId },
+    select: {
+      id: true,
+      userId: true,
+      createdAt: true,
+      status: true,
+      subtotal: true,
+      deliveryCharge: true,
+      discountAmount: true,
+      total: true,
+      shippingName: true,
+      shippingPhone: true,
+      shippingAddress: true,
+      shippingCity: true,
+      voucherCode: true,
       items: {
         include: {
           product: { select: { nameEn: true } },
@@ -23,6 +49,14 @@ export async function GET(request: NextRequest) {
   });
 
   if (!order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  const allowed = canAccessInvoice(
+    { userId, userRole },
+    { userId: order.userId }
+  );
+  if (!allowed) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
@@ -59,7 +93,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[invoice] PDF generation failed:", err);
+    logError("invoice", "PDF generation failed", {
+      error: err instanceof Error ? err.message : "unknown",
+      orderId: order.id,
+    });
     return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
   }
 }

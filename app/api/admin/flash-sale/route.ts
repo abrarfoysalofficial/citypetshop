@@ -3,8 +3,9 @@
  * POST /api/admin/flash-sale  — create a new flash sale rule
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +26,10 @@ export async function GET(request: Request) {
   });
 
   // Enrich with product names
+  const tenantId = getDefaultTenantId();
   const productIds = Array.from(new Set(rules.map((r) => r.productId)));
   const products = await prisma.product.findMany({
-    where: { id: { in: productIds } },
+    where: { tenantId, id: { in: productIds } },
     select: { id: true, nameEn: true, nameBn: true, sku: true },
   });
   const productMap = new Map(products.map((p) => [p.id, p]));

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ export async function GET(
     return NextResponse.json({ error: "Order ID required" }, { status: 400 });
   }
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
+  const tenantId = getDefaultTenantId();
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, tenantId },
     select: { paymentStatus: true, paymentMethod: true, total: true },
   });
 

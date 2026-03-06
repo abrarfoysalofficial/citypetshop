@@ -1,12 +1,11 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 import Link from "next/link";
-import { getBlogPostBySlug, getBlogPosts } from "@/src/data/provider";
-import { isSupabaseConfigured } from "@/src/config/env";
+import { getBlogPostBySlug } from "@/src/data/provider";
 import SafeImage from "@/components/media/SafeImage";
+import BlogPostingSchema from "@/components/seo/BlogPostingSchema";
 
 export async function generateStaticParams() {
-  // Return empty array: all blog posts are dynamically rendered per force-dynamic above.
-  // This prevents Prisma DB calls during build which cause build hangs.
+  // Return empty array: blog posts rendered on-demand (ISR revalidate 5 min).
   return [];
 }
 
@@ -44,6 +43,7 @@ export default async function BlogPostPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      <BlogPostingSchema post={post} />
       <Link href="/blog" className="text-sm font-medium text-accent hover:underline">← Back to Blog</Link>
       <div className="relative mt-4 aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-100">
         <SafeImage

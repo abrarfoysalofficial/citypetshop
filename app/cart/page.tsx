@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/store/CartContext";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, totalItems, totalPrice } = useCart();

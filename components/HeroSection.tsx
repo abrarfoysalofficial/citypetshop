@@ -44,7 +44,7 @@ export default function HeroSection({ slides = DEFAULT_SLIDES, sideBanners = DEF
   }, [goNext]);
 
   return (
-    <section className="w-full bg-slate-100 py-4">
+    <section className="w-full bg-bg-page py-4">
       <div className="mx-auto grid max-w-content grid-cols-1 gap-4 px-4 lg:grid-cols-4 lg:px-8">
         <div className="relative overflow-hidden rounded-xl bg-slate-200 lg:col-span-3">
           <div className="relative aspect-[16/9] w-full">
@@ -64,7 +64,7 @@ export default function HeroSection({ slides = DEFAULT_SLIDES, sideBanners = DEF
                   priority={i === 0}
                   sizes="(max-width: 1024px) 100vw, 75vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-primary-900/85 via-primary-700/40 to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6">
                   <h2 className="text-xl font-extrabold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] sm:text-3xl lg:text-4xl">
                     {slide.title}
@@ -122,7 +122,7 @@ export default function HeroSection({ slides = DEFAULT_SLIDES, sideBanners = DEF
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
                   <h3 className="text-lg font-extrabold leading-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl lg:text-3xl">{banner.title}</h3>
                   <p className="mt-1 text-sm font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] sm:text-base lg:text-lg">{banner.subtitle}</p>
-                  <span className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-orange-600 sm:text-base">
+                  <span className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-accent-300 sm:text-base">
                     {banner.id === "1" && <Phone className="h-4 w-4 sm:h-5 sm:w-5" />}
                     {banner.cta}
                   </span>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { createSslCommerzSession } from "@/lib/sslcommerz";
-import { getServerBaseUrl } from "@/lib/site-url";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { createSslCommerzSession } from "@lib/sslcommerz";
+import { getServerBaseUrl } from "@lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "orderId required" }, { status: 400 });
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
+    const tenantId = getDefaultTenantId();
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, tenantId },
       include: { items: true },
     });
     if (!order) {

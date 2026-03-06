@@ -14,9 +14,9 @@ import {
   AlertCircle,
   Truck,
 } from "lucide-react";
-import type { SiteSettingsRow } from "@/lib/schema";
-import { CTA_COLOR } from "@/lib/theme-constants";
-import { CONTACT_EMAIL } from "@/lib/constants";
+import type { SiteSettingsRow } from "@lib/schema";
+import { CTA_COLOR } from "@lib/theme-constants";
+import { CONTACT_EMAIL } from "@lib/constants";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Partial<SiteSettingsRow>>({
@@ -409,53 +409,29 @@ export default function AdminSettingsPage() {
         </div>
       </motion.div>
 
-      {/* Analytics (GA4, GTM, Pixel) */}
+      {/* Tracking & Pixels - link to dedicated page */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.26 }}
         className="rounded-2xl bg-white p-6 shadow-lg shadow-slate-200/50 border border-slate-100"
       >
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-3 text-white">
-            <Store className="h-6 w-6" />
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-3 text-white">
+              <Store className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Tracking & Pixels</h3>
+              <p className="text-sm text-slate-500">Facebook Pixel, CAPI, GTM, GA4, TikTok</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">Analytics</h3>
-            <p className="text-sm text-slate-500">GA4, GTM, Facebook Pixel IDs (no secrets stored)</p>
-          </div>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Google Analytics ID</label>
-            <input
-              type="text"
-              value={settings.google_analytics_id || ""}
-              onChange={(e) => setSettings({ ...settings, google_analytics_id: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="G-XXXXXXXXXX"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Google Tag Manager ID</label>
-            <input
-              type="text"
-              value={settings.google_tag_manager_id || ""}
-              onChange={(e) => setSettings({ ...settings, google_tag_manager_id: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="GTM-XXXXXXX"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Facebook Pixel ID</label>
-            <input
-              type="text"
-              value={settings.facebook_pixel_id || ""}
-              onChange={(e) => setSettings({ ...settings, facebook_pixel_id: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 px-4 py-3 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="123456789012345"
-            />
-          </div>
+          <a
+            href="/admin/settings/tracking"
+            className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+          >
+            Manage Tracking
+          </a>
         </div>
       </motion.div>
 

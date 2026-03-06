@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getProducts } from "@/src/data/provider";
+import { getProductsByIds } from "@/src/data/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +17,7 @@ export async function GET(request: NextRequest) {
     return Response.json({ products: [] });
   }
   try {
-    const all = await getProducts();
-    const set = new Set(ids);
-    const products = all.filter((p) => set.has(p.id));
+    const products = await getProductsByIds(ids);
     return Response.json({ products });
   } catch {
     return Response.json({ products: [] });

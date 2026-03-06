@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const checkoutShippingSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  phone: z.string().min(1, "Phone is required"),
+  phone: z.string().min(1, "Phone is required").regex(/^01[3-9]\d{8}$/, "Enter a valid 11-digit Bangladesh phone (01XXXXXXXXX)"),
   email: z.string().email().optional().or(z.literal("")),
   address: z.string().min(1, "Address is required"),
   area: z.string().optional(),

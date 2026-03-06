@@ -4,7 +4,7 @@
  * No PII or secrets in response.
  */
 import { NextResponse } from "next/server";
-import { validateProductionEnv } from "@/lib/env-validation";
+import { validateProductionEnv } from "@lib/env-validation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { checkDbConnectivity } = await import("@/lib/db");
+    const { checkDbConnectivity } = await import("@lib/db");
     const dbCheck = await checkDbConnectivity();
     if (!dbCheck.ok) throw new Error(dbCheck.error);
 
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       dbPingMs: dbCheck.ms,
     });
   } catch (e) {
-    const { logError } = await import("@/lib/logger");
+    const { logError } = await import("@lib/logger");
     const errName = e instanceof Error ? e.name : "Error";
     const errMsg = e instanceof Error ? e.message : String(e);
     logError("health", "DB check failed", {

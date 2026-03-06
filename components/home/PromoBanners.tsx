@@ -5,9 +5,9 @@ import SafeImage from "@/components/media/SafeImage";
 import TwoToneText from "@/components/ui/TwoToneText";
 
 const BANNERS = [
-  { id: "1", title: "Cat Deals", subtitle: "Up to 25% off", image: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600", href: "/category/cat-accessories" },
-  { id: "2", title: "Dog Food", subtitle: "Premium nutrition", image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600", href: "/category/dog-food" },
-  { id: "3", title: "Care & Health", subtitle: "Vet recommended", image: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600", href: "/category/care-health" },
+  { id: "1", title: "Cat Deals", subtitle: "Up to 25% off", image: "/ui/blog-cover.svg", href: "/shop?category=cat-accessories" },
+  { id: "2", title: "Dog Food", subtitle: "Premium nutrition", image: "/ui/blog-cover.svg", href: "/shop?category=dog-food" },
+  { id: "3", title: "Special Combo Offer", subtitle: "Bundle & save up to 30%", image: "/ui/blog-cover.svg", href: "/combo-offers" },
 ];
 
 export default function PromoBanners() {
@@ -20,7 +20,7 @@ export default function PromoBanners() {
             <Link
               key={b.id}
               href={b.href}
-              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm transition hover:shadow-lg"
+              className="group relative overflow-hidden rounded-card border border-[var(--border-light)] bg-slate-100 shadow-soft transition hover:shadow-card"
             >
               <div className="relative aspect-[3/2] w-full">
                 <SafeImage
@@ -36,8 +36,8 @@ export default function PromoBanners() {
                   <h3 className="text-lg font-bold">
                     <TwoToneText primary={b.title} secondary={b.subtitle} order="primary-first" variant="on-dark" as="span" />
                   </h3>
-                  <span className="mt-2 inline-block rounded bg-white/90 px-4 py-2 text-sm font-semibold text-slate-900 transition group-hover:bg-white">
-                    View More
+                  <span className="mt-2 inline-block rounded-lg bg-gradient-teal px-4 py-2 text-sm font-semibold text-white shadow-soft transition-opacity hover:opacity-95">
+                    Shop Now
                   </span>
                 </div>
               </div>

@@ -47,7 +47,7 @@ export default async function AdminReportsPage() {
         </div>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Sample chart (demo)</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Sample chart</h2>
         <p className="mt-2 text-sm text-slate-600">Connect backend for daily/weekly/monthly breakdown and CSV export.</p>
       </div>
     </div>

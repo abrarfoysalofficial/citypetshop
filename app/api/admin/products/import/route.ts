@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { logAdminAction } from "@/lib/rbac";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { logAdminAction } from "@lib/rbac";
+import { assertBodySize } from "@lib/request-utils";
 
 export const dynamic = "force-dynamic";
+
+const DEFAULT_IMPORT_LIMIT = 2 * 1024 * 1024; // 2MB
+const IMPORT_LIMIT_BYTES = (() => {
+  const env = process.env.IMPORT_BODY_LIMIT_BYTES;
+  if (!env) return DEFAULT_IMPORT_LIMIT;
+  const n = parseInt(env, 10);
+  return Number.isNaN(n) || n < 1024 ? DEFAULT_IMPORT_LIMIT : Math.min(n, 10 * 1024 * 1024);
+})();
 
 const rowSchema = z.object({
   name: z.string().min(1),
@@ -62,6 +73,9 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status ?? 401 });
 
   try {
+    const sizeCheck = assertBodySize(request, IMPORT_LIMIT_BYTES);
+    if (sizeCheck) return sizeCheck;
+
     const contentType = request.headers.get("content-type") ?? "";
     let rows: z.infer<typeof rowSchema>[] = [];
 
@@ -97,7 +111,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No valid rows to import" }, { status: 400 });
     }
 
-    const categories = await prisma.category.findMany({ select: { slug: true } });
+    const tenantId = getDefaultTenantId();
+    const categories = await prisma.category.findMany({ where: { tenantId, deletedAt: null }, select: { slug: true } });
     const validSlugs = new Set(categories.map((c) => c.slug));
 
     let created = 0;
@@ -114,7 +129,7 @@ export async function POST(request: NextRequest) {
       let slug = baseSlug;
       let suffix = 0;
       while (slug) {
-        const exists = await prisma.product.findUnique({ where: { slug } });
+        const exists = await prisma.product.findFirst({ where: { tenantId, slug } });
         if (!exists) break;
         suffix++;
         slug = `${baseSlug}-${suffix}`;
@@ -123,6 +138,7 @@ export async function POST(request: NextRequest) {
       try {
         const product = await prisma.product.create({
           data: {
+            tenantId,
             nameEn: row.name,
             slug,
             descriptionEn: row.description ?? row.name,
@@ -152,6 +168,9 @@ export async function POST(request: NextRequest) {
         errors.push(`Row ${i + 1}: ${e instanceof Error ? e.message : "Failed"}`);
       }
     }
+
+    revalidatePath("/");
+    revalidatePath("/shop");
 
     return NextResponse.json({
       created,

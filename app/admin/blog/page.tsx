@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useBlog } from "@/context/BlogContext";
+import { useBlog } from "@/store/BlogContext";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export default function AdminBlogPage() {

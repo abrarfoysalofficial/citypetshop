@@ -1,0 +1,30 @@
+{
+  "total": 114,
+  "public": [
+    "/api/health",
+    "/api/status",
+    "/api/settings",
+    "/api/settings/sales-top-bar",
+    "/api/products/by-ids",
+    "/api/products/by-subcategory",
+    "/api/payment-gateways",
+    "/api/checkout/settings",
+    "/api/checkout/order",
+    "/api/checkout/voucher",
+    "/api/checkout/sslcommerz/init",
+    "/api/about",
+    "/api/analytics/events",
+    "/api/analytics/heartbeat",
+    "/api/track-order",
+    "/api/track-order/send-otp",
+    "/api/track-order/verify-otp",
+    "/api/reviews",
+    "/api/auth/*",
+    "/api/feeds/google",
+    "/api/feeds/meta",
+    "/api/webhooks/sslcommerz",
+    "/api/invoice",
+    "/api/draft-orders"
+  ],
+  "admin": 80
+}

@@ -36,12 +36,12 @@ export default function AdminAboutPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [founderForm, setFounderForm] = useState({
-    name: "Sheikh Shakil",
+    name: "Our Founder",
     title: "Founder",
-    bioEn: "",
+    bioEn: "City Plus Pet Shop started with a simple belief: every pet deserves the best. From a small shop in Dhaka to serving pet owners across Bangladesh, we remain committed to authentic dog food, cat food, and premium pet products. Your trust drives us every day.",
     phone: "",
     whatsapp: "",
-    imageUrl: "",
+    imageUrl: "/team/founder.jpg",
   });
 
   useEffect(() => {

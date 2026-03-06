@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { revalidatePath } from "next/cache";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -40,26 +42,45 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
 
+  const tenantId = getDefaultTenantId();
+
   // Bulk update
   if (Array.isArray(body.updates)) {
     const parsed = PatchSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     const data = parsed.data as { updates: { id: string; stock: number }[] };
+    const ids = data.updates.map((u) => u.id);
+    const validProducts = await prisma.product.findMany({
+      where: { id: { in: ids }, tenantId },
+      select: { id: true },
+    });
+    const validIds = new Set(validProducts.map((p) => p.id));
+    const validUpdates = data.updates.filter((u) => validIds.has(u.id));
+
+    const productsBefore = await prisma.product.findMany({
+      where: { id: { in: validUpdates.map((u) => u.id) } },
+      select: { id: true, stock: true },
+    });
+    const stockBeforeMap = Object.fromEntries(productsBefore.map((p) => [p.id, p.stock ?? 0]));
 
     const results = await prisma.$transaction(
-      data.updates.map(({ id, stock }) =>
+      validUpdates.map(({ id, stock }) =>
         prisma.product.update({ where: { id }, data: { stock } })
       )
     );
 
     await prisma.inventoryLog.createMany({
-      data: data.updates.map(({ id, stock }) => ({
+      data: validUpdates.map(({ id, stock }) => ({
         productId: id,
         type: "adjust",
-        quantity: stock,
-        note: `Bulk stock update by admin`,
+        quantity: stock - (stockBeforeMap[id] ?? 0),
+        note: "Bulk stock update by admin",
       })),
     });
+
+    revalidatePath("/");
+    revalidatePath("/shop");
+    for (const { id } of validUpdates) revalidatePath(`/product/${id}`);
 
     return NextResponse.json({ updated: results.length });
   }
@@ -75,7 +96,7 @@ export async function PATCH(request: NextRequest) {
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
     const { productId, quantity, type, note } = parsed.data;
-    const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true, stock: true, nameEn: true } });
+    const product = await prisma.product.findFirst({ where: { id: productId, tenantId }, select: { id: true, stock: true, nameEn: true } });
     if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
     const newStock = type === "adjust" ? Math.max(0, (product.stock ?? 0) + quantity) : Math.max(0, quantity);
@@ -85,6 +106,10 @@ export async function PATCH(request: NextRequest) {
     await prisma.inventoryLog.create({
       data: { productId, type, quantity: delta, note: note ?? `Stock ${type} by admin` },
     });
+
+    revalidatePath("/");
+    revalidatePath("/shop");
+    revalidatePath(`/product/${productId}`);
 
     return NextResponse.json({ id: updated.id, nameEn: updated.nameEn, stock: updated.stock });
   }
@@ -98,13 +123,17 @@ export async function PATCH(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const { id, stock, note } = parsed.data;
-  const product = await prisma.product.findUnique({ where: { id }, select: { id: true, stock: true, nameEn: true } });
+  const product = await prisma.product.findFirst({ where: { id, tenantId }, select: { id: true, stock: true, nameEn: true } });
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
   const updated = await prisma.product.update({ where: { id }, data: { stock } });
   await prisma.inventoryLog.create({
     data: { productId: id, type: "set", quantity: stock - (product.stock ?? 0), note: note ?? "Manual stock update" },
   });
+
+  revalidatePath("/");
+  revalidatePath("/shop");
+  revalidatePath(`/product/${id}`);
 
   return NextResponse.json({ id: updated.id, nameEn: updated.nameEn, stock: updated.stock });
 }
@@ -116,16 +145,17 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
+  const tenantId = getDefaultTenantId();
   const { searchParams } = new URL(request.url);
   const lowStockOnly = searchParams.get("lowStock") === "true";
   const outOfStockOnly = searchParams.get("outOfStock") === "true";
   const threshold = parseInt(searchParams.get("threshold") ?? "5", 10);
 
   const where = outOfStockOnly
-    ? { isActive: true, stock: { lte: 0 } }
+    ? { tenantId, deletedAt: null, isActive: true, stock: { lte: 0 } }
     : lowStockOnly
-    ? { isActive: true, stock: { lte: threshold } }
-    : { isActive: true };
+    ? { tenantId, deletedAt: null, isActive: true, stock: { lte: threshold } }
+    : { tenantId, deletedAt: null, isActive: true };
 
   const products = await prisma.product.findMany({
     where,
@@ -142,7 +172,7 @@ export async function GET(request: NextRequest) {
   });
 
   const allProducts = await prisma.product.findMany({
-    where: { isActive: true },
+    where: { tenantId, deletedAt: null, isActive: true },
     select: { stock: true, lowStockThreshold: true },
   });
 

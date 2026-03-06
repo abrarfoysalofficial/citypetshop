@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
-import { prisma } from "@/lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { prisma } from "@lib/db";
+import { createAuditLog } from "@lib/audit";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,11 @@ export async function PATCH(request: Request) {
   try {
     const body = schema.parse(await request.json());
 
+    const prev = await prisma.order.findUnique({
+      where: { id: body.orderId },
+      select: { status: true },
+    });
+
     const updated = await prisma.$transaction(async (tx) => {
       const order = await tx.order.update({
         where: { id: body.orderId },
@@ -38,6 +44,15 @@ export async function PATCH(request: Request) {
         },
       });
       return order;
+    });
+
+    await createAuditLog({
+      userId: auth.userId,
+      action: "update",
+      resource: "order",
+      resourceId: body.orderId,
+      oldValues: prev ? { status: prev.status } : undefined,
+      newValues: { status: body.status, note: body.note },
     });
 
     return NextResponse.json(updated);

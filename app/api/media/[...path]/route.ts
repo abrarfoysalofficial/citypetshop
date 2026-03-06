@@ -9,7 +9,7 @@ import { promises as fs } from "fs";
 
 export const dynamic = "force-dynamic";
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "/var/www/city-plus/uploads";
+const UPLOAD_DIR = process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
 
 const ALLOWED_EXT = new Set([
   "jpg", "jpeg", "png", "gif", "webp", "svg", "ico",
@@ -32,8 +32,8 @@ export async function GET(
 ) {
   const { path: pathSegments } = await params;
   const key = decodeURIComponent(pathSegments.join("/"));
-  if (!key) {
-    return NextResponse.json({ error: "Missing key" }, { status: 400 });
+  if (!key || key.includes("..")) {
+    return new NextResponse(null, { status: 403 });
   }
 
   // Path traversal protection

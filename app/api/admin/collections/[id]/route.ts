@@ -4,8 +4,8 @@
  * DELETE /api/admin/collections/[id]  — delete collection
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";

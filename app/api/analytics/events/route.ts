@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
 import { isPrismaConfigured } from "@/src/config/env";
+import { rateLimit, getRateLimitKey } from "@lib/rate-limit";
+import { assertBodySize } from "@lib/request-utils";
 import { z } from "zod";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const ANALYTICS_REQUESTS_PER_MIN = 60;
+const BODY_LIMIT_BYTES = 64 * 1024; // 64KB
 
 const schema = z.object({
   event_name: z.string().min(1),
@@ -19,8 +25,23 @@ const schema = z.object({
   has_fbc: z.boolean().optional(),
 });
 
-/** POST: Capture analytics event. Dedup by event_id if provided. */
+/** POST: Capture analytics event. Dedup by event_id if provided. Rate limited 60 req/min per IP. */
 export async function POST(request: NextRequest) {
+  const rl = await rateLimit(
+    getRateLimitKey("analytics:events", request),
+    ANALYTICS_REQUESTS_PER_MIN,
+    60 * 1000
+  );
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter ?? 60) } }
+    );
+  }
+
+  const sizeCheck = assertBodySize(request, BODY_LIMIT_BYTES);
+  if (sizeCheck) return sizeCheck;
+
   const body = await request.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

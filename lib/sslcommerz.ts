@@ -2,7 +2,7 @@
  * SSLCommerz payment gateway integration.
  * Creates session and returns redirect URL for hosted payment.
  */
-import { prisma } from "@/lib/db";
+import { prisma } from "@lib/db";
 
 const SANDBOX_URL = "https://sandbox.sslcommerz.com/gwprocess/v4/api.php";
 const LIVE_URL = "https://securepay.sslcommerz.com/gwprocess/v4/api.php";
@@ -25,13 +25,13 @@ export async function getSslCommerzCredentials(): Promise<SslCommerzCredentials 
   });
   if (!gw?.credentialsJson) return null;
   const c = gw.credentialsJson as Record<string, unknown>;
-  const storeId = c.store_id ?? process.env.PAYMENT_SSLCOMMERZ_STORE_ID;
-  const storePass = c.store_password ?? process.env.PAYMENT_SSLCOMMERZ_STORE_PASSWORD;
-  if (!storeId || !storePass) return null;
-  const env = (c.environment as string) ?? (process.env.PAYMENT_SSLCOMMERZ_ENV || "sandbox");
+  const storeId = c.store_id;
+  const storePass = c.store_password;
+  if (!storeId || !storePass || typeof storeId !== "string" || typeof storePass !== "string") return null;
+  const env = (c.environment as string) || "sandbox";
   return {
-    store_id: String(storeId),
-    store_password: String(storePass),
+    store_id: storeId,
+    store_password: storePass,
     environment: env === "live" ? "live" : "sandbox",
   };
 }

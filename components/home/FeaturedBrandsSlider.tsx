@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useMemo } from "react";
 import SafeImage from "@/components/media/SafeImage";
-import { MASTER_BRANDS, isFeaturedBrand } from "@/lib/brands-master";
+import { MASTER_BRANDS, isFeaturedBrand } from "@lib/brands-master";
 
 export default function FeaturedBrandsSlider() {
   const scrollRef = useRef<HTMLDivElement>(null);

@@ -3,8 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Loader2, Search, ArrowUpDown, Eye, Download, Plus } from "lucide-react";
-import type { OrderStatus } from "@/lib/schema";
+import { Loader2, Search, ArrowUpDown, Eye, Download, Plus, Package } from "lucide-react";
+import type { OrderStatus } from "@lib/schema";
 
 type Order = {
   id: string;
@@ -52,6 +52,11 @@ export default function AdminOrdersClient({
   const [sortBy, setSortBy] = useState<"createdAt" | "total">("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBookingOpen, setBulkBookingOpen] = useState(false);
+  const [bulkBookingBusy, setBulkBookingBusy] = useState(false);
+  const [bulkResults, setBulkResults] = useState<{ orderId: string; success: boolean; trackingCode?: string; error?: string }[] | null>(null);
+  const [activeProvider, setActiveProvider] = useState<string>("pathao");
 
   useEffect(() => {
     setOrders(initialOrders);
@@ -98,6 +103,63 @@ export default function AdminOrdersClient({
     }
   };
 
+  useEffect(() => {
+    fetch("/api/admin/courier-settings")
+      .then((r) => r.json())
+      .then((d) => {
+        const p = d.activeCourierProvider;
+        if (p && p !== "none") setActiveProvider(p);
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredOrders.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredOrders.map((o) => o.id)));
+    }
+  };
+
+  const handleBulkBook = async (retryFailedOnly = false) => {
+    let ids = Array.from(selectedIds);
+    if (retryFailedOnly && bulkResults) {
+      ids = bulkResults.filter((r) => !r.success).map((r) => r.orderId);
+    }
+    if (ids.length === 0) return;
+    setBulkBookingBusy(true);
+    setBulkResults(null);
+    try {
+      const res = await fetch("/api/admin/courier-booking/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderIds: ids, provider: activeProvider }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.results) {
+        setBulkResults(data.results);
+        onRefresh?.();
+      } else {
+        setBulkResults([{ orderId: "bulk", success: false, error: data.error ?? "Bulk booking failed" }]);
+      }
+    } catch {
+      setBulkResults([{ orderId: "bulk", success: false, error: "Network error" }]);
+    } finally {
+      setBulkBookingBusy(false);
+    }
+  };
+
+  const unbookedCount = filteredOrders.filter((o) => !o.courierBookingId).length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -134,6 +196,88 @@ export default function AdminOrdersClient({
         </div>
       )}
 
+      {/* Bulk Book Courier */}
+      {activeTab === "booking" && unbookedCount > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <button
+            onClick={() => setBulkBookingOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            <Package className="h-4 w-4" />
+            Bulk Book Courier
+          </button>
+          <span className="text-sm text-slate-600">{unbookedCount} orders without courier</span>
+        </div>
+      )}
+
+      {/* Bulk booking modal */}
+      {bulkBookingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold">Bulk Book Courier</h3>
+            <p className="mb-2 text-sm text-slate-600">
+              Provider: {activeProvider} • Select orders to book (idempotent — already booked will be skipped)
+            </p>
+            <div className="mb-4 max-h-48 overflow-y-auto rounded border border-slate-200 p-2">
+              {filteredOrders
+                .filter((o) => !o.courierBookingId)
+                .map((o) => (
+                  <label key={o.id} className="flex cursor-pointer items-center gap-2 py-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(o.id)}
+                      onChange={() => toggleSelect(o.id)}
+                    />
+                    <span className="font-mono text-sm">{o.id.slice(0, 12)}…</span>
+                  </label>
+                ))}
+            </div>
+            {bulkResults && (
+              <div className="mb-4 max-h-40 overflow-y-auto rounded border border-slate-200 bg-slate-50 p-2 text-sm">
+                {bulkResults.map((r) => (
+                  <div key={r.orderId} className="flex justify-between py-1">
+                    <span className="font-mono">{r.orderId.slice(0, 10)}…</span>
+                    {r.success ? (
+                      <span className="text-green-700">✓ {r.trackingCode?.slice(0, 8)}…</span>
+                    ) : (
+                      <span className="text-red-700">✗ {r.error}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleBulkBook(false)}
+                disabled={bulkBookingBusy || selectedIds.size === 0}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {bulkBookingBusy ? "Booking…" : "Book Selected"}
+              </button>
+              {bulkResults && bulkResults.some((r) => !r.success) && (
+                <button
+                  onClick={() => handleBulkBook(true)}
+                  disabled={bulkBookingBusy}
+                  className="rounded-lg border border-amber-300 px-4 py-2 text-sm text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                >
+                  Retry Failed Only
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setBulkBookingOpen(false);
+                  setBulkResults(null);
+                  setSelectedIds(new Set());
+                }}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Search */}
       {onSearchChange && (
         <motion.div
@@ -164,6 +308,25 @@ export default function AdminOrdersClient({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
+                <th className="w-10 p-4">
+                  {activeTab === "booking" ? (
+                    <input
+                      type="checkbox"
+                      checked={
+                        filteredOrders.filter((o) => !o.courierBookingId).length > 0 &&
+                        selectedIds.size === filteredOrders.filter((o) => !o.courierBookingId).length
+                      }
+                      onChange={() => {
+                        const unbooked = filteredOrders.filter((o) => !o.courierBookingId);
+                        if (selectedIds.size === unbooked.length) {
+                          setSelectedIds(new Set());
+                        } else {
+                          setSelectedIds(new Set(unbooked.map((o) => o.id)));
+                        }
+                      }}
+                    />
+                  ) : null}
+                </th>
                 <th className="p-4 font-medium text-slate-700">Order ID</th>
                 <th className="p-4 font-medium text-slate-700">Customer</th>
                 <th className="p-4">
@@ -191,7 +354,7 @@ export default function AdminOrdersClient({
             <tbody className="divide-y divide-slate-100">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-500">
+                  <td colSpan={7} className="p-12 text-center text-slate-500">
                     <p className="font-medium">No orders found</p>
                     <p className="text-sm mt-1">Try adjusting your filters</p>
                   </td>
@@ -199,6 +362,15 @@ export default function AdminOrdersClient({
               ) : (
                 filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="w-10 p-4">
+                      {activeTab === "booking" && !order.courierBookingId && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(order.id)}
+                          onChange={() => toggleSelect(order.id)}
+                        />
+                      )}
+                    </td>
                     <td className="p-4">
                       <span className="font-mono font-medium text-slate-900">
                         {order.id.slice(0, 8)}...

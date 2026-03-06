@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { requireAdminAuth } from "@lib/admin-auth";
+import { createAuditLog } from "@lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +45,19 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.phoneVelocityHours === "number") update.phoneVelocityHours = body.phoneVelocityHours;
   if (typeof body.ipRiskScoreThreshold === "number") update.ipRiskScoreThreshold = body.ipRiskScoreThreshold;
 
+  const prev = await prisma.fraudPolicy.findUnique({ where: { id: "default" } });
   const policy = await prisma.fraudPolicy.upsert({
     where: { id: "default" },
     create: { id: "default", ...update },
     update,
+  });
+  await createAuditLog({
+    userId: auth.userId,
+    action: "update",
+    resource: "fraud_policy",
+    resourceId: "default",
+    oldValues: prev ? { blockThreshold: prev.blockThreshold, otpThreshold: prev.otpThreshold, manualReviewThreshold: prev.manualReviewThreshold } : undefined,
+    newValues: update,
   });
   return NextResponse.json({ policy });
 }

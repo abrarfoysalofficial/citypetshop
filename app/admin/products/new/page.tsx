@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useProducts } from "@/context/ProductsContext";
-import { useCategories } from "@/context/CategoriesContext";
+import { useProducts } from "@store/ProductsContext";
+import { useCategories } from "@store/CategoriesContext";
 
 const PLACEHOLDER = "https://placehold.co/400x400/f1f5f9/1e3a8a?text=Product";
 

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { MASTER_CATEGORIES } from "@/lib/categories-master";
+import { MASTER_CATEGORIES } from "@lib/categories-master";
 
 type PreviewRow = { name: string; price: number; description: string; categorySlug: string; image?: string; inStock: boolean };
 

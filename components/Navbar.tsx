@@ -11,8 +11,8 @@ import {
   ShoppingCart,
   User,
 } from "lucide-react";
-import { useCart } from "@/context/CartContext";
-import { useCategories } from "@/context/CategoriesContext";
+import { useCart } from "@/store/CartContext";
+import { useCategories } from "@/store/CategoriesContext";
 import { useState, useRef, useEffect } from "react";
 
 const MAIN_NAV = [
@@ -52,7 +52,7 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-slate-900 shadow-lg">
+    <header className="sticky top-0 z-50 w-full bg-primary-900 shadow-lg">
       {/* Top Bar */}
       <div className="mx-auto flex h-14 max-w-content items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         {/* Mobile Menu */}
@@ -94,7 +94,7 @@ export default function Navbar() {
           />
           <button
             type="submit"
-            className="flex shrink-0 items-center gap-2 bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+            className="flex shrink-0 items-center gap-2 bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-300"
           >
             <Search className="h-5 w-5" />
             Search
@@ -103,11 +103,6 @@ export default function Navbar() {
 
         {/* Right Icons */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          {(process.env.NEXT_PUBLIC_AUTH_MODE ?? "demo") === "demo" && (
-            <span className="hidden rounded-full bg-amber-500 px-2 py-0.5 text-xs font-medium text-white sm:inline-block" title="Demo mode – localhost only">
-              Demo
-            </span>
-          )}
           <Link
             href="/offers"
             className="flex flex-col items-center rounded-lg p-2 text-white hover:bg-white/10 sm:flex-row sm:gap-1.5"
@@ -154,7 +149,7 @@ export default function Navbar() {
         />
         <button
           type="submit"
-          className="flex shrink-0 items-center gap-1 bg-accent px-3 py-2 text-white"
+          className="flex shrink-0 items-center gap-1 bg-accent px-3 py-2 text-white hover:bg-accent-300"
         >
           <Search className="h-5 w-5" />
         </button>
@@ -185,7 +180,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="absolute left-0 right-0 top-full z-50 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain border-t border-white/10 bg-slate-900 lg:hidden">
+        <div className="absolute left-0 right-0 top-full z-50 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain border-t border-white/10 bg-primary-900 lg:hidden">
           <div className="mx-auto max-w-content space-y-1 px-4 py-4">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/60">Menu</p>
             {MAIN_NAV.map(({ href, label }) => {

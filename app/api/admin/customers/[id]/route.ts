@@ -3,8 +3,9 @@
  * PATCH /api/admin/customers/[id]  — update customer fields
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@lib/admin-auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +30,13 @@ export async function GET(
   if (!customer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
 
   // Fetch recent orders via phone or email
-  const orderWhere = customer.phone
-    ? { guestPhone: customer.phone }
-    : customer.email
-    ? { guestEmail: customer.email }
-    : { id: "none" };
+  const tenantId = getDefaultTenantId();
+  const orderWhere =
+    customer.phone
+      ? { tenantId, guestPhone: { contains: customer.phone.replace(/\D/g, "").slice(-10) } }
+      : customer.email
+      ? { tenantId, guestEmail: customer.email }
+      : { tenantId, id: "00000000-0000-0000-0000-000000000000" }; // No match when neither phone nor email
 
   const recentOrders = await prisma.order.findMany({
     where: orderWhere,

@@ -9,7 +9,7 @@ import {
   getProductById,
   getHomeData,
 } from "@/src/data/provider";
-import { MASTER_CATEGORIES } from "@/lib/categories-master";
+import { MASTER_CATEGORIES } from "@lib/categories-master";
 
 function toCategory(c: { slug: string; name: string; subcategories: { slug: string }[] }): Category {
   return {

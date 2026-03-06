@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 
 export const dynamic = "force-dynamic";
 

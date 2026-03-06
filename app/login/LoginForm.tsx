@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { AUTH_MODE } from "@/src/config/runtime";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -19,7 +18,7 @@ export default function LoginForm() {
     if (err) setError(decodeURIComponent(err));
   }, [searchParams]);
 
-  const handlePrismaSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -34,36 +33,18 @@ export default function LoginForm() {
         setLoading(false);
         return;
       }
-      router.push("/account");
+      const raw = searchParams.get("callbackUrl") ?? searchParams.get("next");
+      let target = "/account";
+      if (typeof raw === "string" && raw.trim()) {
+        const path = raw.startsWith("/") ? raw : (() => { try { return new URL(raw).pathname; } catch { return ""; } })();
+        if (path && path.startsWith("/") && !path.startsWith("/admin")) target = path;
+      }
+      router.push(target);
       router.refresh();
     } catch {
       setError("Login failed. Try again.");
     }
     setLoading(false);
-  };
-
-  const handleDemoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res = await fetch("/api/auth/demo-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, type: "user" }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError((data as { error?: string }).error ?? "Invalid email or password");
-        setLoading(false);
-        return;
-      }
-      router.push((data as { redirect?: string }).redirect ?? "/account");
-      router.refresh();
-    } catch {
-      setError("Login failed. Try again.");
-      setLoading(false);
-    }
   };
 
   return (
@@ -72,16 +53,10 @@ export default function LoginForm() {
       <p className="mt-2 text-slate-600">
         Sign in to your account to view orders and manage your profile.
       </p>
-      {AUTH_MODE === "demo" && process.env.NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS === "true" && (
-        <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          Demo mode: use user@cityplus.local / User@12345
-        </p>
-      )}
 
       {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
 
-      {(AUTH_MODE === "prisma" || AUTH_MODE === "demo") && (
-        <form onSubmit={AUTH_MODE === "prisma" ? handlePrismaSubmit : handleDemoSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email</label>
             <input
@@ -112,7 +87,6 @@ export default function LoginForm() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
-      )}
 
       <Link href="/" className="mt-6 inline-block font-medium text-primary hover:underline">
         ← Back to Home

@@ -1,0 +1,26 @@
+{
+  "complete": 28,
+  "incomplete": 8,
+  "missing": 4,
+  "features": [
+    {"name": "Auth/RBAC", "status": "complete"},
+    {"name": "Catalog", "status": "complete"},
+    {"name": "Cart", "status": "complete"},
+    {"name": "Checkout", "status": "complete"},
+    {"name": "Payments", "status": "complete"},
+    {"name": "Courier", "status": "complete"},
+    {"name": "Orders", "status": "complete"},
+    {"name": "Track order", "status": "complete"},
+    {"name": "Fraud policy", "status": "complete"},
+    {"name": "Audit log", "status": "complete"},
+    {"name": "Blog", "status": "complete"},
+    {"name": "Legal pages", "status": "complete"},
+    {"name": "SEO", "status": "complete"},
+    {"name": "Analytics", "status": "complete"},
+    {"name": "Admin settings", "status": "complete"},
+    {"name": "Search", "status": "incomplete"},
+    {"name": "Notifications", "status": "incomplete"},
+    {"name": "Reminders", "status": "missing"},
+    {"name": "Inventory logs", "status": "missing"}
+  ]
+}

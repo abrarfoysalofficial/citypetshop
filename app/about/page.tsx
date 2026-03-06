@@ -1,8 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { prisma } from "@/lib/db";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 import SafeImage from "@/components/media/SafeImage";
 import type { LucideIcon } from "lucide-react";
 import {

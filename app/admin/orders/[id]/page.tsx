@@ -63,8 +63,14 @@ export default async function AdminOrderDetailPage({
         </div>
       )}
 
-      {/* Live order actions — confirm, dispatch, cancel, invoice */}
-      <OrderActions orderId={order.id} currentStatus={order.status} />
+      {/* Live order actions — confirm, dispatch, cancel, invoice, book courier */}
+      <OrderActions
+        orderId={order.id}
+        currentStatus={order.status}
+        courierBookingId={order.courierBookingId ?? undefined}
+        trackingCode={order.trackingCode ?? undefined}
+        courierProvider={order.courierProvider ?? undefined}
+      />
 
       {/* Notes always shown (Prisma-backed) */}
       <OrderNotesBlock orderId={order.id} />

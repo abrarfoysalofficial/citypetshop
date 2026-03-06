@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isValidBdPhone, normalizeBdPhone } from "@/lib/phone-bd";
-import { prisma } from "@/lib/db";
+import { isValidBdPhone, normalizeBdPhone } from "@lib/phone-bd";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   // Enforce OTP when requireOtpPhoneTracking is true and query is by phone
   if (isPhone && process.env.DATABASE_URL) {
-    const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+    const settings = await prisma.tenantSettings.findUnique({ where: { tenantId: getDefaultTenantId() } });
     const requireOtp = settings?.requireOtpPhoneTracking ?? false;
     if (requireOtp) {
       if (!otpToken) {
@@ -70,8 +71,9 @@ export async function GET(request: NextRequest) {
     where.id = q;
   }
 
+  const tenantId = getDefaultTenantId();
   const orders = await prisma.order.findMany({
-    where,
+    where: { tenantId, ...where },
     select: {
       id: true,
       status: true,

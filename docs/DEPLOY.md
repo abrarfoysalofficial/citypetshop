@@ -6,6 +6,25 @@
 
 ---
 
+## 0. First Deploy (One-Time)
+
+For a **brand-new** deployment, follow this sequence once:
+
+1. **Prerequisites** (Section 1) — VPS, Node.js, PostgreSQL, PM2
+2. **PostgreSQL** (Section 3) — Create DB and user
+3. **Application** (Section 4) — Clone repo, `npm ci --omit=dev`, `npx prisma generate`
+4. **Environment** (Section 5) — Create `.env.production.local` with `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `AUTH_TRUST_HOST`, `UPLOAD_DIR`, and **`INITIAL_ADMIN_EMAIL`**, **`INITIAL_ADMIN_PASSWORD`** (min 12 chars), **`INITIAL_ADMIN_NAME`**
+5. **Database** — Run `npm run db:setup` (migrate + seed). This creates the admin user. **Change password** at `/admin/settings/security` after first login.
+6. **Upload dir** — `sudo mkdir -p /var/www/cityplus/uploads && sudo chown $USER:$USER /var/www/cityplus/uploads`
+7. **Build** (Section 7) — `NODE_OPTIONS=--max-old-space-size=4096 npm run build` + copy public/static
+8. **PM2** (Section 8) — Start app
+9. **Proxy** (Section 9) — CyberPanel/OpenLiteSpeed proxy to 127.0.0.1:3000
+10. **Verify** — `curl -sf http://127.0.0.1:3000/api/health` → `{"status":"ok"}`; login at `/admin`
+
+**Subsequent deploys:** Use `bash deploy/deploy-production.sh` (does not run seed).
+
+---
+
 ## 1. Prerequisites
 
 | Requirement | Min |
@@ -84,7 +103,9 @@ EMAIL_FROM=noreply@citypetshop.bd
 BULK_SMS_BD_API_KEY=xxx
 BULK_SMS_BD_SENDER_ID=CityPlus
 
-# Storage
+# Storage — REQUIRED for media persistence across deploys
+# Must be an absolute path outside the app directory. Survives app restart, rebuild, redeploy.
+# Create: sudo mkdir -p /var/www/cityplus/uploads && sudo chown $USER:$USER /var/www/cityplus/uploads
 UPLOAD_DIR=/var/www/cityplus/uploads
 
 # Secure Config (required for Admin Integrations — courier, etc.)
@@ -100,6 +121,37 @@ REDIS_URL=redis://127.0.0.1:6379
 **Courier go-live:** `MASTER_SECRET` + provider keys in Admin → Integrations; Admin → Courier: enable provider, set Sandbox OFF for production.  
 **Invoice API:** Auth-only. Guests get invoice via email/track-order.
 
+**Domain-safe:** Set `NEXTAUTH_URL` (and `NEXT_PUBLIC_SITE_URL`, `APP_URL`) to your actual deployment URL. Auth works on any domain — staging, production, or custom domain. No hardcoded domain.
+
+**Initial admin:** Set `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` (min 12 chars), `INITIAL_ADMIN_NAME` before running `db:seed`. The seed creates the admin only if it does not exist; it never overwrites an existing password. After first login, change the password at `/admin/settings/security`.
+
+### Infra vs Business Config (Handover)
+
+| Config | Where | Notes |
+|-------|-------|------|
+| DATABASE_URL, NEXTAUTH_*, UPLOAD_DIR, MASTER_SECRET | .env only | Infrastructure; not admin-manageable |
+| Payment credentials (SSLCommerz, bKash, etc.) | Admin → Payments | DB-backed; no .env needed |
+| Courier credentials (Pathao, Steadfast, RedX) | Admin → Integrations | Encrypted in SecureConfig |
+| Courier enable/sandbox | Admin → Courier | DB-backed |
+| Tracking (FB Pixel, TikTok, GTM, GA4) | Admin → Tracking | tenant_settings |
+| SMS/Email (order notifications) | .env | RESEND_API_KEY, BULK_SMS_BD_* |
+
+After handover, the client configures payments, courier, and tracking from the admin panel. No SSH or .env edits for normal business integration updates.
+
+### Required vs Recommended Env Vars
+
+| Variable | Required | Notes |
+|----------|----------|------|
+| DATABASE_URL | Yes | PostgreSQL connection string; use 127.0.0.1 not localhost |
+| NEXTAUTH_SECRET | Yes | Min 32 chars; `openssl rand -hex 32` |
+| NEXTAUTH_URL | Yes | Full site URL (e.g. https://citypetshop.bd) |
+| AUTH_TRUST_HOST | Yes | Must be `true` behind reverse proxy |
+| UPLOAD_DIR | Yes (prod) | Absolute path for media; survives redeploy |
+| INITIAL_ADMIN_* | First deploy | For `db:seed` bootstrap; not needed after |
+| MASTER_SECRET | Integrations | 32+ chars for Admin → Integrations |
+| NEXT_PUBLIC_SITE_URL | Recommended | For sitemap, canonical, OG |
+| APP_URL | Recommended | Fallback for auth redirects |
+
 ---
 
 ## 6. Database
@@ -114,6 +166,42 @@ npm run db:seed
 ```
 
 **Local development:** `npm run db:reset` resets DB and re-seeds (destructive).
+
+---
+
+## 6.1 Media / Upload Persistence
+
+Uploaded images (products, banners, logos) are stored on the local filesystem. **UPLOAD_DIR must point to a persistent path** — outside the app directory — so media survives redeploys.
+
+| Risk | Mitigation |
+|------|------------|
+| Redeploy wipes uploads | Set `UPLOAD_DIR=/var/www/cityplus/uploads` (or similar) — never use `./uploads` or paths inside the app/repo |
+| Rebuild overwrites | UPLOAD_DIR is separate from `.next/` and `public/` |
+| Container replacement | Mount UPLOAD_DIR as a volume if using Docker |
+
+**One-time setup:**
+```bash
+sudo mkdir -p /var/www/cityplus/uploads
+sudo chown $USER:$USER /var/www/cityplus/uploads
+```
+
+**Backup:** Include UPLOAD_DIR in backup scripts. Product/category/banner image URLs reference `/api/media/{key}`; files must exist on disk.
+
+---
+
+## 6.2 Persistence Summary
+
+| Data | Location | Survives Restart | Survives Redeploy |
+|------|----------|------------------|-------------------|
+| Users, orders, products, settings | PostgreSQL | Yes | Yes |
+| Admin credentials | PostgreSQL (seeded once) | Yes | Yes (seed never overwrites) |
+| Uploaded media | UPLOAD_DIR (filesystem) | Yes | Yes if path is persistent |
+| Deploy logs | /var/log/cityplus/ | Yes | Yes |
+| Build output (.next/) | App directory | No (rebuilt) | No (rebuilt) |
+
+**Restart:** App restarts do not affect DB or UPLOAD_DIR. Health check verifies DB connectivity.
+
+**Redeploy:** `deploy-production.sh` backs up DB, runs migrations, rebuilds, reloads PM2. UPLOAD_DIR must be outside app directory. Seed is **not** run by deploy script — run `npm run db:seed` manually on first deploy only.
 
 ---
 
@@ -241,11 +329,11 @@ git fetch origin && git reset --hard origin/main
 # 3. Install deps
 npm ci --omit=dev
 
-# 4. Generate Prisma client (required before migrate)
-npx prisma generate
-
-# 5. Run migrations
+# 4. Run migrations (Prisma client generated by npm ci postinstall; explicit generate optional)
 npx prisma migrate deploy
+
+# 5. Generate Prisma client (explicit; ensures schema matches before build)
+npx prisma generate
 
 # 6. Build
 NODE_OPTIONS=--max-old-space-size=4096 npm run build

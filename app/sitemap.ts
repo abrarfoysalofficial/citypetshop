@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/db";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { prisma } from "@lib/db";
+import { getDefaultTenantId } from "@lib/tenant";
 import { STATIC_BLOG_POSTS } from "@/src/data/blog-posts-static";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
