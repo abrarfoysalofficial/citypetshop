@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminAuth } from "@lib/admin-auth";
-import { prisma } from "@lib/db";
-import { getDefaultTenantId } from "@lib/tenant";
+import { requireAdminAuth } from "@/lib/admin-auth";
+import { prisma } from "@/lib/db";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";

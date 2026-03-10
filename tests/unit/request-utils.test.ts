@@ -2,7 +2,7 @@
  * Request utils: body size limit (assertBodySize).
  */
 import { NextRequest } from "next/server";
-import { assertBodySize } from "@lib/request-utils";
+import { assertBodySize } from "@/lib/request-utils";
 
 describe("assertBodySize", () => {
   function req(contentLength: string | null): NextRequest {

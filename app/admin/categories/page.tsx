@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Plus, Pencil, Trash2, FolderTree } from "lucide-react";
+import { PageHero } from "@/components/admin/page-hero";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +68,7 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/categories");
+      const res = await fetch("/api/admin/categories?parentId=root");
       if (res.status === 401) {
         window.location.href = "/admin/login";
         return;
@@ -132,6 +134,7 @@ export default function CategoriesPage() {
       resetForm();
       setShowCreateModal(false);
       fetchCategories();
+      if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("categories-updated"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save category");
     } finally {
@@ -161,6 +164,7 @@ export default function CategoriesPage() {
       const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete category");
       fetchCategories();
+      if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("categories-updated"));
     } catch (err) {
       setError("Failed to delete category");
     }
@@ -176,15 +180,12 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="text-muted-foreground">
-            Manage product categories ({categories.length} total)
-          </p>
-        </div>
-        <Dialog open={showCreateModal} onOpenChange={(open) => {
+      <PageHero
+        title="Categories"
+        description={`Manage product categories (${categories.length} total)`}
+        breadcrumb={[{ label: "Dashboard", href: "/admin" }, { label: "Categories" }]}
+        actions={
+          <Dialog open={showCreateModal} onOpenChange={(open) => {
           setShowCreateModal(open);
           if (!open) resetForm();
         }}>
@@ -283,7 +284,8 @@ export default function CategoriesPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
       {/* Categories Table */}
       <div className="rounded-lg border bg-card shadow-sm">
@@ -332,6 +334,12 @@ export default function CategoriesPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/admin/categories/${category.slug}/subcategories`}>
+                          <FolderTree className="mr-1 h-4 w-4" />
+                          Subcategories
+                        </Link>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

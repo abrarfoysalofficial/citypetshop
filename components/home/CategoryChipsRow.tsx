@@ -1,27 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-
-type CategoryItem = { slug: string; name: string };
+import { useCategories } from "@/store/CategoriesContext";
 
 /**
  * Horizontal scroll category chips - grocery style for mobile.
- * Categories from DB via /api/categories.
+ * Categories from CategoriesContext (canonical source, refetches on admin update).
  */
 export default function CategoryChipsRow() {
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setCategories(data.map((c: { slug: string; name: string }) => ({ slug: c.slug, name: c.name })));
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const { categories } = useCategories();
 
   if (categories.length === 0) return null;
 
@@ -32,7 +19,7 @@ export default function CategoryChipsRow() {
           {categories.map((cat) => (
             <Link
               key={cat.slug}
-              href={`/shop?category=${cat.slug}`}
+              href={`/category/${cat.slug}`}
               className="flex min-w-[100px] max-w-[120px] shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--primary-light)] hover:text-[var(--primary)]"
             >
               {cat.name}

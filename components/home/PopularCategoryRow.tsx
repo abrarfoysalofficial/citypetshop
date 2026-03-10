@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import SafeImage from "@/components/media/SafeImage";
-import { MASTER_CATEGORIES } from "@lib/categories-master";
+import { useCategories } from "@/store/CategoriesContext";
 import { getCategoryImageSrc, CATEGORY_FALLBACK_IMAGE } from "@lib/category-meta";
 
 export default function PopularCategoryRow() {
-  const popularCategories = MASTER_CATEGORIES.slice(0, 8);
+  const { categories } = useCategories();
+  const popularCategories = categories.slice(0, 8);
 
   return (
     <section className="border-y border-[var(--border-light)] bg-[var(--bg-page)] py-6 md:py-8">
@@ -16,7 +17,7 @@ export default function PopularCategoryRow() {
           {popularCategories.map((cat) => (
             <Link
               key={cat.slug}
-              href={`/shop?category=${cat.slug}`}
+              href={`/category/${cat.slug}`}
               className="group flex w-28 shrink-0 flex-col items-center rounded-card border border-[var(--border-light)] bg-white p-4 shadow-soft transition hover:border-[var(--teal-from)] hover:shadow-card sm:w-36"
             >
               <div className="relative h-16 w-16 overflow-hidden rounded-full sm:h-20 sm:w-20">

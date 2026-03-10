@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@lib/db";
 import { getDefaultTenantId } from "@lib/tenant";
 import { STATIC_BLOG_POSTS } from "@/src/data/blog-posts-static";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
 
@@ -24,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   let categories: { slug: string }[] = [];
-  let products: { id: string }[] = [];
+  let products: { id: string; slug: string; categorySlug: string }[] = [];
   let blogSlugs: string[] = [];
 
   if (process.env.DATABASE_URL) {
@@ -37,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }),
         prisma.product.findMany({
           where: { tenantId, deletedAt: null, isActive: true },
-          select: { id: true },
+          select: { id: true, slug: true, categorySlug: true },
         }),
         prisma.cmsPage.findMany({
           where: { isPublished: true, template: "blog" },
@@ -62,7 +63,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
-    url: `${BASE}/product/${p.id}`,
+    url: `${BASE}${buildProductRoute({
+      categorySlug: p.categorySlug,
+      subcategorySlug: p.categorySlug,
+      slug: p.slug || p.id,
+      id: p.id,
+    })}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.8,

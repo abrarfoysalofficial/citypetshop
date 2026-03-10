@@ -45,6 +45,8 @@ const DEFAULT_SETTINGS: SiteSettingsRow = {
   default_og_image_url: null,
   homepage_blocks: null,
   auth_providers: null,
+  sales_top_bar_text: null,
+  sales_top_bar_enabled: true,
 };
 
 interface SiteSettingsContextValue {
@@ -82,6 +84,12 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchSettings();
+  }, [fetchSettings]);
+
+  useEffect(() => {
+    const onSettingsUpdated = () => fetchSettings();
+    window.addEventListener("settings-updated", onSettingsUpdated);
+    return () => window.removeEventListener("settings-updated", onSettingsUpdated);
   }, [fetchSettings]);
 
   const value: SiteSettingsContextValue = {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProducts } from "@/src/data/provider";
-import { getSubcategoryByFullSlug } from "@lib/categories-master";
+import { getSubcategoryByFullSlugFromDb } from "@lib/categories-db";
 
 /** GET: Top products for a subcategory (by fullSlug). Used by mega menu. */
 export async function GET(request: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (!fullSlug) {
     return NextResponse.json({ products: [] });
   }
-  const sub = getSubcategoryByFullSlug(fullSlug);
+  const sub = await getSubcategoryByFullSlugFromDb(fullSlug);
   const categorySlug = fullSlug.includes("/") ? fullSlug.split("/")[0]! : fullSlug;
   const subSlug = fullSlug.includes("/") ? fullSlug.split("/")[1]! : null;
 

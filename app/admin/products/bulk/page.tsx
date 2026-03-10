@@ -3,12 +3,9 @@
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { MASTER_CATEGORIES } from "@lib/categories-master";
-
 type PreviewRow = { name: string; price: number; description: string; categorySlug: string; image?: string; inStock: boolean };
 
 const TEMPLATE_URL = "/templates/products_template.csv";
-const categorySlugs = MASTER_CATEGORIES.flatMap((c) => [c.slug, ...c.subcategories.map((s) => s.fullSlug)]);
 
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split(/\r?\n/);
@@ -31,7 +28,8 @@ function parseRow(row: Record<string, string>, validSlugs: string[]): PreviewRow
   const price = parseInt((row.price ?? row.Price ?? "0").trim(), 10);
   const categorySlug = (row.categoryslug ?? row.category_slug ?? row.categorySlug ?? "").trim();
   if (!name || Number.isNaN(price) || price < 0 || !categorySlug) return null;
-  const slug = validSlugs.includes(categorySlug) ? categorySlug : validSlugs[0];
+  if (validSlugs.length === 0) return null;
+  const slug = validSlugs.includes(categorySlug) ? categorySlug : validSlugs[0]!;
   return {
     name,
     price,
@@ -57,7 +55,7 @@ export default function AdminBulkProductsPage() {
       .catch(() => setCategories([]));
   }, []);
 
-  const validSlugs = categories.length > 0 ? categories.map((c) => c.slug) : categorySlugs;
+  const validSlugs = categories.length > 0 ? categories.map((c) => c.slug) : [];
 
   const handleDownloadTemplate = useCallback(() => {
     window.open(TEMPLATE_URL, "_blank");

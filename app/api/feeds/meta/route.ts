@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@lib/db";
 import { getDefaultTenantId } from "@lib/tenant";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,12 @@ export async function GET() {
     const id = p.id;
     const title = p.nameEn;
     const description = (p.descriptionEn ?? "").slice(0, 5000);
-    const link = `${baseUrl}/product/${p.id}`;
+    const link = `${baseUrl}${buildProductRoute({
+      categorySlug: p.categorySlug,
+      subcategorySlug: p.categorySlug,
+      slug: p.slug || p.id,
+      id: p.id,
+    })}`;
     const firstImg = p.images[0];
     const imageLink = p.metaOgImage || (firstImg?.url) || `${baseUrl}/ui/product-4x3.svg`;
     const price = `${Number(p.sellingPrice)} BDT`;

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/store/CartContext";
 import { useCategories } from "@/store/CategoriesContext";
+import { useSiteSettings } from "@/store/SiteSettingsContext";
 import { useState, useRef, useEffect } from "react";
 
 const MAIN_NAV = [
@@ -34,6 +35,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const { totalItems, toggleCart } = useCart();
   const { navCategories } = useCategories();
+  const { settings } = useSiteSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -70,13 +72,13 @@ export default function Navbar() {
           className="flex shrink-0 items-center gap-2"
         >
           <Image
-            src="/brand/logo.png"
-            alt="City Plus Pet Shop"
+            src={settings?.logo_url || "/brand/logo.png"}
+            alt={settings?.site_name_en || "City Plus Pet Shop"}
             width={40}
             height={40}
             className="h-9 w-9 object-contain sm:h-10 sm:w-10"
           />
-          <span className="text-base font-bold text-white sm:text-lg">City Plus Pet Shop</span>
+          <span className="text-base font-bold text-white sm:text-lg">{settings?.site_name_en || "City Plus Pet Shop"}</span>
         </Link>
 
         {/* Search Bar - Center (Desktop) */}

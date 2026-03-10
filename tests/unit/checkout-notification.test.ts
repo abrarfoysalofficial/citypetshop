@@ -8,11 +8,11 @@ jest.mock("next-auth", () => ({
   getServerSession: jest.fn().mockResolvedValue(null),
 }));
 
-jest.mock("@lib/tenant", () => ({
+jest.mock("@/lib/tenant", () => ({
   getDefaultTenantId: jest.fn().mockReturnValue("tenant-default"),
 }));
 
-jest.mock("@lib/rate-limit", () => ({
+jest.mock("@/lib/rate-limit", () => ({
   rateLimit: jest.fn().mockResolvedValue({ ok: true }),
   getRateLimitKey: jest.fn().mockReturnValue("key"),
 }));
@@ -21,12 +21,12 @@ jest.mock("@/src/config/env", () => ({
   isPrismaConfigured: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock("@lib/fraud", () => ({
+jest.mock("@/lib/fraud", () => ({
   checkFraud: jest.fn().mockResolvedValue({ passed: true, flags: [] }),
   recordFraudFlag: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock("@lib/db", () => {
+jest.mock("@/lib/db", () => {
   const mockOrderCreate = jest.fn();
   const mockOrderItemCreateMany = jest.fn();
   const mockProductUpdate = jest.fn();
@@ -52,12 +52,12 @@ jest.mock("@lib/db", () => {
   };
 });
 
-jest.mock("@lib/notifications", () => ({
+jest.mock("@/lib/notifications", () => ({
   sendOrderConfirmationEmail: jest.fn(),
   sendOrderStatusSms: jest.fn(),
 }));
 
-jest.mock("@lib/notification-log", () => ({
+jest.mock("@/lib/notification-log", () => ({
   tryAcquireNotificationSlot: jest.fn(),
   updateNotificationLog: jest.fn().mockResolvedValue(undefined),
   truncateRecipient: jest.fn((r: string) => (r.includes("@") ? "***@***" : "****")),
@@ -89,15 +89,15 @@ function createRequest(body: object) {
 describe("Checkout: notification adapter throw does not fail order", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.order.create.mockResolvedValue({ id: "order-123" });
     prisma.orderItem.createMany.mockResolvedValue({ count: 1 });
-    const { tryAcquireNotificationSlot } = require("@lib/notification-log");
+    const { tryAcquireNotificationSlot } = require("@/lib/notification-log");
     tryAcquireNotificationSlot.mockResolvedValue(true);
   });
 
   it("returns orderId when email adapter throws (order creation not blocked)", async () => {
-    const { sendOrderConfirmationEmail, sendOrderStatusSms } = require("@lib/notifications");
+    const { sendOrderConfirmationEmail, sendOrderStatusSms } = require("@/lib/notifications");
     sendOrderConfirmationEmail.mockRejectedValue(new Error("Resend API error"));
     sendOrderStatusSms.mockResolvedValue({ ok: true });
 
@@ -109,7 +109,7 @@ describe("Checkout: notification adapter throw does not fail order", () => {
   });
 
   it("returns orderId when SMS adapter throws (order creation not blocked)", async () => {
-    const { sendOrderConfirmationEmail, sendOrderStatusSms } = require("@lib/notifications");
+    const { sendOrderConfirmationEmail, sendOrderStatusSms } = require("@/lib/notifications");
     sendOrderConfirmationEmail.mockResolvedValue({ ok: true });
     sendOrderStatusSms.mockRejectedValue(new Error("SMS provider timeout"));
 
@@ -124,19 +124,19 @@ describe("Checkout: notification adapter throw does not fail order", () => {
 describe("Checkout: duplicate request replays skip send", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.order.create.mockResolvedValue({ id: "order-no-send" });
     prisma.orderItem.createMany.mockResolvedValue({ count: 1 });
   });
 
   it("skips email send when slot already taken (idempotent replay)", async () => {
-    const { tryAcquireNotificationSlot } = require("@lib/notification-log");
+    const { tryAcquireNotificationSlot } = require("@/lib/notification-log");
     tryAcquireNotificationSlot.mockResolvedValue(false);
 
     const res = await POST(createRequest(validBody));
     expect(res.status).toBe(200);
 
-    const { sendOrderConfirmationEmail } = require("@lib/notifications");
+    const { sendOrderConfirmationEmail } = require("@/lib/notifications");
     expect(sendOrderConfirmationEmail).not.toHaveBeenCalled();
   });
 });

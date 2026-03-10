@@ -2,7 +2,7 @@
  * SSLCommerz webhook tests: idempotency, status transitions, amount validation.
  * Mocks prisma and validateSslCommerzTransaction.
  */
-import { canTransitionPaymentStatus } from "@lib/order-transitions";
+import { canTransitionPaymentStatus } from "@/lib/order-transitions";
 
 describe("Order transitions: canTransitionPaymentStatus", () => {
   it("allows pending -> paid", () => {

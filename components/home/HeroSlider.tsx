@@ -17,9 +17,9 @@ export interface HeroSlide {
 }
 
 const DEFAULT_SLIDES: HeroSlide[] = [
-  { id: "1", title: "Premium Pet Food", subheadline: "Quality nutrition for your furry friends", image: "/ui/hero-16x9.svg", href: "/shop", cta: "Shop Now", discountText: "SAVE UP 30%" },
-  { id: "2", title: "Cat & Dog Essentials", subheadline: "Everything you need in one place", image: "/ui/hero-16x9.svg", href: "/category/dog-food", cta: "Shop Now", discountText: "UP TO 25% OFF" },
-  { id: "3", title: "New Arrivals", subheadline: "Fresh stock every week", image: "/ui/hero-16x9.svg", href: "/combo-offers", cta: "View Combos", discountText: "SAVE UP 30%" },
+  { id: "1", title: "Premium Pet Travel Gear", subheadline: "", image: "/banners/hero-slide-1.jpeg", href: "/shop", cta: "Shop Now" },
+  { id: "2", title: "Premium Pet Care Starts Here", subheadline: "", image: "/banners/hero-slide-2.jpeg", href: "/shop", cta: "Shop Now" },
+  { id: "3", title: "Luxury and Exclusive Fashion", subheadline: "", image: "/banners/hero-slide-3.jpeg", href: "/shop", cta: "Shop Now" },
 ];
 
 const AUTO_PLAY_MS = 5500;
@@ -54,7 +54,7 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
               src={slide.image}
               alt={slide.title}
               fill
-              fallbackSrc="/ui/hero-16x9.svg"
+              fallbackSrc="/banners/hero-slide-1.jpeg"
               priority={i === 0}
               sizes="100vw"
               className="object-cover"

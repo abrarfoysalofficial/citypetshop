@@ -21,8 +21,26 @@ import { getDefaultTenantId } from "@/lib/tenant";
 import type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
 import * as dbProducts from "@/lib/data/db-products";
 import { prisma } from "@/lib/db";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export type { AdminAnalyticsResult, AdminDashboardStats } from "./admin-types";
+
+// Categories - for ProductsRepository
+export async function getCategoriesFromDb(): Promise<{ slug: string; name: string; subcategories: string[] }[]> {
+  const tenantId = getDefaultTenantId();
+  const all = await prisma.category.findMany({
+    where: { tenantId, deletedAt: null, isActive: true },
+    select: { id: true, slug: true, nameEn: true, parentId: true, parent: { select: { slug: true } } },
+    orderBy: { sortOrder: "asc" },
+  });
+  const topLevel = all.filter((c) => !c.parentId);
+  const children = all.filter((c) => c.parentId);
+  return topLevel.map((p) => ({
+    slug: p.slug,
+    name: p.nameEn,
+    subcategories: children.filter((c) => c.parent?.slug === p.slug).map((c) => c.slug),
+  }));
+}
 
 // Products
 export const getProducts = dbProducts.getProducts;
@@ -74,45 +92,31 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
   };
 }
 
-// Home - from tenant_settings + home_banner_slides
+// Home - canonical source: HomeBannerSlide only (no TenantSettings.heroSlider fallback)
 export async function getHomeData(): Promise<HomeSection> {
   const tenantId = getDefaultTenantId();
-  const settings = await prisma.tenantSettings.findUnique({
-    where: { tenantId },
-    select: { heroSlider: true },
-  });
-  const heroRaw = (settings?.heroSlider as { image_url?: string; title_en?: string; link?: string; order?: number }[]) ?? [];
-  const heroSlides = heroRaw.map((s, i) => ({
-    id: String(i),
-    title: s.title_en ?? "",
-    subheadline: "",
-    image: s.image_url ?? "/placeholder.jpg",
-    href: s.link ?? "/shop",
-    cta: "Shop Now",
-  }));
-  if (heroSlides.length === 0) {
-    heroSlides.push({ id: "1", title: "Welcome", subheadline: "", image: "/placeholder.jpg", href: "/shop", cta: "Shop Now" });
-  }
   const slides = await prisma.homeBannerSlide.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
   });
-  const fromSlides = slides.map((s) => ({
-    id: s.id,
-    title: s.titleEn ?? "",
-    subheadline: "",
-    image: s.imageUrl,
-    href: s.link ?? "/shop",
-    cta: "Shop Now",
-  }));
-  const allSlides = fromSlides.length > 0 ? fromSlides : heroSlides;
+  const heroSlides =
+    slides.length > 0
+      ? slides.map((s) => ({
+          id: s.id,
+          title: s.titleEn ?? "",
+          subheadline: "",
+          image: s.imageUrl,
+          href: s.link ?? "/shop",
+          cta: "Shop Now",
+        }))
+      : [{ id: "default", title: "Welcome", subheadline: "", image: "/banners/hero-slide-1.jpeg", href: "/shop", cta: "Shop Now" }];
   const categories = await prisma.category.findMany({
     where: { tenantId, isActive: true, deletedAt: null },
     orderBy: { sortOrder: "asc" },
     take: 8,
   });
   return {
-    heroSlides: allSlides,
+    heroSlides,
     featuredCategories: categories.map((c) => ({
       slug: c.slug,
       name: c.nameEn,
@@ -137,7 +141,12 @@ export async function getComboOffers(): Promise<ComboOffer[]> {
     price: p.price,
     comparePrice: p.comparePrice,
     productIds: [p.id],
-    href: `/product/${p.id}`,
+    href: buildProductRoute({
+      categorySlug: p.categorySlug,
+      subcategorySlug: p.categorySlug,
+      id: p.id,
+      slug: p.slug,
+    }),
     cta: "View",
   }));
 }

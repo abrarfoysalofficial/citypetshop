@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { getAdminDashboard } from "@/src/data/provider";
 import { DollarSign, ShoppingCart, TrendingUp, RotateCcw } from "lucide-react";
+import { PageHero } from "@/components/admin/page-hero";
 
 export default async function AdminReportsPage() {
   const dashboard = await getAdminDashboard();
@@ -8,8 +9,11 @@ export default async function AdminReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Reports</h1>
-      <p className="text-slate-600">Daily / weekly / monthly sales, profit, delivery cost, returns. Export CSV when backend is connected.</p>
+      <PageHero
+        title="Reports"
+        description="Daily / weekly / monthly sales, profit, delivery cost, returns. Export CSV when backend is connected."
+        breadcrumb={[{ label: "Dashboard", href: "/admin" }, { label: "Reports" }]}
+      />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm bg-emerald-50">
           <div className="flex items-center justify-between">

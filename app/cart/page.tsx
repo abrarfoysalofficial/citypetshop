@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 import { useCart } from "@/store/CartContext";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, totalItems, totalPrice } = useCart();
@@ -47,7 +48,11 @@ export default function CartPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={`/product/${item.id}`}
+                    href={buildProductRoute({
+                      categorySlug: item.categorySlug ?? "general",
+                      subcategorySlug: item.categorySlug ?? "general",
+                      id: item.id,
+                    })}
                     className="font-semibold text-gray-900 line-clamp-2 hover:text-primary"
                   >
                     {item.name}

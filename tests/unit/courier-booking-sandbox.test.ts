@@ -1,7 +1,7 @@
 /**
  * Courier booking: sandbox flag persistence in CourierBookingLog.
  */
-import { bookCourier } from "@lib/courier/booking";
+import { bookCourier } from "@/lib/courier/booking";
 
 const mockCreate = jest.fn();
 const mockFindFirst = jest.fn();
@@ -10,7 +10,7 @@ const mockFindUnique = jest.fn();
 const mockOrderUpdate = jest.fn().mockResolvedValue({});
 const mockEventCreate = jest.fn().mockResolvedValue({});
 
-jest.mock("@lib/db", () => ({
+jest.mock("@/lib/db", () => ({
   prisma: {
     order: {
       findFirst: (...args: unknown[]) => mockFindFirst(...args),
@@ -25,13 +25,13 @@ jest.mock("@lib/db", () => ({
   },
 }));
 
-jest.mock("@lib/courier/provider-config", () => ({
+jest.mock("@/lib/courier/provider-config", () => ({
   isProviderConfigured: jest.fn().mockResolvedValue(true),
   isProviderEnabled: jest.fn().mockResolvedValue(true),
   getCourierSandbox: jest.fn(),
 }));
 
-jest.mock("@lib/courier/pathao-client", () => ({
+jest.mock("@/lib/courier/pathao-client", () => ({
   getPathaoClient: jest.fn().mockResolvedValue({}),
   getPathaoStoreId: jest.fn().mockResolvedValue("store-1"),
   createPathaoOrder: jest.fn().mockResolvedValue({
@@ -40,12 +40,12 @@ jest.mock("@lib/courier/pathao-client", () => ({
   }),
 }));
 
-jest.mock("@lib/logger", () => ({
+jest.mock("@/lib/logger", () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
 }));
 
-const getCourierSandbox = require("@lib/courier/provider-config").getCourierSandbox;
+const getCourierSandbox = require("@/lib/courier/provider-config").getCourierSandbox;
 
 describe("bookCourier sandbox persistence", () => {
   beforeEach(() => {

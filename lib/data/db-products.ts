@@ -5,14 +5,15 @@
 import { prisma } from "@/lib/db";
 import { getDefaultTenantId } from "@/lib/tenant";
 import type { Product } from "@/src/data/types";
+import type { Prisma } from "@prisma/client";
 
-const productInclude = {
+const productInclude: Prisma.ProductInclude = {
   images: {
-    orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }],
+    orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
     take: 5,
   },
   brand: { select: { name: true } },
-} as const;
+};
 
 type ProductRow = {
   id: string;

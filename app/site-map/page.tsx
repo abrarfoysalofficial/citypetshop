@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const SECTIONS = [
   { title: "Main", links: ["/", "/shop", "/blog", "/about", "/contact"] },
-  { title: "Shop", links: ["/shop", "/shop?category=dog", "/shop?category=cat"] },
+  { title: "Shop", links: ["/shop", "/category/dog-food", "/category/cat-food"] },
 ];
 
 export default function SiteMapPage() {

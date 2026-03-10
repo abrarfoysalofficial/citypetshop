@@ -5,8 +5,8 @@ import SafeImage from "@/components/media/SafeImage";
 import TwoToneText from "@/components/ui/TwoToneText";
 
 const BANNERS = [
-  { id: "1", title: "Cat Deals", subtitle: "Up to 25% off", image: "/ui/blog-cover.svg", href: "/shop?category=cat-accessories" },
-  { id: "2", title: "Dog Food", subtitle: "Premium nutrition", image: "/ui/blog-cover.svg", href: "/shop?category=dog-food" },
+  { id: "1", title: "Cat Deals", subtitle: "Up to 25% off", image: "/ui/blog-cover.svg", href: "/category/cat-accessories" },
+  { id: "2", title: "Dog Food", subtitle: "Premium nutrition", image: "/ui/blog-cover.svg", href: "/category/dog-food" },
   { id: "3", title: "Special Combo Offer", subtitle: "Bundle & save up to 30%", image: "/ui/blog-cover.svg", href: "/combo-offers" },
 ];
 

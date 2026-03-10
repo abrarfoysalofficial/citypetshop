@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@lib/db";
 import { getDefaultTenantId } from "@lib/tenant";
 import { requireAdminAuth } from "@lib/admin-auth";
@@ -6,14 +7,22 @@ import { logAdminAction } from "@lib/rbac";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await requireAdminAuth();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
 
   try {
     const tenantId = getDefaultTenantId();
+    const { searchParams } = new URL(request.url);
+    const parentId = searchParams.get("parentId");
+
+    const where: { tenantId: string; deletedAt: null; parentId?: string | null } = { tenantId, deletedAt: null };
+    if (parentId !== undefined && parentId !== null && parentId !== "") {
+      where.parentId = parentId === "root" ? null : parentId;
+    }
+
     const categories = await prisma.category.findMany({
-      where: { tenantId, deletedAt: null },
+      where,
       include: {
         parent: { select: { id: true, nameEn: true, nameBn: true } },
         children: { select: { id: true, nameEn: true, nameBn: true } },
@@ -61,6 +70,8 @@ export async function POST(request: NextRequest) {
 
     await logAdminAction(auth.userId, "create", "category", category.id, undefined, { nameEn: category.nameEn, slug: category.slug }, { headers: request.headers });
 
+    revalidatePath("/");
+
     return NextResponse.json(category);
   } catch (error) {
     console.error("[admin/categories] POST:", error);
@@ -104,6 +115,8 @@ export async function PATCH(request: NextRequest) {
 
     await logAdminAction(auth.userId, "update", "category", id, before, category, { headers: request.headers });
 
+    revalidatePath("/");
+
     return NextResponse.json(category);
   } catch (error) {
     console.error("[admin/categories] PATCH:", error);
@@ -126,6 +139,8 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.category.update({ where: { id }, data: { deletedAt: new Date() } });
     await logAdminAction(auth.userId, "delete", "category", id, before, undefined, { headers: request.headers });
+
+    revalidatePath("/");
 
     return NextResponse.json({ success: true });
   } catch (error) {

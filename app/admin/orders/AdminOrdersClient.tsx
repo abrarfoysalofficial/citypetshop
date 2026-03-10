@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Loader2, Search, ArrowUpDown, Eye, Download, Plus, Package } from "lucide-react";
+import { PageHero } from "@/components/admin/page-hero";
 import type { OrderStatus } from "@lib/schema";
 
 type Order = {
@@ -162,20 +163,20 @@ export default function AdminOrdersClient({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
-          <p className="mt-1 text-slate-600">{filteredOrders.length} orders</p>
-        </div>
-        <Link
-          href="/admin/orders/create"
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
-          Create Order
-        </Link>
-      </div>
+      <PageHero
+        title="Orders"
+        description={`${filteredOrders.length} orders`}
+        breadcrumb={[{ label: "Dashboard", href: "/admin" }, { label: "Orders" }]}
+        actions={
+          <Link
+            href="/admin/orders/create"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            Create Order
+          </Link>
+        }
+      />
 
       {/* Tabs */}
       {tabs.length > 0 && (

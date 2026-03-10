@@ -14,6 +14,7 @@ import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { CONTACT_EMAIL } from "../lib/constants";
 import { DEFAULT_TENANT_ID } from "../lib/tenant";
+import { encryptSecret } from "../lib/crypto/secrets";
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,7 @@ async function main() {
   const adminEmail =
     process.env.INITIAL_ADMIN_EMAIL ?? process.env.ADMIN_EMAIL ?? "admin@citypetshop.bd";
   const adminPassword =
-    process.env.INITIAL_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? "Admin@12345";
+    process.env.INITIAL_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? "Admin@12345!";
   const adminName = process.env.INITIAL_ADMIN_NAME ?? process.env.ADMIN_NAME ?? "Admin";
 
   if (process.env.NODE_ENV === "production") {
@@ -30,9 +31,9 @@ async function main() {
         "INITIAL_ADMIN_PASSWORD or ADMIN_PASSWORD must be set and at least 12 characters in production"
       );
     }
-    if (adminPassword === "Admin@12345") {
+    if (adminPassword === "Admin@12345!") {
       throw new Error(
-        "INITIAL_ADMIN_PASSWORD/ADMIN_PASSWORD cannot be the default 'Admin@12345' in production"
+        "INITIAL_ADMIN_PASSWORD/ADMIN_PASSWORD cannot be the default 'Admin@12345!' in production"
       );
     }
   }
@@ -60,6 +61,42 @@ async function main() {
     update: { primaryColor: "#5cd4ff", accentColor: "#f39221" },
   });
   console.log("Tenant settings ready");
+
+  // Persist courier credentials in encrypted SecureConfig if provided via env.
+  // This mirrors "permanent default" behavior while keeping secrets out tracked files.
+  const steadfastApiKey = process.env.STEADFAST_API_KEY?.trim();
+  const steadfastSecretKey = process.env.STEADFAST_SECRET_KEY?.trim();
+  if (steadfastApiKey || steadfastSecretKey) {
+    if (!process.env.MASTER_SECRET || process.env.MASTER_SECRET.trim().length < 32) {
+      console.warn(
+        "Skipping Steadfast SecureConfig seed: MASTER_SECRET is missing/short (needs 32+ chars)."
+      );
+    } else {
+      const entries: Array<{ key: string; value: string }> = [];
+      if (steadfastApiKey) {
+        entries.push({ key: "courier:steadfast:api_key", value: steadfastApiKey });
+      }
+      if (steadfastSecretKey) {
+        entries.push({ key: "courier:steadfast:secret_key", value: steadfastSecretKey });
+      }
+      for (const entry of entries) {
+        await prisma.secureConfig.upsert({
+          where: { tenantId_key: { tenantId: DEFAULT_TENANT_ID, key: entry.key } },
+          create: {
+            tenantId: DEFAULT_TENANT_ID,
+            key: entry.key,
+            valueEnc: encryptSecret(entry.value),
+            valueLen: entry.value.length,
+          },
+          update: {
+            valueEnc: encryptSecret(entry.value),
+            valueLen: entry.value.length,
+          },
+        });
+      }
+      console.log(`Steadfast secure credentials ready (${entries.length})`);
+    }
+  }
 
   // 3. SUPER_ADMIN role (and owner, admin, moderator) - if not exists
   const superAdminRole = await prisma.role.upsert({
@@ -173,6 +210,31 @@ async function main() {
     }).catch(() => {});
   }
   console.log("Product filters ready");
+
+  // Hero banners — ensure 3 slides from provided images (public/banners/hero-slide-1..3.jpeg)
+  const heroSlides = [
+    { imageUrl: "/banners/hero-slide-1.jpeg", titleEn: "Premium Pet Travel Gear", link: "/shop", sortOrder: 1 },
+    { imageUrl: "/banners/hero-slide-2.jpeg", titleEn: "Premium Pet Care Starts Here", link: "/shop", sortOrder: 2 },
+    { imageUrl: "/banners/hero-slide-3.jpeg", titleEn: "Luxury and Exclusive Fashion", link: "/shop", sortOrder: 3 },
+  ];
+  const existing = await prisma.homeBannerSlide.findMany({ orderBy: { sortOrder: "asc" } });
+  if (existing.length >= 3) {
+    for (let i = 0; i < 3; i++) {
+      await prisma.homeBannerSlide.update({
+        where: { id: existing[i]!.id },
+        data: { ...heroSlides[i], isActive: true },
+      });
+    }
+    if (existing.length > 3) {
+      await prisma.homeBannerSlide.deleteMany({ where: { id: { in: existing.slice(3).map((e) => e.id) } } });
+    }
+  } else {
+    await prisma.homeBannerSlide.deleteMany({});
+    for (const s of heroSlides) {
+      await prisma.homeBannerSlide.create({ data: { ...s, isActive: true } });
+    }
+  }
+  console.log("Hero banners ready (3 slides)");
 
   // Legal pages (terms, privacy, refund) — create only if not exists
   const legalSlugs = ["terms", "privacy", "refund"];

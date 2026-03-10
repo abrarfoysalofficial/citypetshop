@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { PageHero } from "@/components/admin/page-hero";
 
 type StockItem = {
   id: string;
@@ -71,16 +72,11 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
-        {report && (
-          <div className="flex gap-4 text-sm">
-            <span className="text-amber-700">⚠ Low stock: <strong>{report.lowStockCount}</strong></span>
-            <span className="text-red-700">✕ Out of stock: <strong>{report.outOfStockCount}</strong></span>
-            <span className="text-slate-500">Total: {report.total}</span>
-          </div>
-        )}
-      </div>
+      <PageHero
+        title="Inventory"
+        description={report ? `Low stock: ${report.lowStockCount} • Out of stock: ${report.outOfStockCount} • Total: ${report.total}` : "Manage product stock levels"}
+        breadcrumb={[{ label: "Dashboard", href: "/admin" }, { label: "Products", href: "/admin/products" }, { label: "Inventory" }]}
+      />
 
       {msg && (
         <div className={`rounded-lg px-4 py-2 text-sm ${msg.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>

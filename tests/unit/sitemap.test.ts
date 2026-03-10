@@ -21,7 +21,7 @@ describe("Sitemap XML structure", () => {
 
   it("url element has required loc, lastmod, changefreq, priority", () => {
     const url = {
-      loc: "https://citypetshop.bd/product/123",
+      loc: "https://citypetshop.bd/shop/general/general/123",
       lastmod: "2026-02-26",
       changefreq: "weekly" as const,
       priority: 0.6,

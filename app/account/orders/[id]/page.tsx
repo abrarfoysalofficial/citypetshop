@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
-import { auth } from "@lib/auth";
+import { auth } from "@/lib/auth";
 import { getUserOrderById } from "@/src/data/provider";
 import { notFound } from "next/navigation";
 import { OrderActions } from "./OrderActions";

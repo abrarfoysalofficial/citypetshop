@@ -4,30 +4,48 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCategories } from "@store/CategoriesContext";
-import type { CategoryItem } from "@lib/types";
+import { Loader2 } from "lucide-react";
 
 export default function AdminNewCategoryPage() {
   const router = useRouter();
-  const { addCategory } = useCategories();
+  const { refetch } = useCategories();
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
   const [subcategories, setSubcategories] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const slugTrim = slug.trim().toLowerCase().replace(/\s+/g, "-");
     const nameTrim = name.trim();
     if (!slugTrim || !nameTrim) return;
-    const item: CategoryItem = {
-      slug: slugTrim,
-      name: nameTrim,
-      subcategories: subcategories
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    };
-    addCategory(item);
-    router.push("/admin/categories");
+
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: slugTrim,
+          nameEn: nameTrim,
+          nameBn: null,
+          isActive: true,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create category");
+      }
+      await refetch();
+      if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("categories-updated"));
+      router.push("/admin/categories");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create category");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -74,11 +92,14 @@ export default function AdminNewCategoryPage() {
             />
           </div>
         </div>
+        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
         <div className="mt-6 flex gap-3">
           <button
             type="submit"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+            disabled={saving}
+            className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-70"
           >
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Category
           </button>
           <Link

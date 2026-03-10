@@ -24,7 +24,7 @@
 | `NEXTAUTH_URL` | Root `.env` | `http://localhost:3000` | `https://citypetshop.bd` |
 | `NEXT_PUBLIC_SITE_URL` | Root `.env` | `http://localhost:3000` | `https://citypetshop.bd` |
 | `ADMIN_EMAIL` | Root `.env` (optional) | `admin@citypetshop.bd` | Change for production |
-| `ADMIN_PASSWORD` | Root `.env` (optional) | `Admin@12345` | **MUST set 12+ chars in production** |
+| `ADMIN_PASSWORD` | Root `.env` (optional) | `Admin@12345!` | **MUST set 12+ chars in production** |
 | `MASTER_SECRET` | Root `.env` | Not set (SecureConfig disabled) | `openssl rand -base64 32` for encryption |
 | `RESEND_API_KEY` | Root `.env` | `re_xxxxx` | Real Resend API key |
 | `REDIS_URL` | Root `.env` | Optional | `redis://...` if using Redis |
@@ -53,7 +53,7 @@ Configure via **Admin → Settings → Integrations** (or **Admin → Advanced S
 | Item | Dev Default | Production Action |
 |------|-------------|-------------------|
 | Email | `admin@citypetshop.bd` | Set `ADMIN_EMAIL` in .env before seed |
-| Password | `Admin@12345` | Set `ADMIN_PASSWORD` (12+ chars) in .env before seed; **MUST change** after first login |
+| Password | `Admin@12345!` | Set `ADMIN_PASSWORD` (12+ chars) in .env before seed; **MUST change** after first login |
 
 **Idempotent seed:** `npx prisma db seed` creates/updates admin user. Does not overwrite password on re-run.
 

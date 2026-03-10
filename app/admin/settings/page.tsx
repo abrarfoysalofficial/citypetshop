@@ -117,7 +117,8 @@ export default function AdminSettingsPage() {
 
       if (res.ok) {
         setMessage({ type: "success", text: "Settings saved successfully!" });
-        await fetchSettings(); // Refresh from server
+        await fetchSettings(); // Refresh admin form from server
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("settings-updated"));
         setTimeout(() => setMessage(null), 3000);
       } else {
         setMessage({ type: "error", text: "Failed to save settings" });

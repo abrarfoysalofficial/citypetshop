@@ -83,7 +83,7 @@
 
 **Note:** About page is DB-driven. Founder from `AboutPageProfile` (id: founder); team from `TeamMember`. Seed provides defaults; Admin can edit via Admin → About.
 
-**1.6 Verified on:** Home (/), Shop (/shop), Product (/product/[id]). Primary #5cd4ff, Accent #f39221, Neutral #0f172a. Contrast fixed: primary-foreground (#0f172a) on light primary backgrounds.
+**1.6 Verified on:** Home (/), Shop (/shop), Product (/shop/[category]/[subcategory]/[product]). Primary #5cd4ff, Accent #f39221, Neutral #0f172a. Contrast fixed: primary-foreground (#0f172a) on light primary backgrounds.
 
 ---
 
@@ -128,7 +128,7 @@
 | 4.6 | Technical SEO: sitemap, robots, canonical | `app/sitemap.ts`, `app/robots.ts`, metadataBase | Dynamic sitemap.xml, robots.txt, canonical URLs | /sitemap.xml, /robots.txt valid | Done |
 | 4.7 | Structured data (Schema.org) | `components/seo/*`, product, blog, layout | Organization, Product, BlogPosting schema | Valid JSON-LD in page source | Done |
 
-**Verification:** Run `npm run build` then `npm run dev`. Visit /, /sitemap.xml, /robots.txt. View source on /, /product/[id], /blog/[slug] to confirm JSON-LD present.
+**Verification:** Run `npm run build` then `npm run dev`. Visit /, /sitemap.xml, /robots.txt. View source on /, /shop/[category]/[subcategory]/[product], /blog/[slug] to confirm JSON-LD present.
 
 ---
 

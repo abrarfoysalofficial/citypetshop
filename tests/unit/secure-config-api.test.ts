@@ -5,19 +5,19 @@
 import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/admin/settings/secure-config/route";
 
-jest.mock("@lib/admin-auth", () => ({
+jest.mock("@/lib/admin-auth", () => ({
   requireAdminAuthAndPermission: jest.fn(),
 }));
 
-jest.mock("@lib/tenant", () => ({
+jest.mock("@/lib/tenant", () => ({
   getDefaultTenantId: jest.fn().mockReturnValue("tenant-1"),
 }));
 
-jest.mock("@lib/env-validation", () => ({
+jest.mock("@/lib/env-validation", () => ({
   validateMasterSecret: jest.fn().mockReturnValue({ ok: true }),
 }));
 
-jest.mock("@lib/db", () => ({
+jest.mock("@/lib/db", () => ({
   prisma: {
     secureConfig: {
       findMany: jest.fn(),
@@ -30,13 +30,13 @@ jest.mock("@lib/db", () => ({
   },
 }));
 
-jest.mock("@lib/crypto/secrets", () => ({
+jest.mock("@/lib/crypto/secrets", () => ({
   encryptSecret: jest.fn((v: string) => `enc:${v}`),
   maskSecret: jest.fn((v: string) => (v.length > 4 ? "••••••••" + v.slice(-4) : "••••")),
 }));
 
-const requireAdminAuthAndPermission = require("@lib/admin-auth").requireAdminAuthAndPermission;
-const prisma = require("@lib/db").prisma;
+const requireAdminAuthAndPermission = require("@/lib/admin-auth").requireAdminAuthAndPermission;
+const prisma = require("@/lib/db").prisma;
 
 describe("GET /api/admin/settings/secure-config", () => {
   beforeEach(() => {

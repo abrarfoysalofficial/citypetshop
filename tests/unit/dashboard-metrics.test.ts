@@ -1,7 +1,7 @@
 /**
  * Dashboard metrics: percentChange helper tests.
  */
-import { percentChange } from "@lib/dashboard-metrics";
+import { percentChange } from "@/lib/dashboard-metrics";
 
 describe("percentChange", () => {
   it("returns 0 when both prev and current are 0", () => {

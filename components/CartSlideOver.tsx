@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
 import { useCart } from "@/store/CartContext";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export default function CartSlideOver() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalItems, totalPrice } = useCart();
@@ -61,7 +62,11 @@ export default function CartSlideOver() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <Link
-                      href={`/product/${item.id}`}
+                      href={buildProductRoute({
+                        categorySlug: item.categorySlug ?? "general",
+                        subcategorySlug: item.categorySlug ?? "general",
+                        id: item.id,
+                      })}
                       onClick={closeCart}
                       className="font-medium text-gray-900 hover:text-primary line-clamp-2"
                     >

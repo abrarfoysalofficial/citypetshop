@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { PageHero } from "@/components/admin/page-hero";
 import {
   AreaChart,
   Area,
@@ -34,6 +35,8 @@ export default function AdminDashboardPage() {
     totalCustomers: 0,
     revenueChange: 0,
     ordersChange: 0,
+    outOfStockCount: 0,
+    pendingOrdersCount: 0,
   });
   const [salesData, setSalesData] = useState<{ name: string; revenue: number; orders: number }[]>([]);
   const [categoryData, setCategoryData] = useState<{ name: string; value: number; count: number }[]>([]);
@@ -41,7 +44,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const setEmptyFallback = useCallback(() => {
-    setStats({ totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0 });
+    setStats({ totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0, outOfStockCount: 0, pendingOrdersCount: 0 });
     setSalesData([]);
     setCategoryData([]);
     setRecentOrders([]);
@@ -60,7 +63,7 @@ export default function AdminDashboardPage() {
         }
         if (!res.ok) throw new Error("Dashboard fetch failed");
         const data = await res.json();
-        setStats(data.stats ?? { totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0 });
+        setStats(data.stats ?? { totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenueChange: 0, ordersChange: 0, outOfStockCount: 0, pendingOrdersCount: 0 });
         setSalesData(data.salesData ?? []);
         setCategoryData(data.categoryData ?? []);
         setRecentOrders(data.recentOrders ?? []);
@@ -145,11 +148,11 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-slate-600">Welcome back! Here&apos;s what&apos;s happening with your store today.</p>
-      </div>
+      <PageHero
+        title="Dashboard"
+        description="Welcome back! Here's what's happening with your store today."
+        breadcrumb={[{ label: "Dashboard" }]}
+      />
 
       {/* Stats Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -178,6 +181,22 @@ export default function AdminDashboardPage() {
           icon={Users}
         />
       </div>
+
+      {/* Quick stats */}
+      {(stats.outOfStockCount > 0 || stats.pendingOrdersCount > 0) && (
+        <div className="flex flex-wrap gap-4 rounded-xl bg-amber-50 border border-amber-200 p-4">
+          {stats.outOfStockCount > 0 && (
+            <a href="/admin/inventory" className="text-sm font-medium text-amber-800 hover:text-amber-900">
+              ⚠ {stats.outOfStockCount} product{stats.outOfStockCount !== 1 ? "s" : ""} out of stock
+            </a>
+          )}
+          {stats.pendingOrdersCount > 0 && (
+            <a href="/admin/orders?status=pending" className="text-sm font-medium text-amber-800 hover:text-amber-900">
+              📋 {stats.pendingOrdersCount} pending order{stats.pendingOrdersCount !== 1 ? "s" : ""}
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid gap-6 lg:grid-cols-2">

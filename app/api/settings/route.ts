@@ -48,6 +48,8 @@ const DEFAULTS: SiteSettingsRow = {
   default_og_image_url: null,
   homepage_blocks: null,
   auth_providers: null,
+  sales_top_bar_text: null,
+  sales_top_bar_enabled: true,
 };
 
 /** GET /api/settings – public site settings (no secrets, no tokens) */
@@ -86,8 +88,8 @@ export async function GET() {
       phone: s.phone,
       email: s.email,
       whatsapp_number: s.whatsappNumber,
-      hero_slider: Array.isArray(s.heroSlider) ? (s.heroSlider as unknown as SiteSettingsRow["hero_slider"]) : [],
-      side_banners: Array.isArray(s.sideBanners) ? (s.sideBanners as unknown as SiteSettingsRow["side_banners"]) : [],
+      hero_slider: [], // Banners: canonical source is HomeBannerSlide via /admin/banners
+      side_banners: [],
       cta_buttons: Array.isArray(s.ctaButtons) ? (s.ctaButtons as unknown as SiteSettingsRow["cta_buttons"]) : [],
       popup_enabled: s.popupEnabled,
       popup_content_en: s.popupContentEn,
@@ -104,6 +106,8 @@ export async function GET() {
       default_og_image_url: s.defaultOgImageUrl,
       homepage_blocks: s.homepageBlocks as SiteSettingsRow["homepage_blocks"],
       auth_providers: null,
+      sales_top_bar_text: s.salesTopBarText,
+      sales_top_bar_enabled: s.salesTopBarEnabled,
       delivery_inside_dhaka: s.deliveryInsideDhaka ? Number(s.deliveryInsideDhaka) : undefined,
       delivery_outside_dhaka: s.deliveryOutsideDhaka ? Number(s.deliveryOutsideDhaka) : undefined,
       free_delivery_threshold: s.freeDeliveryThreshold ? Number(s.freeDeliveryThreshold) : undefined,

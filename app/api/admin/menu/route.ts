@@ -108,7 +108,7 @@ async function buildMenuFromPermissions(userId: string): Promise<MenuItem[]> {
 function getStaticMenu(): MenuItem[] {
   return [
     { name: "Dashboard", href: "/admin", icon: "LayoutDashboard" },
-    { name: "Home Banner Slides", href: "/admin/home-banner-slides", icon: "Image" },
+    { name: "Banners", href: "/admin/banners", icon: "Image" },
     { name: "Category", href: "/admin/categories", icon: "FolderTree" },
     {
       name: "Products",
@@ -123,12 +123,8 @@ function getStaticMenu(): MenuItem[] {
       ],
     },
     { name: "Orders", href: "/admin/orders", icon: "ShoppingCart" },
-    { name: "Create Order", href: "/admin/orders/create", icon: "ShoppingCart" },
-    { name: "Order Activities", href: "/admin/orders/activities", icon: "Activity" },
-    { name: "Repeat Customer", href: "/admin/customers/repeat", icon: "Users" },
-    { name: "Home Banners", href: "/admin/home-banners", icon: "ImageIcon" },
-    { name: "Home Side Banners", href: "/admin/home-side-banners", icon: "PanelLeft" },
-    { name: "Home Bottom Banners", href: "/admin/home-bottom-banners", icon: "LayoutGrid" },
+    { name: "Brands", href: "/admin/brands", icon: "Store" },
+    { name: "System Health", href: "/admin/system-health", icon: "HeartPulse" },
     {
       name: "Settings & More",
       href: "/admin/settings",
@@ -142,11 +138,12 @@ function getStaticMenu(): MenuItem[] {
         { name: "Blog", href: "/admin/blog" },
         { name: "Customers", href: "/admin/customers" },
         { name: "Vouchers", href: "/admin/vouchers" },
-        { name: "Landing Pages", href: "/admin/landing-pages" },
         { name: "Abandoned Checkout", href: "/admin/draft-orders" },
         { name: "Fraud & Security", href: "/admin/fraud" },
         { name: "Courier", href: "/admin/courier" },
         { name: "Team", href: "/admin/team" },
+        { name: "Audit Logs", href: "/admin/audit-logs" },
+        { name: "Roles & Permissions", href: "/admin/roles-permissions" },
       ],
     },
   ];

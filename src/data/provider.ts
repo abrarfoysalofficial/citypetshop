@@ -119,12 +119,20 @@ export async function getHomeData(): Promise<HomeSection> {
     return getPrisma();
   }
   return {
-    heroSlides: [{ id: "1", title: "Welcome", subheadline: "", image: "/placeholder.jpg", href: "/shop", cta: "Shop Now" }],
+    heroSlides: [{ id: "1", title: "Welcome", subheadline: "", image: "/banners/hero-slide-1.jpeg", href: "/shop", cta: "Shop Now" }],
     featuredCategories: [],
     featuredBrands: [],
     flashSale: null,
     sideBanners: [],
   };
+}
+
+export async function getCategories(): Promise<{ slug: string; name: string; subcategories: string[] }[]> {
+  if (shouldUsePrisma()) {
+    const { getCategoriesFromDb } = await import("./provider-db");
+    return getCategoriesFromDb();
+  }
+  return [];
 }
 
 export async function getComboOffers(): Promise<ComboOffer[]> {

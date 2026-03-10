@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCompare } from "@/store/CompareContext";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export default function ComparePage() {
   const { items, removeFromCompare } = useCompare();
@@ -40,7 +41,14 @@ export default function ComparePage() {
                     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-slate-100">
                       <Image src={product.image} alt={product.name} fill className="object-cover" sizes="64px" />
                     </div>
-                    <Link href={`/product/${product.id}`} className="font-medium text-primary hover:underline">
+                    <Link
+                      href={buildProductRoute({
+                        categorySlug: product.categorySlug ?? "general",
+                        subcategorySlug: product.categorySlug ?? "general",
+                        id: product.id,
+                      })}
+                      className="font-medium text-primary hover:underline"
+                    >
                       {product.name}
                     </Link>
                   </div>

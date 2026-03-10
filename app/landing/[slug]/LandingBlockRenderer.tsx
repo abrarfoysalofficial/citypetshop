@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 type Block = {
   id: string;
@@ -136,7 +137,12 @@ function ProductGridBlock({ config }: { config: Config }) {
           {products.map((p) => (
             <Link
               key={p.id}
-              href={`/product/${p.id}`}
+              href={buildProductRoute({
+                categorySlug: "general",
+                subcategorySlug: "general",
+                id: p.id,
+                slug: p.slug,
+              })}
               className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md"
             >
               {p.image && (

@@ -7,7 +7,7 @@ test.describe("Admin", () => {
 
     // Login (requires seeded admin)
     await page.getByLabel(/email/i).fill(process.env.TEST_ADMIN_EMAIL ?? "admin@citypetshop.bd");
-    await page.getByLabel(/password/i).fill(process.env.TEST_ADMIN_PASSWORD ?? "Admin@12345");
+    await page.getByLabel(/password/i).fill(process.env.TEST_ADMIN_PASSWORD ?? "Admin@12345!");
     await page.getByRole("button", { name: /sign in|login/i }).click();
 
     // Should redirect to admin

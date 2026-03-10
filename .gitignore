@@ -19,10 +19,10 @@ yarn-error.log*
 .env.*
 !.env.example
 *.pem
-id_rsa
-id_rsa.pub
-id_ed25519
-id_ed25519.pub
+id_rsa*
+id_ed25519*
+.aws/credentials
+.aws/config
 *.key
 
 # Vercel
@@ -73,3 +73,12 @@ _backup/
 !app/**
 !store/**
 node_modules
+
+app/_imports/
+legacy-data/
+pet product/
+_archive/
+*.docx
+*.txt
+*.jpeg
+*.zip

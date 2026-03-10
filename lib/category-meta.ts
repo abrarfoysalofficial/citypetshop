@@ -4,8 +4,6 @@
  * Descriptions: used for category pages when meta is missing.
  */
 
-import { MASTER_CATEGORIES } from "./categories-master";
-
 const CATEGORY_SHORT_DESCRIPTIONS: Record<string, string> = {
   "cat-food": "Premium cat food, litter, toys, and accessories for healthy and happy cats.",
   "cat-litter": "Cat litter, litter boxes, and litter accessories for a clean and odor-free home.",
@@ -44,9 +42,9 @@ export function getCategoryShortDescription(slug: string): string | undefined {
 
 /** All category slugs that have a short description (for meta/OG). */
 export function getCategoriesWithMeta(): { slug: string; name: string; shortDescription: string }[] {
-  return MASTER_CATEGORIES.filter((c) => CATEGORY_SHORT_DESCRIPTIONS[c.slug]).map((c) => ({
-    slug: c.slug,
-    name: c.name,
-    shortDescription: CATEGORY_SHORT_DESCRIPTIONS[c.slug]!,
+  return Object.entries(CATEGORY_SHORT_DESCRIPTIONS).map(([slug, shortDescription]) => ({
+    slug,
+    name: slug.replace(/-/g, " "),
+    shortDescription,
   }));
 }

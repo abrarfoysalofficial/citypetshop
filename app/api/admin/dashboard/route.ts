@@ -37,10 +37,12 @@ export async function GET(request: Request) {
       currentOrders,
       prevRevenue,
       prevOrders,
+      outOfStockCount,
+      pendingOrdersCount,
     ] = await Promise.all([
       prisma.order.count({ where: { tenantId } }),
       prisma.product.count({ where: { tenantId, deletedAt: null } }),
-      prisma.user.count(),
+      prisma.customer.count(),
       prisma.order.aggregate({ where: { tenantId }, _sum: { total: true } }),
       prisma.order.aggregate({
         where: { tenantId, createdAt: { gte: currentStart, lte: now } },
@@ -56,6 +58,8 @@ export async function GET(request: Request) {
       prisma.order.count({
         where: { tenantId, createdAt: { gte: prevStart, lte: prevEnd } },
       }),
+      prisma.product.count({ where: { tenantId, deletedAt: null, stock: 0 } }),
+      prisma.order.count({ where: { tenantId, status: "pending" } }),
     ]);
 
     const currentRev = Number(currentRevenue._sum.total ?? 0);
@@ -135,6 +139,8 @@ export async function GET(request: Request) {
         totalCustomers,
         revenueChange,
         ordersChange,
+        outOfStockCount,
+        pendingOrdersCount,
       },
       salesData: chartData,
       categoryData,

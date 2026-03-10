@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { DemoCustomer } from "@/src/data/types";
+import { PageHero } from "@/components/admin/page-hero";
 
 export function AdminCustomersClient({ customers }: { customers: DemoCustomer[] }) {
   const [roleFilter, setRoleFilter] = useState("all");
@@ -15,13 +16,16 @@ export function AdminCustomersClient({ customers }: { customers: DemoCustomer[] 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
-        <Link href="/admin/users/new" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-          Add User
-        </Link>
-      </div>
-      <p className="text-slate-600">Customer list and contact info. Use filters and search below.</p>
+      <PageHero
+        title="Customers"
+        description="Customer list and contact info. Use filters and search below."
+        breadcrumb={[{ label: "Dashboard", href: "/admin" }, { label: "Customers" }]}
+        actions={
+          <Link href="/admin/users/new" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
+            Add User
+          </Link>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex rounded-lg border border-slate-200 bg-white">

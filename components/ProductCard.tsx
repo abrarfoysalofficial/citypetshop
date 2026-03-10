@@ -7,6 +7,7 @@ import { useCart } from "@store/CartContext";
 import { useWishlist } from "@store/WishlistContext";
 import type { Product } from "@lib/types";
 import SafeImage, { PRODUCT_PLACEHOLDER } from "@/components/media/SafeImage";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 /** Accepts both lib/types Product (image) and src/data/types Product (images[], comparePrice, tags, rating) */
 export interface DisplayProduct {
@@ -82,7 +83,11 @@ export default function ProductCard({ product, showBuyNow = false }: ProductCard
 
   return (
     <Link
-      href={`/product/${product.id}`}
+      href={buildProductRoute({
+        categorySlug: product.categorySlug,
+        subcategorySlug: product.categorySlug,
+        id: product.id,
+      })}
       className="group flex flex-col overflow-hidden rounded-card border border-[var(--border-light)] bg-white shadow-soft transition-all duration-200 hover:shadow-card"
     >
       <div className="relative aspect-square overflow-hidden bg-slate-50">

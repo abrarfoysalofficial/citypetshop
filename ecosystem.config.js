@@ -14,7 +14,7 @@ module.exports = {
       env_production: {
         NODE_ENV: "production",
         PORT: "3000",
-        APP_DIR: process.env.APP_DIR || "/home/citypetshop/htdocs/citypetshop.bd",
+        APP_DIR: process.env.APP_DIR || "/var/www/cityplus/app",
       },
       max_memory_restart: "1G",
       autorestart: true,

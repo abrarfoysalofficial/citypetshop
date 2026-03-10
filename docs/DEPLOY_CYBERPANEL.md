@@ -908,4 +908,4 @@ If you are redirected to the customer login page (`/login`) when trying to acces
 
 - **Section 3.3:** `DROP DATABASE` and `DROP USER` destroy existing data. Use only on a fresh DB or when you accept total data loss.
 - **Section 7.2:** Never commit `.env.production.local`. It is in `.gitignore`. `/root/.cityplus_db_url` is deleted in step 7.2.
-- **Admin password:** Must be changed after first login. Seed rejects default `Admin@12345` in production.
+- **Admin password:** Must be changed after first login. Seed rejects default `Admin@12345!` in production.

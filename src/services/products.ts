@@ -8,16 +8,8 @@ import {
   getProducts,
   getProductById,
   getHomeData,
+  getCategories,
 } from "@/src/data/provider";
-import { MASTER_CATEGORIES } from "@lib/categories-master";
-
-function toCategory(c: { slug: string; name: string; subcategories: { slug: string }[] }): Category {
-  return {
-    slug: c.slug,
-    name: c.name,
-    subcategories: c.subcategories?.map((s) => s.slug),
-  };
-}
 
 /** Uses current DATA_SOURCE (provider). */
 export function createProviderProductsRepository(): ProductsRepository {
@@ -29,7 +21,12 @@ export function createProviderProductsRepository(): ProductsRepository {
       return getProductById(id);
     },
     async listCategories() {
-      return MASTER_CATEGORIES.map((c) => toCategory(c));
+      const cats = await getCategories();
+      return cats.map((c) => ({
+        slug: c.slug,
+        name: c.name,
+        subcategories: c.subcategories,
+      }));
     },
     async getHomeContent() {
       return getHomeData();

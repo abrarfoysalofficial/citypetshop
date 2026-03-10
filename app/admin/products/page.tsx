@@ -45,10 +45,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHero } from "@/components/admin/page-hero";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [categories, setCategories] = useState<{ slug: string; name_en: string }[]>([]);
+  const [categories, setCategories] = useState<{ slug: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -107,7 +109,9 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetch("/api/admin/categories")
       .then((r) => (r.ok ? r.json() : []))
-      .then(setCategories)
+      .then((data: { slug: string; nameEn?: string; name_en?: string }[]) =>
+        setCategories(data.map((c) => ({ slug: c.slug, name: c.nameEn ?? c.name_en ?? c.slug })))
+      )
       .catch(() => setCategories([]));
   }, []);
 
@@ -238,15 +242,12 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground">
-            {filteredProducts.length} of {products.length} products
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <PageHero
+        title="Products"
+        description={`${filteredProducts.length} of ${products.length} products`}
+        breadcrumb={[{ label: "Dashboard", href: "/admin" }, { label: "Products" }]}
+        actions={
+          <>
           <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
             <DialogTrigger asChild>
               <Button>
@@ -301,7 +302,7 @@ export default function AdminProductsPage() {
                       <SelectContent>
                         {categories.map((c) => (
                           <SelectItem key={c.slug} value={c.slug}>
-                            {c.name_en}
+                            {c.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -355,8 +356,9 @@ export default function AdminProductsPage() {
               Bulk Import
             </Link>
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Filters */}
       <motion.div
@@ -388,7 +390,7 @@ export default function AdminProductsPage() {
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c.slug} value={c.slug}>
-                    {c.name_en}
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -540,7 +542,15 @@ export default function AdminProductsPage() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/product/${product.id}`} target="_blank">
+                        <Link
+                          href={buildProductRoute({
+                            categorySlug: product.category_slug ?? "general",
+                            subcategorySlug: product.category_slug ?? "general",
+                            id: product.id,
+                            slug: product.slug,
+                          })}
+                          target="_blank"
+                        >
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>

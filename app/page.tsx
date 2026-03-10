@@ -79,14 +79,14 @@ export default async function HomePage() {
   const { storefrontSettings, homeData, featuredProducts, flashSaleProducts, clearanceProducts, comboOffers } =
     await getHomepageData();
 
-  const heroSlides = homeData.heroSlides.map((s, i) => ({
+  const heroSlides = homeData.heroSlides.map((s) => ({
     id: s.id,
-    title: i === 0 ? "Premium Pet Care Starts Here" : s.title,
-    subheadline: i === 0 ? "Authentic Dog & Cat Food | Trusted Accessories | Fast Delivery Across Bangladesh" : (s.subheadline ?? ""),
+    title: s.title,
+    subheadline: s.subheadline ?? "",
     image: s.image,
     href: s.href,
     cta: s.cta ?? "Shop Now",
-    discountText: i === 0 ? undefined : "SAVE UP 30%",
+    discountText: undefined,
   }));
 
   const featuredDisplay: DisplayProduct[] = featuredProducts

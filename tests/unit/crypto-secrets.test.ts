@@ -1,7 +1,7 @@
 /**
  * Unit tests: encryption roundtrip, tamper fails, masking.
  */
-import { encryptSecret, decryptSecret, maskSecret } from "@lib/crypto/secrets";
+import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto/secrets";
 
 const MASTER = "a".repeat(32);
 

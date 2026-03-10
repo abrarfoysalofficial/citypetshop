@@ -1,7 +1,7 @@
 /**
  * Notifications: sendEmail stub (RESEND_API_KEY missing → ok:false), no ok:true dev stub.
  */
-import { sendEmail } from "@lib/notifications";
+import { sendEmail } from "@/lib/notifications";
 
 describe("sendEmail", () => {
   const originalKey = process.env.RESEND_API_KEY;

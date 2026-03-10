@@ -114,7 +114,7 @@ MASTER_SECRET=<openssl rand -hex 32>
 
 # Redis (optional, for rate limiting / sessions)
 REDIS_URL=redis://127.0.0.1:6379
-```
+
 
 **Required:** `DATABASE_URL`, `NEXTAUTH_SECRET` (32+ chars), `NEXTAUTH_URL`, `AUTH_TRUST_HOST`.  
 **Integrations:** `MASTER_SECRET` (32+ chars) required for encrypted credentials (Admin → Integrations).  

@@ -4,10 +4,10 @@ export const revalidate = 300;
 import Link from "next/link";
 import { getProducts } from "@/src/data/provider";
 import CategoryClient from "./CategoryClient";
-import { getCategoryBySlug, getSubcategoryByFullSlug } from "@lib/categories-master";
-import { getCategoryShortDescription, CATEGORY_FALLBACK_IMAGE } from "@lib/category-meta";
+import { getCategoryBySlugFromDb, getSubcategoryByFullSlugFromDb } from "@/lib/categories-db";
+import { getCategoryShortDescription, CATEGORY_FALLBACK_IMAGE } from "@/lib/category-meta";
 
-import { getServerBaseUrl } from "@lib/site-url";
+import { getServerBaseUrl } from "@/lib/site-url";
 
 function normalizeSlug(slug: string | string[]): string {
   return Array.isArray(slug) ? slug.join("/") : slug;
@@ -25,7 +25,7 @@ export async function generateMetadata({
   const raw = await params;
   const slug = normalizeSlug(raw.slug);
   const categorySlug = getCategorySlugFromParams(slug);
-  const cat = getCategoryBySlug(categorySlug);
+  const cat = await getCategoryBySlugFromDb(categorySlug);
   const shortDesc = getCategoryShortDescription(categorySlug);
   // Use fallback for OG to avoid 404/400 from missing /categories/{slug}.png
   const ogImage = CATEGORY_FALLBACK_IMAGE;
@@ -56,8 +56,10 @@ export default async function CategoryPage({
   const products = await getProducts({ categorySlug, limit: 48 });
   const subSlug = isSubcategory ? slug.split("/")[1]! : null;
 
-  const cat = getCategoryBySlug(categorySlug);
-  const sub = isSubcategory ? getSubcategoryByFullSlug(slug) : null;
+  const [cat, sub] = await Promise.all([
+    getCategoryBySlugFromDb(categorySlug),
+    isSubcategory ? getSubcategoryByFullSlugFromDb(slug) : Promise.resolve(null),
+  ]);
 
   let categoryProducts = products.filter((p) => p.categorySlug === categorySlug);
   if (sub && subSlug) {

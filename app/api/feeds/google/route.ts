@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@lib/db";
 import { getDefaultTenantId } from "@lib/tenant";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,12 @@ export async function GET() {
       <g:id>${escapeXml(p.id)}</g:id>
       <g:title>${title}</g:title>
       <g:description>${description}</g:description>
-      <g:link>${baseUrl}/product/${escapeXml(p.id)}</g:link>
+      <g:link>${baseUrl}${escapeXml(buildProductRoute({
+        categorySlug: p.categorySlug,
+        subcategorySlug: p.categorySlug,
+        slug: p.slug || p.id,
+        id: p.id,
+      }))}</g:link>
       <g:image_link>${escapeXml(imageUrl)}</g:image_link>
       <g:price>${price}</g:price>
       <g:availability>${availability}</g:availability>

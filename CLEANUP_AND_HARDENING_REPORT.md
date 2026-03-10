@@ -526,7 +526,7 @@ Set NEXTAUTH_URL to deployment URL. Run `db:seed` with INITIAL_ADMIN_* set. Chan
 - **Custom checkout items:** Items without productId use client price (e.g. add-ons).
 - **ORD- fallback:** When DB returns 501/503, checkout redirects with ORD-{timestamp}; no invoice download; track-order will not find it.
 - **UPLOAD_DIR:** Must be absolute path outside app directory for media persistence across redeploys.
-- **admin:reset:** `ADMIN_PASSWORD='...' npm run admin:reset` for password recovery.
+ery.
 
 ---
 
@@ -678,7 +678,7 @@ npm start
 - **Variants:** ProductVariant exists; storefront/checkout use product-level price/stock
 - **Custom checkout items:** Items without productId use client price
 - **UPLOAD_DIR:** Must be absolute path outside app for media persistence
-- **admin:reset:** `ADMIN_PASSWORD='...' npm run admin:reset` for password recovery
+ery
 
 ### Release Verdict
 **Ready for controlled production deployment.** Codebase is production-safe, deploy-safe, and operator-safe. Auth, checkout, admin, and deploy flows are wired and documented. Run manual verification in target environment before go-live.

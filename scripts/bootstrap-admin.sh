@@ -11,7 +11,7 @@ if [ ${#ADMIN_PASSWORD} -lt 12 ]; then
   echo "ADMIN_PASSWORD must be at least 12 characters"
   exit 1
 fi
-if [ "$ADMIN_PASSWORD" = "Admin@12345" ]; then
+if [ "$ADMIN_PASSWORD" = "Admin@12345!" ]; then
   echo "ADMIN_PASSWORD cannot be the default"
   exit 1
 fi

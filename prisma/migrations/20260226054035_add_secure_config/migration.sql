@@ -1,3 +1,24 @@
+-- Ensure tenants table exists (handles legacy DBs or migration order issues)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tenants') THEN
+    CREATE TABLE "tenants" (
+      "id" TEXT NOT NULL,
+      "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updated_at" TIMESTAMP(3) NOT NULL,
+      "slug" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "is_active" BOOLEAN NOT NULL DEFAULT true,
+      CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")
+    );
+    CREATE UNIQUE INDEX "tenants_slug_key" ON "tenants"("slug");
+    CREATE INDEX "tenants_slug_idx" ON "tenants"("slug");
+    CREATE INDEX "tenants_is_active_idx" ON "tenants"("is_active");
+    INSERT INTO "tenants" ("id", "created_at", "updated_at", "slug", "name", "is_active")
+    VALUES ('00000000-0000-0000-0000-000000000001', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'default', 'Default', true);
+  END IF;
+END $$;
+
 -- CreateTable
 CREATE TABLE "secure_configs" (
     "id" TEXT NOT NULL,

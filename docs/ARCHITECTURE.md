@@ -39,7 +39,7 @@
 |-------|---------|
 | `/` | Home (hero, categories, featured) |
 | `/shop` | Product grid + filters |
-| `/product/[slug]` | Product detail |
+| `/shop/[category]/[subcategory]/[product]` | Product detail (canonical) |
 | `/category/[slug]` | Category listing |
 | `/cart` | Cart page |
 | `/checkout` | Checkout flow |

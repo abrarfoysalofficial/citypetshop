@@ -8,11 +8,11 @@ jest.mock("next-auth", () => ({
   getServerSession: jest.fn().mockResolvedValue(null),
 }));
 
-jest.mock("@lib/tenant", () => ({
+jest.mock("@/lib/tenant", () => ({
   getDefaultTenantId: jest.fn().mockReturnValue("tenant-default"),
 }));
 
-jest.mock("@lib/rate-limit", () => ({
+jest.mock("@/lib/rate-limit", () => ({
   rateLimit: jest.fn().mockResolvedValue({ ok: true }),
   getRateLimitKey: jest.fn().mockReturnValue("key"),
 }));
@@ -21,12 +21,12 @@ jest.mock("@/src/config/env", () => ({
   isPrismaConfigured: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock("@lib/fraud", () => ({
+jest.mock("@/lib/fraud", () => ({
   checkFraud: jest.fn().mockResolvedValue({ passed: true, flags: [] }),
   recordFraudFlag: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock("@lib/db", () => {
+jest.mock("@/lib/db", () => {
   const mockOrderCreate = jest.fn();
   const mockOrderItemCreateMany = jest.fn();
   const mockProductUpdate = jest.fn();
@@ -50,12 +50,12 @@ jest.mock("@lib/db", () => {
   };
 });
 
-jest.mock("@lib/notifications", () => ({
+jest.mock("@/lib/notifications", () => ({
   sendOrderConfirmationEmail: jest.fn(),
   sendOrderStatusSms: jest.fn(),
 }));
 
-jest.mock("@lib/notification-log", () => ({
+jest.mock("@/lib/notification-log", () => ({
   tryAcquireNotificationSlot: jest.fn().mockResolvedValue(false),
   updateNotificationLog: jest.fn().mockResolvedValue(undefined),
   truncateRecipient: jest.fn((r: string) => r),
@@ -78,7 +78,7 @@ describe("Checkout: stock validation", () => {
   });
 
   it("returns 409 with insufficientStock when product has less stock than requested", async () => {
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.$queryRaw.mockResolvedValue([{ id: productId, stock: 2, name_en: "Test Product" }]);
 
     const res = await POST(
@@ -108,7 +108,7 @@ describe("Checkout: stock validation", () => {
   });
 
   it("succeeds when stock is sufficient", async () => {
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.$queryRaw.mockResolvedValue([{ id: productId, stock: 10, name_en: "Test Product" }]);
     prisma.order.create.mockResolvedValue({ id: "order-456" });
     prisma.orderItem.createMany.mockResolvedValue({ count: 1 });
@@ -137,7 +137,7 @@ describe("Checkout: stock validation", () => {
   });
 
   it("skips stock validation for items without productId", async () => {
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.order.create.mockResolvedValue({ id: "order-guest" });
     prisma.orderItem.createMany.mockResolvedValue({ count: 1 });
 

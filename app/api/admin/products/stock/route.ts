@@ -4,8 +4,20 @@ import { prisma } from "@lib/db";
 import { getDefaultTenantId } from "@lib/tenant";
 import { requireAdminAuth } from "@lib/admin-auth";
 import { z } from "zod";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export const dynamic = "force-dynamic";
+
+function revalidateProductRoute(categorySlug: string | null | undefined, slug: string | null | undefined, id: string) {
+  revalidatePath(
+    buildProductRoute({
+      categorySlug: categorySlug ?? "general",
+      subcategorySlug: categorySlug ?? "general",
+      slug: slug ?? id,
+      id,
+    })
+  );
+}
 
 const PatchSchema = z.union([
   // Single update: { productId, quantity, type?, note? }
@@ -52,7 +64,7 @@ export async function PATCH(request: NextRequest) {
     const ids = data.updates.map((u) => u.id);
     const validProducts = await prisma.product.findMany({
       where: { id: { in: ids }, tenantId },
-      select: { id: true },
+      select: { id: true, slug: true, categorySlug: true },
     });
     const validIds = new Set(validProducts.map((p) => p.id));
     const validUpdates = data.updates.filter((u) => validIds.has(u.id));
@@ -80,7 +92,8 @@ export async function PATCH(request: NextRequest) {
 
     revalidatePath("/");
     revalidatePath("/shop");
-    for (const { id } of validUpdates) revalidatePath(`/product/${id}`);
+    for (const p of validProducts) revalidatePath(`/category/${p.categorySlug}`);
+    for (const p of validProducts) revalidateProductRoute(p.categorySlug, p.slug, p.id);
 
     return NextResponse.json({ updated: results.length });
   }
@@ -96,7 +109,10 @@ export async function PATCH(request: NextRequest) {
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
     const { productId, quantity, type, note } = parsed.data;
-    const product = await prisma.product.findFirst({ where: { id: productId, tenantId }, select: { id: true, stock: true, nameEn: true } });
+    const product = await prisma.product.findFirst({
+      where: { id: productId, tenantId },
+      select: { id: true, stock: true, nameEn: true, slug: true, categorySlug: true },
+    });
     if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
     const newStock = type === "adjust" ? Math.max(0, (product.stock ?? 0) + quantity) : Math.max(0, quantity);
@@ -109,7 +125,8 @@ export async function PATCH(request: NextRequest) {
 
     revalidatePath("/");
     revalidatePath("/shop");
-    revalidatePath(`/product/${productId}`);
+    revalidatePath(`/category/${product.categorySlug}`);
+    revalidateProductRoute(product.categorySlug, product.slug, productId);
 
     return NextResponse.json({ id: updated.id, nameEn: updated.nameEn, stock: updated.stock });
   }
@@ -123,7 +140,10 @@ export async function PATCH(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const { id, stock, note } = parsed.data;
-  const product = await prisma.product.findFirst({ where: { id, tenantId }, select: { id: true, stock: true, nameEn: true } });
+  const product = await prisma.product.findFirst({
+    where: { id, tenantId },
+    select: { id: true, stock: true, nameEn: true, slug: true, categorySlug: true },
+  });
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
   const updated = await prisma.product.update({ where: { id }, data: { stock } });
@@ -133,7 +153,8 @@ export async function PATCH(request: NextRequest) {
 
   revalidatePath("/");
   revalidatePath("/shop");
-  revalidatePath(`/product/${id}`);
+  revalidatePath(`/category/${product.categorySlug}`);
+  revalidateProductRoute(product.categorySlug, product.slug, id);
 
   return NextResponse.json({ id: updated.id, nameEn: updated.nameEn, stock: updated.stock });
 }

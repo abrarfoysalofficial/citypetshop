@@ -13,7 +13,15 @@ export async function GET() {
     const tenantId = getDefaultTenantId();
     const categories = await prisma.category.findMany({
       where: { tenantId, deletedAt: null, isActive: true },
-      select: { id: true, slug: true, nameEn: true, nameBn: true, sortOrder: true },
+      select: {
+        id: true,
+        slug: true,
+        nameEn: true,
+        nameBn: true,
+        parentId: true,
+        sortOrder: true,
+        parent: { select: { slug: true } },
+      },
       orderBy: { sortOrder: "asc" },
     });
 
@@ -23,6 +31,8 @@ export async function GET() {
         slug: c.slug,
         name: c.nameEn,
         nameBn: c.nameBn,
+        parentId: c.parentId,
+        parentSlug: c.parent?.slug ?? null,
       }))
     );
   } catch (error) {

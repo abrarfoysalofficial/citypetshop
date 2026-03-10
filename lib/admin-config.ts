@@ -8,16 +8,8 @@ import {
   FolderTree,
   Package,
   ShoppingCart,
-  ImageIcon,
-  PanelLeft,
-  LayoutGrid,
   Store,
   Settings,
-  Shield,
-  Users,
-  FileText,
-  Activity,
-  Bug,
   HeartPulse,
 } from "lucide-react";
 
@@ -28,10 +20,10 @@ export type NavItem = {
   children?: { name: string; href: string }[];
 };
 
-/** Primary nav: reference structure (Dashboard, Banners, Category, Products, Orders) */
+/** Primary nav: unified structure. Banners merged into one. Orphans removed. */
 export const adminSidebarConfig: NavItem[] = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Home Banner Slides", href: "/admin/home-banner-slides", icon: Image },
+  { name: "Banners", href: "/admin/banners", icon: Image },
   { name: "Category", href: "/admin/categories", icon: FolderTree },
   {
     name: "Products",
@@ -39,6 +31,7 @@ export const adminSidebarConfig: NavItem[] = [
     icon: Package,
     children: [
       { name: "Product List", href: "/admin/products" },
+      { name: "Inventory", href: "/admin/inventory" },
       { name: "Product Upload", href: "/admin/products/upload" },
       { name: "Attributes", href: "/admin/attributes" },
       { name: "Inventory Logs", href: "/admin/inventory-logs" },
@@ -48,14 +41,8 @@ export const adminSidebarConfig: NavItem[] = [
     ],
   },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
-  { name: "Home Banners", href: "/admin/home-banners", icon: ImageIcon },
-  { name: "Home Side Banners", href: "/admin/home-side-banners", icon: PanelLeft },
-  { name: "Home Bottom Banners", href: "/admin/home-bottom-banners", icon: LayoutGrid },
-  { name: "Flash Sale", href: "/admin/flash-sale", icon: Store },
-  { name: "Menus", href: "/admin/menus", icon: FileText },
-  { name: "About", href: "/admin/about", icon: FileText },
+  { name: "Brands", href: "/admin/brands", icon: Store },
   { name: "System Health", href: "/admin/system-health", icon: HeartPulse },
-  { name: "Event Debug", href: "/admin/event-debug", icon: Bug },
   {
     name: "Settings & More",
     href: "/admin/settings",
@@ -77,16 +64,11 @@ export const adminSidebarConfig: NavItem[] = [
       { name: "Legal Pages", href: "/admin/legal-pages" },
       { name: "Blog Categories", href: "/admin/blog-categories" },
       { name: "Customers", href: "/admin/customers" },
-      { name: "Reminders", href: "/admin/reminders" },
       { name: "Vouchers", href: "/admin/vouchers" },
-      { name: "Landing Pages", href: "/admin/landing-pages" },
       { name: "Abandoned Checkout", href: "/admin/draft-orders" },
       { name: "Order Activities", href: "/admin/orders/activities" },
       { name: "Repeat Customer", href: "/admin/customers/repeat" },
       { name: "Customer Risk", href: "/admin/customers/risk" },
-      { name: "Message Inbox", href: "/admin/messages" },
-      { name: "Ad Management", href: "/admin/ad-management" },
-      { name: "Global AI", href: "/admin/global-ai" },
       { name: "Product Catalogs", href: "/admin/collections" },
       { name: "Product Filters", href: "/admin/product-filters" },
       { name: "Units", href: "/admin/products/units" },
@@ -95,6 +77,8 @@ export const adminSidebarConfig: NavItem[] = [
       { name: "Courier", href: "/admin/courier" },
       { name: "Notifications", href: "/admin/notifications" },
       { name: "Team", href: "/admin/team" },
+      { name: "Audit Logs", href: "/admin/audit-logs" },
+      { name: "Roles & Permissions", href: "/admin/roles-permissions" },
     ],
   },
 ];

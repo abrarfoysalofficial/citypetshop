@@ -30,13 +30,24 @@ export default function AdminLoginPage() {
         redirect: false,
       });
       if (res?.error) {
-        setError("Invalid email or password.");
+        const errMsg = String(res.error ?? "").toLowerCase();
+        const isConfigError =
+          errMsg.includes("callback") ||
+          errMsg.includes("invalid") ||
+          errMsg.includes("url");
+        setError(
+          isConfigError
+            ? "Server misconfiguration: NEXTAUTH_URL must match your site (e.g. https://citypetshop.bd). Set NEXTAUTH_URL and AUTH_TRUST_HOST=true in .env.production.local, then restart."
+            : "Invalid email or password. Please try again or contact support."
+        );
         setLoading(false);
         return;
       }
       const session = res?.ok;
       if (!session) {
-        setError("Sign in failed. Please try again.");
+        setError(
+          "Sign in failed. Check: (1) NEXTAUTH_URL=https://citypetshop.bd in production, (2) admin credentials are seeded (default admin@citypetshop.bd)."
+        );
         setLoading(false);
         return;
       }
@@ -56,7 +67,12 @@ export default function AdminLoginPage() {
       router.refresh();
     } catch (err) {
       console.error("Admin login error:", err);
-      setError("An error occurred. Please try again.");
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(
+        msg.toLowerCase().includes("callback") || msg.toLowerCase().includes("invalid")
+          ? "Server misconfiguration: Set NEXTAUTH_URL=https://citypetshop.bd and AUTH_TRUST_HOST=true in production env, then restart."
+          : "An error occurred. If login keeps failing, set NEXTAUTH_URL=https://citypetshop.bd on the server."
+      );
     }
     setLoading(false);
   };
@@ -68,6 +84,11 @@ export default function AdminLoginPage() {
         <p className="mt-1 text-sm text-slate-600">
           Sign in to access the admin panel.
         </p>
+        {process.env.NODE_ENV !== "production" && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+            Dev default login: <strong>admin@citypetshop.bd</strong> / <strong>Admin@12345!</strong>
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
@@ -81,7 +102,7 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="admin@example.com"
+              placeholder="admin@citypetshop.bd"
             />
           </div>
 

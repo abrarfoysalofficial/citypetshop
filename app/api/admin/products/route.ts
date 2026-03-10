@@ -5,8 +5,20 @@ import { prisma } from "@lib/db";
 import { getDefaultTenantId } from "@lib/tenant";
 import { requireAdminAuthAndPermission, requireAdminAuth } from "@lib/admin-auth";
 import { logAdminAction } from "@lib/rbac";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 export const dynamic = "force-dynamic";
+
+function revalidateProductRoute(categorySlug: string | null | undefined, slug: string | null | undefined, id: string) {
+  revalidatePath(
+    buildProductRoute({
+      categorySlug: categorySlug ?? "general",
+      subcategorySlug: categorySlug ?? "general",
+      slug: slug ?? id,
+      id,
+    })
+  );
+}
 
 /** GET: List products with optional search, category filter, pagination */
 export async function GET(request: NextRequest) {
@@ -156,7 +168,8 @@ export async function POST(request: NextRequest) {
 
     revalidatePath("/");
     revalidatePath("/shop");
-    revalidatePath(`/product/${product.id}`);
+    revalidatePath(`/category/${product.categorySlug}`);
+    revalidateProductRoute(product.categorySlug, product.slug, product.id);
 
     return NextResponse.json(product);
   } catch (error) {
@@ -248,7 +261,10 @@ export async function PATCH(request: NextRequest) {
 
     revalidatePath("/");
     revalidatePath("/shop");
-    revalidatePath(`/product/${id}`);
+    revalidatePath(`/category/${before.categorySlug}`);
+    revalidatePath(`/category/${product.categorySlug}`);
+    revalidateProductRoute(before.categorySlug, before.slug, id);
+    revalidateProductRoute(product.categorySlug, product.slug, id);
 
     return NextResponse.json(product);
   } catch (error) {
@@ -276,7 +292,8 @@ export async function DELETE(request: NextRequest) {
 
     revalidatePath("/");
     revalidatePath("/shop");
-    revalidatePath(`/product/${id}`);
+    revalidatePath(`/category/${before.categorySlug}`);
+    revalidateProductRoute(before.categorySlug, before.slug, id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -40,7 +40,7 @@
 
 - [ ] `/` — Home
 - [ ] `/shop` — Shop (search: `/shop?q=dog`)
-- [ ] `/product/[id]` — Product page (e.g. /product/sample-product)
+- [ ] `/shop/[category]/[subcategory]/[product]` — Product page (e.g. /shop/dog-food/dry-food/sample-product)
 - [ ] `/cart` — Cart
 - [ ] `/checkout` — Checkout
 - [ ] `/blog` — Blog listing
@@ -62,7 +62,7 @@
 - [ ] `curl -sf https://citypetshop.bd/api/health` → `{"status":"ok"}`
 - [ ] Admin login at `/admin`
 - [ ] Change default admin password
-- [ ] Homepage, /shop, /blog, /product/[id] load
+- [ ] Homepage, /shop, /blog, canonical product route loads
 
 ---
 

@@ -1,11 +1,11 @@
 /**
  * PR-8: Verify cache headers for key API endpoints.
  */
-jest.mock("@lib/tenant", () => ({
+jest.mock("@/lib/tenant", () => ({
   getDefaultTenantId: jest.fn().mockReturnValue("tenant-1"),
 }));
 
-jest.mock("@lib/db", () => ({
+jest.mock("@/lib/db", () => ({
   prisma: {
     tenantSettings: { findUnique: jest.fn().mockResolvedValue(null) },
   },

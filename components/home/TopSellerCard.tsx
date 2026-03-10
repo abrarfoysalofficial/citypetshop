@@ -6,6 +6,7 @@ import { useState } from "react";
 import SafeImage from "@/components/media/SafeImage";
 import { useCart } from "@/store/CartContext";
 import type { DisplayProduct } from "@/components/ProductCard";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 const TOP_SELLERS_FALLBACK: { id: string; name: string; image: string; price: number; comparePrice: number }[] = [
   { id: "1", name: "Premium Dog Food 10kg", image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400", price: 2890, comparePrice: 3200 },
@@ -70,7 +71,14 @@ export default function TopSellerCard({ products }: TopSellerCardProps) {
           </button>
         </div>
       </div>
-      <Link href={`/product/${item.id}`} className="block">
+      <Link
+        href={buildProductRoute({
+          categorySlug: sourceProduct?.categorySlug ?? "general",
+          subcategorySlug: sourceProduct?.categorySlug ?? "general",
+          id: item.id,
+        })}
+        className="block"
+      >
         <div className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
           <SafeImage
             src={item.image}

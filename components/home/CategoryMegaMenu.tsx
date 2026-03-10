@@ -13,8 +13,9 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MASTER_CATEGORIES, type CategoryItem, type SubcategoryItem } from "@lib/categories-master";
+import { useCategories, type MegaMenuCategory } from "@/store/CategoriesContext";
 import SafeImage from "@/components/media/SafeImage";
+import { buildProductRoute } from "@/lib/storefront-routes";
 
 type SubProduct = { id: string; name: string; price: number; image: string; slug: string };
 
@@ -31,8 +32,11 @@ const CAT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "rabbit-food-accessories": Rabbit,
 };
 
+type SubcategoryItem = { slug: string; name: string; fullSlug: string };
+
 export default function CategoryMegaMenu() {
-  const [activeCategory, setActiveCategory] = useState<CategoryItem | null>(null);
+  const { categoriesTree } = useCategories();
+  const [activeCategory, setActiveCategory] = useState<MegaMenuCategory | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<SubcategoryItem | null>(null);
   const [subProducts, setSubProducts] = useState<SubProduct[]>([]);
   const [mobileOpen, setMobileOpen] = useState<string | null>(null);
@@ -47,7 +51,7 @@ export default function CategoryMegaMenu() {
     }
   };
 
-  const handleCategoryEnter = (cat: CategoryItem) => {
+  const handleCategoryEnter = (cat: MegaMenuCategory) => {
     clearTimeoutRef();
     setActiveCategory(cat);
   };
@@ -94,13 +98,13 @@ export default function CategoryMegaMenu() {
     if (subTimeoutRef.current) clearTimeout(subTimeoutRef.current);
   }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent, cat: CategoryItem, index: number) => {
+  const handleKeyDown = (e: React.KeyboardEvent, cat: MegaMenuCategory, index: number) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       setActiveCategory(cat);
     }
     if (e.key === "Escape") setActiveCategory(null);
-    if (e.key === "ArrowDown" && index < MASTER_CATEGORIES.length - 1) {
+    if (e.key === "ArrowDown" && index < categoriesTree.length - 1) {
       const next = (e.target as HTMLElement).nextElementSibling?.querySelector("a, button") as HTMLElement | null;
       next?.focus();
     }
@@ -122,7 +126,7 @@ export default function CategoryMegaMenu() {
           </h2>
         </div>
         <nav className="py-2" aria-label="Category menu">
-          {MASTER_CATEGORIES.map((cat, index) => {
+          {categoriesTree.map((cat, index) => {
             const Icon = CAT_ICONS[cat.slug] ?? Package;
             const hasSubs = cat.subcategories.length > 0;
 
@@ -255,7 +259,11 @@ export default function CategoryMegaMenu() {
                   {subProducts.map((p) => (
                     <Link
                       key={p.id}
-                      href={`/product/${p.id}`}
+                      href={buildProductRoute({
+                        categorySlug: activeCategory?.slug ?? "general",
+                        subcategorySlug: activeSubcategory?.slug ?? activeCategory?.slug ?? "general",
+                        id: p.id,
+                      })}
                       className="flex gap-2 rounded-lg p-2 transition hover:bg-slate-50"
                     >
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-slate-100">

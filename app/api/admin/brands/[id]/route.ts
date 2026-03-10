@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@lib/db";
-import { requireAdminAuthAndPermission } from "@lib/admin-auth";
-import { logAdminAction } from "@lib/rbac";
+import { prisma } from "@/lib/db";
+import { requireAdminAuthAndPermission } from "@/lib/admin-auth";
+import { logAdminAction } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 

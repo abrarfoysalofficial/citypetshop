@@ -1,7 +1,8 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useCategories } from "@/store/CategoriesContext";
 import Link from "next/link";
 import { ArrowDownAZ, ArrowUpAZ, Package, CheckCircle, Search, Star, SlidersHorizontal, X } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
@@ -56,20 +57,10 @@ export default function ShopClient({
   const categoryParam = searchParams.get("category") ?? "";
   const keywordParam = searchParams.get("q") ?? "";
 
-  const [dbCategories, setDbCategories] = useState<CategoryItem[]>([]);
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setDbCategories(data.map((c: { slug: string; name: string }) => ({ slug: c.slug, name: c.name, href: `/shop?category=${c.slug}` })));
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const { categories: contextCategories } = useCategories();
 
   const categories = useMemo((): CategoryItem[] => {
-    if (dbCategories.length > 0) return dbCategories;
+    if (contextCategories.length > 0) return contextCategories.map((c) => ({ slug: c.slug, name: c.name, href: `/category/${c.slug}` }));
     if (propCategories && propCategories.length > 0) return propCategories;
     const seen = new Set<string>();
     return products
@@ -78,8 +69,8 @@ export default function ShopClient({
         seen.add(p.categorySlug);
         return true;
       })
-      .map((p) => ({ slug: p.categorySlug, name: p.category ?? p.categorySlug, href: `/shop?category=${p.categorySlug}` }));
-  }, [products, propCategories, dbCategories]);
+      .map((p) => ({ slug: p.categorySlug, name: p.category ?? p.categorySlug, href: `/category/${p.categorySlug}` }));
+  }, [products, propCategories, contextCategories]);
 
   const brands = useMemo(() => {
     const set = new Set<string>();
@@ -163,7 +154,7 @@ export default function ShopClient({
         {categoryList.filter((c) => c.slug).map((cat) => (
           <li key={cat.slug || "all"}>
             <Link
-              href={cat.href ?? (cat.slug ? `/shop?category=${cat.slug}` : "/shop")}
+              href={cat.href ?? (cat.slug ? `/category/${cat.slug}` : "/shop")}
               className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
                 selectedCategory === cat.slug ? "bg-[var(--primary)] text-white" : "hover:bg-slate-100"
               }`}

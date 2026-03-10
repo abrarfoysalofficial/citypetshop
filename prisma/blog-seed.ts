@@ -199,7 +199,7 @@ Kittens need kitten-specific food until 12 months. Higher protein and calories s
 
 ## Where to Buy Cat Food in Bangladesh
 
-City Plus Pet Shop stocks authentic Whiskas, Royal Canin, Drools, and more. We deliver across Dhaka and outside. COD and online payment available. Shop [cat food](/shop?category=cat-food) now.
+City Plus Pet Shop stocks authentic Whiskas, Royal Canin, Drools, and more. We deliver across Dhaka and outside. COD and online payment available. Shop [cat food](/category/cat-food) now.
 
 ## FAQ
 
@@ -253,7 +253,7 @@ For travel or vet visits, a secure carrier is essential. Soft carriers work for 
 
 ## Where to Buy Pet Accessories in Bangladesh
 
-City Plus Pet Shop offers leashes, beds, bowls, toys, and grooming supplies. We deliver across Dhaka and outside Dhaka. COD available. Browse [pet accessories](/shop?category=pet-accessories) on our site.
+City Plus Pet Shop offers leashes, beds, bowls, toys, and grooming supplies. We deliver across Dhaka and outside Dhaka. COD available. Browse [pet accessories](/category/pet-accessories) on our site.
 
 ## FAQ
 

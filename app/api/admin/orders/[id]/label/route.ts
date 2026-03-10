@@ -3,9 +3,9 @@
  * Generate a printable shipping label PDF for an order.
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@lib/db";
-import { getDefaultTenantId } from "@lib/tenant";
-import { requireAdminAuth } from "@lib/admin-auth";
+import { prisma } from "@/lib/db";
+import { getDefaultTenantId } from "@/lib/tenant";
+import { requireAdminAuth } from "@/lib/admin-auth";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export const dynamic = "force-dynamic";

@@ -82,22 +82,32 @@ export default function HomeFooter() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2">
-              <Image src="/brand/logo-white.jpg" alt="City Plus Pet Shop" width={48} height={48} className="h-12 w-12 object-contain" />
-              <span className="text-lg font-bold text-white">City Plus Pet Shop</span>
+              <Image
+                src={settings?.logo_dark_url || settings?.logo_url || "/brand/logo-white.jpg"}
+                alt={settings?.site_name_en || "City Plus Pet Shop"}
+                width={48}
+                height={48}
+                className="h-12 w-12 object-contain"
+              />
+              <span className="text-lg font-bold text-white">{settings?.site_name_en || "City Plus Pet Shop"}</span>
             </Link>
-            <p className="mt-2 text-sm text-white/80">Your pet, our passion. Premium pet food, accessories & care.</p>
+            <p className="mt-2 text-sm text-white/80">{settings?.tagline_en || "Your pet, our passion. Premium pet food, accessories & care."}</p>
             <div className="mt-4 space-y-2 text-sm text-white/80">
-              <p className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 shrink-0 text-[var(--teal-from)]" />
-                Mirpur 2, Borobag, Dhaka
-              </p>
-              <a href="tel:+8801643390045" className="flex items-center gap-2 hover:text-white">
-                <Phone className="h-4 w-4 shrink-0 text-[var(--teal-from)]" />
-                01643-390045
-              </a>
-              <a href={`mailto:${CONTACT_EMAIL}`} className="flex items-center gap-2 hover:text-white">
+              {settings?.address_en && (
+                <p className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 shrink-0 text-[var(--teal-from)]" />
+                  {settings.address_en}
+                </p>
+              )}
+              {settings?.phone && (
+                <a href={`tel:${settings.phone.replace(/\D/g, "")}`} className="flex items-center gap-2 hover:text-white">
+                  <Phone className="h-4 w-4 shrink-0 text-[var(--teal-from)]" />
+                  {settings.phone}
+                </a>
+              )}
+              <a href={`mailto:${settings?.email || CONTACT_EMAIL}`} className="flex items-center gap-2 hover:text-white">
                 <Mail className="h-4 w-4 shrink-0 text-[var(--teal-from)]" />
-                {CONTACT_EMAIL}
+                {settings?.email || CONTACT_EMAIL}
               </a>
             </div>
           </div>
@@ -180,7 +190,7 @@ export default function HomeFooter() {
               </a>
             )}
           </div>
-          <p className="text-center text-xs text-white/70">© {new Date().getFullYear()} City Plus Pet Shop. All rights reserved.</p>
+          <p className="text-center text-xs text-white/70">© {new Date().getFullYear()} {settings?.site_name_en || "City Plus Pet Shop"}. All rights reserved.</p>
         </div>
       </div>
     </footer>

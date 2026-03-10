@@ -15,6 +15,7 @@ import { DEFAULT_LOW_STOCK_THRESHOLD, DEFAULT_DELIVERY_ETA_INSIDE } from "@/lib/
 import { addRecentlyViewed } from "@/lib/recently-viewed";
 import { captureEvent } from "@/lib/analytics";
 import { PRODUCT_PLACEHOLDER } from "@/components/media/SafeImage";
+import { buildProductRoute } from "@/lib/storefront-routes";
 import type { Product, ProductVariation } from "@/src/data/types";
 import type { Product as CartProduct } from "@/lib/types";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -269,6 +270,12 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   const cartProduct = toCartProduct(product);
   const imageList = product.images?.length ? product.images : [mainImage];
   const imageUrls = imageList.map((url) => (url.startsWith("http") ? url : `${SITE_URL}${url.startsWith("/") ? url : `/${url}`}`));
+  const productRoute = buildProductRoute({
+    categorySlug: product.categorySlug,
+    subcategorySlug: product.categorySlug,
+    slug: product.slug || product.id,
+    id: product.id,
+  });
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -276,7 +283,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
     description: richContent?.seo?.description ?? product.shortDesc,
     image: imageUrls,
     sku: product.id,
-    offers: { "@type": "Offer", price: product.price, priceCurrency: "BDT", availability: product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", url: `${SITE_URL}/product/${product.id}` },
+    offers: { "@type": "Offer", price: product.price, priceCurrency: "BDT", availability: product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", url: `${SITE_URL}${productRoute}` },
   };
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -285,7 +292,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
       { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/shop` },
       { "@type": "ListItem", position: 3, name: category.name, item: `${SITE_URL}/category/${product.categorySlug}` },
-      { "@type": "ListItem", position: 4, name: product.name, item: `${SITE_URL}/product/${product.id}` },
+      { "@type": "ListItem", position: 4, name: product.name, item: `${SITE_URL}${productRoute}` },
     ],
   };
   const faqJsonLd = richContent?.faq?.length ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: richContent.faq.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) } : null;

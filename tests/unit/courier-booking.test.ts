@@ -4,20 +4,20 @@
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/admin/courier-booking/route";
 
-jest.mock("@lib/admin-auth", () => ({
+jest.mock("@/lib/admin-auth", () => ({
   requireAdminAuth: jest.fn(),
 }));
 
-jest.mock("@lib/tenant", () => ({
+jest.mock("@/lib/tenant", () => ({
   getDefaultTenantId: jest.fn().mockReturnValue("tenant-1"),
 }));
 
-jest.mock("@lib/courier/booking", () => ({
+jest.mock("@/lib/courier/booking", () => ({
   bookCourier: jest.fn(),
 }));
 
-const requireAdminAuth = require("@lib/admin-auth").requireAdminAuth;
-const bookCourier = require("@lib/courier/booking").bookCourier;
+const requireAdminAuth = require("@/lib/admin-auth").requireAdminAuth;
+const bookCourier = require("@/lib/courier/booking").bookCourier;
 
 function createRequest(body: object) {
   return new NextRequest("http://localhost/api/admin/courier-booking", {

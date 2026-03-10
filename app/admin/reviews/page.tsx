@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@lib/db";
 import AdminReviewsClient from "./AdminReviewsClient";
+import { PageHero } from "@/components/admin/page-hero";
 
 export default async function AdminReviewsPage() {
   const reviews = await prisma.productReview.findMany({
@@ -28,8 +29,11 @@ export default async function AdminReviewsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-slate-900">Review Moderation</h1>
-      <p className="text-slate-600">Approve or reject product reviews.</p>
+      <PageHero
+        title="Review Moderation"
+        description="Approve or reject product reviews."
+        breadcrumb={[{ label: "Dashboard", href: "/admin" }, { label: "Reviews" }]}
+      />
       <AdminReviewsClient reviews={formattedReviews} />
     </div>
   );

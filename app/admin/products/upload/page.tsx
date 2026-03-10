@@ -25,7 +25,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function ProductUploadPage() {
-  const [categories, setCategories] = useState<{ slug: string; name_en: string }[]>([]);
+  const [categories, setCategories] = useState<{ slug: string; name: string }[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,8 +39,10 @@ export default function ProductUploadPage() {
 
   useEffect(() => {
     fetch("/api/admin/categories")
-      .then((r) => r.ok ? r.json() : [])
-      .then(setCategories)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: { slug: string; nameEn?: string; name_en?: string }[]) =>
+        setCategories(data.map((c) => ({ slug: c.slug, name: c.nameEn ?? c.name_en ?? c.slug })))
+      )
       .catch(() => setCategories([]));
   }, []);
 
@@ -111,7 +113,7 @@ export default function ProductUploadPage() {
             <select {...register("category_slug")} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
               <option value="">Select...</option>
               {categories.map((c) => (
-                <option key={c.slug} value={c.slug}>{c.name_en}</option>
+                <option key={c.slug} value={c.slug}>{c.name}</option>
               ))}
             </select>
           </div>

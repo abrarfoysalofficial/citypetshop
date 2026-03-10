@@ -20,12 +20,12 @@ A multi-page e-commerce website for **City Plus Pet Shop** built with Next.js 14
 
    Copy the logo into the `public` folder so it appears in the header:
 
-   - Copy `logonobg.png` from the project root into `public/logonobg.png`
+   - Copy `logonobg.png` from `legacy-data/root-images/` (or `public/brand/`) into `public/brand/logonobg.png`
 
    On Windows (PowerShell), from the project root:
 
    ```powershell
-   Copy-Item logonobg.png public\logonobg.png
+   Copy-Item legacy-data\root-images\logonobg.png public\brand\logonobg.png
    ```
 
 3. **Run the dev server**
@@ -39,14 +39,13 @@ A multi-page e-commerce website for **City Plus Pet Shop** built with Next.js 14
 ## Admin Panel
 
 - **Admin** (`/admin`) – Dashboard, Products, Orders, Payments, Checkout Settings, Store Settings, Analytics
-- **Admin Login** (`/admin/login`) – Supabase Auth, team_members authorization
-- Full feature requirements: [docs/ADMIN_FEATURE_REQUIREMENTS.md](docs/ADMIN_FEATURE_REQUIREMENTS.md)
+- **Admin Login** (`/admin/login`) – NextAuth credentials, RBAC
 
 ## Pages & Features
 
 - **Home** (`/`) – Hero, category cards (Food, Accessories, Toys, Medicine), featured products
 - **Shop** (`/shop`) – Full product grid with sidebar filters (Category, Price range)
-- **Product** (`/product/[id]`) – Product details, quantity selector, Add to Cart
+- **Product** (`/shop/[category]/[subcategory]/[product]`) – Product details, quantity selector, Add to Cart
 - **Cart** – Slide-over from navbar + full page at `/cart` with items and total
 - **Services** (`/services`) – Service offerings
 - **Contact** (`/contact`) – Address, hours, contact form

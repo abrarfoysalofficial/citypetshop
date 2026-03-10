@@ -1,4 +1,4 @@
-import { getDeliveryCharge, calculateCheckout, type ShippingCity } from "@lib/checkout";
+import { getDeliveryCharge, calculateCheckout, type ShippingCity } from "@/lib/checkout";
 
 describe("Checkout: delivery charge", () => {
   it("returns 70 for inside Dhaka", () => {

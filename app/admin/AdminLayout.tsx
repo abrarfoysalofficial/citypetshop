@@ -23,11 +23,7 @@ import {
   Settings,
   Image,
   FolderTree,
-  ImageIcon,
-  PanelLeft,
-  LayoutGrid,
   HeartPulse,
-  Bug,
 } from "lucide-react";
 import { adminSidebarConfig, StoreIcon } from "@/lib/admin-config";
 
@@ -41,9 +37,8 @@ const iconMap: Record<string, LucideIcon> = {
   Settings,
   Image,
   FolderTree,
-  ImageIcon,
-  PanelLeft,
-  LayoutGrid,
+  Store,
+  HeartPulse,
 };
 
 const DEFAULT_ICON: LucideIcon = LayoutDashboard;

@@ -41,9 +41,9 @@ async function main() {
     console.log(`${icon} ${path} ${status}`);
     if (!ok) failed++;
   }
-  // Sample product page (use sample-product slug if seeded)
-  const { ok: productOk, status: productStatus } = await check(`${BASE}/product/sample-product`);
-  console.log(`${productOk ? "✓" : "✗"} /product/sample-product ${productStatus}`);
+  // Sample product page (new hierarchy route)
+  const { ok: productOk, status: productStatus } = await check(`${BASE}/shop/dog-food/dog-food/sample-product`);
+  console.log(`${productOk ? "✓" : "✗"} /shop/dog-food/dog-food/sample-product ${productStatus}`);
   if (!productOk && productStatus !== 404) failed++;
 
   // Sample blog slug from static posts

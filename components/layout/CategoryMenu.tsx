@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { ChevronRight, Package, LayoutGrid } from "lucide-react";
+import { useCategories } from "@/store/CategoriesContext";
 
 type CategoryItem = { slug: string; name: string };
 
@@ -28,7 +29,7 @@ export function CategoryMenuContent({ categories, onClose }: { categories: Categ
       {categories.map((c) => (
         <Link
           key={c.slug}
-          href={`/shop?category=${c.slug}`}
+          href={`/category/${c.slug}`}
           className="flex items-center justify-between px-4 py-3 text-sm text-white/90 hover:bg-white/10 lg:px-4 lg:py-2.5 lg:text-[var(--text-primary)] lg:hover:bg-[var(--primary-light)]"
           {...linkProps}
         >
@@ -41,20 +42,9 @@ export function CategoryMenuContent({ categories, onClose }: { categories: Categ
 }
 
 export default function CategoryMenu({ contentOnly = false, onClose }: CategoryMenuProps) {
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const { categories, loading } = useCategories();
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setCategories(data.map((c: { slug: string; name: string }) => ({ slug: c.slug, name: c.name })));
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const handleEnter = () => {
     if (timeoutRef.current) {

@@ -5,9 +5,9 @@ import {
   truncateRecipient,
   tryAcquireNotificationSlot,
   NOTIFICATION_TYPES,
-} from "@lib/notification-log";
+} from "@/lib/notification-log";
 
-jest.mock("@lib/db", () => ({
+jest.mock("@/lib/db", () => ({
   prisma: {
     notificationLog: {
       create: jest.fn(),
@@ -39,7 +39,7 @@ describe("truncateRecipient", () => {
 describe("tryAcquireNotificationSlot", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.notificationLog.create.mockResolvedValue({});
   });
 
@@ -52,12 +52,12 @@ describe("tryAcquireNotificationSlot", () => {
       "us***@ex***"
     );
     expect(result).toBe(true);
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     expect(prisma.notificationLog.create).toHaveBeenCalledTimes(1);
   });
 
   it("returns false on duplicate (P2002) – idempotency prevents second send", async () => {
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.notificationLog.create
       .mockResolvedValueOnce({})
       .mockRejectedValueOnce({ code: "P2002" });
@@ -82,7 +82,7 @@ describe("tryAcquireNotificationSlot", () => {
   });
 
   it("re-throws on non-P2002 errors", async () => {
-    const { prisma } = require("@lib/db");
+    const { prisma } = require("@/lib/db");
     prisma.notificationLog.create.mockRejectedValue(new Error("DB connection failed"));
 
     await expect(

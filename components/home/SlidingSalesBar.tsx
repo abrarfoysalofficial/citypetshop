@@ -1,26 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useSiteSettings } from "@/store/SiteSettingsContext";
 
 const DEFAULT_TEXT =
   "City Plus Pet Shop — 100% Authentic Pet Supplies • Fast Delivery • Best Price Guarantee • Hotline: 01643-390045";
 
 export default function SlidingSalesBar() {
-  const [text, setText] = useState(DEFAULT_TEXT);
-  const [enabled, setEnabled] = useState(true);
+  const { settings } = useSiteSettings();
   const [isPaused, setIsPaused] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/settings/sales-top-bar")
-      .then((r) => r.json())
-      .then((d) => {
-        const data = d as { text?: string; enabled?: boolean };
-        if (data.enabled === false) setEnabled(false);
-        const t = data.text;
-        if (t && typeof t === "string" && t.trim()) setText(t.trim());
-      })
-      .catch(() => {});
-  }, []);
+  const enabled = settings?.sales_top_bar_enabled !== false;
+  const text = (settings?.sales_top_bar_text?.trim() || DEFAULT_TEXT) || DEFAULT_TEXT;
 
   if (!enabled || !text) return null;
 

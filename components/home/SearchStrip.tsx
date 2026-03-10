@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Phone } from "lucide-react";
-
-type CategoryItem = { slug: string; name: string };
+import { useCategories } from "@/store/CategoriesContext";
 
 interface SearchStripProps {
   /** When true, renders compact inline form (for header) */
@@ -13,18 +12,7 @@ interface SearchStripProps {
 export default function SearchStrip({ inline = false }: SearchStripProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All Categories");
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setCategories(data.map((c: { slug: string; name: string }) => ({ slug: c.slug, name: c.name })));
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const { categories } = useCategories();
 
   const categoryOptions = ["All Categories", ...categories.map((c) => c.name)];
 

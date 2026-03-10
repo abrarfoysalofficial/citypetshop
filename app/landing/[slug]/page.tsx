@@ -1,6 +1,6 @@
 export const revalidate = 300;
 import { notFound } from "next/navigation";
-import { prisma } from "@lib/db";
+import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import LandingBlockRenderer from "./LandingBlockRenderer";
 

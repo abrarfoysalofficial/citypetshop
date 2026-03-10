@@ -65,8 +65,6 @@ export async function GET() {
         whatsapp_number: s.whatsappNumber,
         sales_top_bar_text: s.salesTopBarText,
         sales_top_bar_enabled: s.salesTopBarEnabled,
-        hero_slider: s.heroSlider,
-        side_banners: s.sideBanners,
         cta_buttons: s.ctaButtons,
         popup_enabled: s.popupEnabled,
         popup_content_en: s.popupContentEn,
@@ -114,15 +112,22 @@ export async function PATCH(request: Request) {
 
   try {
     const raw = await request.json();
-    const patchSchema = z.object({
-      id: z.unknown().optional(),
-      updated_at: z.unknown().optional(),
+
+    const settingsSchema = z.object({
+      storeName: z.string().min(1, "Store name is required"),
+      supportEmail: z.string().email("Invalid email address"),
+      supportPhone: z.string().optional(),
+      deliveryCharge: z.number().min(0, "Delivery charge must be non-negative"),
+      currency: z.string().min(1, "Currency is required"),
+      logoUrl: z.string().url("Invalid URL").optional(),
     }).passthrough();
-    const parsed = patchSchema.safeParse(raw);
+
+    const parsed = settingsSchema.safeParse(raw);
+
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid request body", issues: parsed.error.issues }, { status: 400 });
     }
-    const { id: _id, updated_at: _ua, ...updates } = parsed.data;
+    const { ...updates } = parsed.data;
 
     if (isPrismaConfigured()) {
       const snakeToCamel = (s: string) => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -134,7 +139,7 @@ export async function PATCH(request: Request) {
         footer_text_en: "footerTextEn", footer_text_bn: "footerTextBn", footer_links: "footerLinks",
         copyright_text: "copyrightText", social_links: "socialLinks", address_en: "addressEn",
         address_bn: "addressBn", phone: "phone", email: "email", whatsapp_number: "whatsappNumber",
-        sales_top_bar_text: "salesTopBarText", sales_top_bar_enabled: "salesTopBarEnabled", hero_slider: "heroSlider", side_banners: "sideBanners", cta_buttons: "ctaButtons",
+        sales_top_bar_text: "salesTopBarText", sales_top_bar_enabled: "salesTopBarEnabled", cta_buttons: "ctaButtons",
         popup_enabled: "popupEnabled", popup_content_en: "popupContentEn", popup_content_bn: "popupContentBn",
         popup_image_url: "popupImageUrl",         facebook_pixel_id: "facebookPixelId", facebook_capi_token: "facebookCapiToken",
         google_analytics_id: "googleAnalyticsId", google_tag_manager_id: "googleTagManagerId",
@@ -158,6 +163,7 @@ export async function PATCH(request: Request) {
         update: data as never,
       });
       revalidatePath("/");
+      revalidatePath("/api/settings");
 
       await createAuditLog({
         userId: auth.userId,
