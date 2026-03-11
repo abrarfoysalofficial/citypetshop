@@ -12,11 +12,11 @@ export function getDatabaseUrl(): string {
 }
 
 export function getNextAuthSecret(): string {
-  return process.env.NEXTAUTH_SECRET || "";
+  return process.env.CLERK_SECRET_KEY || process.env.NEXTAUTH_SECRET || "";
 }
 
 export function getNextAuthUrl(): string {
-  return process.env.NEXTAUTH_URL || "";
+  return process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || "";
 }
 
 export function isPrismaConfigured(): boolean {

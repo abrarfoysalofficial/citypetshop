@@ -13,7 +13,7 @@ For a **brand-new** deployment, follow this sequence once:
 1. **Prerequisites** (Section 1) — VPS, Node.js, PostgreSQL, PM2
 2. **PostgreSQL** (Section 3) — Create DB and user
 3. **Application** (Section 4) — Clone repo, `npm ci --omit=dev`, `npx prisma generate`
-4. **Environment** (Section 5) — Create `.env.production.local` with `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `AUTH_TRUST_HOST`, `UPLOAD_DIR`, and **`INITIAL_ADMIN_EMAIL`**, **`INITIAL_ADMIN_PASSWORD`** (min 12 chars), **`INITIAL_ADMIN_NAME`**
+4. **Environment** (Section 5) — Create `.env.production.local` with `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `UPLOAD_DIR`, and **`INITIAL_ADMIN_EMAIL`**, **`INITIAL_ADMIN_PASSWORD`** (min 12 chars), **`INITIAL_ADMIN_NAME`**
 5. **Database** — Run `npm run db:setup` (migrate + seed). This creates the admin user. **Change password** at `/admin/settings/security` after first login.
 6. **Upload dir** — `sudo mkdir -p /var/www/cityplus/uploads && sudo chown $USER:$USER /var/www/cityplus/uploads`
 7. **Build** (Section 7) — `NODE_OPTIONS=--max-old-space-size=4096 npm run build` + copy public/static
@@ -89,9 +89,8 @@ Create `.env.production.local`:
 ```env
 NODE_ENV=production
 DATABASE_URL=postgresql://cityplus_app:PASSWORD@127.0.0.1:5432/cityplus_db
-NEXTAUTH_URL=https://citypetshop.bd
-NEXTAUTH_SECRET=<openssl rand -hex 32>
-AUTH_TRUST_HOST=true
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_replace_me
+CLERK_SECRET_KEY=sk_live_replace_me
 NEXT_PUBLIC_SITE_URL=https://citypetshop.bd
 APP_URL=https://citypetshop.bd
 
@@ -116,12 +115,12 @@ MASTER_SECRET=<openssl rand -hex 32>
 REDIS_URL=redis://127.0.0.1:6379
 
 
-**Required:** `DATABASE_URL`, `NEXTAUTH_SECRET` (32+ chars), `NEXTAUTH_URL`, `AUTH_TRUST_HOST`.  
+**Required:** `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`.  
 **Integrations:** `MASTER_SECRET` (32+ chars) required for encrypted credentials (Admin → Integrations).  
 **Courier go-live:** `MASTER_SECRET` + provider keys in Admin → Integrations; Admin → Courier: enable provider, set Sandbox OFF for production.  
 **Invoice API:** Auth-only. Guests get invoice via email/track-order.
 
-**Domain-safe:** Set `NEXTAUTH_URL` (and `NEXT_PUBLIC_SITE_URL`, `APP_URL`) to your actual deployment URL. Auth works on any domain — staging, production, or custom domain. No hardcoded domain.
+**Domain-safe:** Set `NEXT_PUBLIC_SITE_URL` and `APP_URL` to your actual deployment URL. Configure Clerk allowed redirect URLs to match your domain(s).
 
 **Initial admin:** Set `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` (min 12 chars), `INITIAL_ADMIN_NAME` before running `db:seed`. The seed creates the admin only if it does not exist; it never overwrites an existing password. After first login, change the password at `/admin/settings/security`.
 
@@ -129,7 +128,7 @@ REDIS_URL=redis://127.0.0.1:6379
 
 | Config | Where | Notes |
 |-------|-------|------|
-| DATABASE_URL, NEXTAUTH_*, UPLOAD_DIR, MASTER_SECRET | .env only | Infrastructure; not admin-manageable |
+| DATABASE_URL, Clerk keys, UPLOAD_DIR, MASTER_SECRET | .env only | Infrastructure; not admin-manageable |
 | Payment credentials (SSLCommerz, bKash, etc.) | Admin → Payments | DB-backed; no .env needed |
 | Courier credentials (Pathao, Steadfast, RedX) | Admin → Integrations | Encrypted in SecureConfig |
 | Courier enable/sandbox | Admin → Courier | DB-backed |
@@ -143,9 +142,8 @@ After handover, the client configures payments, courier, and tracking from the a
 | Variable | Required | Notes |
 |----------|----------|------|
 | DATABASE_URL | Yes | PostgreSQL connection string; use 127.0.0.1 not localhost |
-| NEXTAUTH_SECRET | Yes | Min 32 chars; `openssl rand -hex 32` |
-| NEXTAUTH_URL | Yes | Full site URL (e.g. https://citypetshop.bd) |
-| AUTH_TRUST_HOST | Yes | Must be `true` behind reverse proxy |
+| NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY | Yes | Clerk frontend key |
+| CLERK_SECRET_KEY | Yes | Clerk backend key |
 | UPLOAD_DIR | Yes (prod) | Absolute path for media; survives redeploy |
 | INITIAL_ADMIN_* | First deploy | For `db:seed` bootstrap; not needed after |
 | MASTER_SECRET | Integrations | 32+ chars for Admin → Integrations |

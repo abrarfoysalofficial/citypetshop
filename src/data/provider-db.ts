@@ -109,7 +109,7 @@ export async function getHomeData(): Promise<HomeSection> {
           href: s.link ?? "/shop",
           cta: "Shop Now",
         }))
-      : [{ id: "default", title: "Welcome", subheadline: "", image: "/banners/hero-slide-1.jpeg", href: "/shop", cta: "Shop Now" }];
+      : [{ id: "default", title: "Welcome", subheadline: "", image: "/banners/hero-banner.png", href: "/shop", cta: "Shop Now" }];
   const categories = await prisma.category.findMany({
     where: { tenantId, isActive: true, deletedAt: null },
     orderBy: { sortOrder: "asc" },

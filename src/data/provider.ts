@@ -119,7 +119,7 @@ export async function getHomeData(): Promise<HomeSection> {
     return getPrisma();
   }
   return {
-    heroSlides: [{ id: "1", title: "Welcome", subheadline: "", image: "/banners/hero-slide-1.jpeg", href: "/shop", cta: "Shop Now" }],
+    heroSlides: [{ id: "1", title: "Welcome", subheadline: "", image: "/banners/hero-banner.png", href: "/shop", cta: "Shop Now" }],
     featuredCategories: [],
     featuredBrands: [],
     flashSale: null,

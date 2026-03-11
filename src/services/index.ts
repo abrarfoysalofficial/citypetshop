@@ -5,7 +5,7 @@
 import type { ProductsRepository, OrdersRepository, AuthService } from "./types";
 import { createProviderProductsRepository } from "./products";
 import { createLocalOrdersRepository } from "./orders";
-import { createNextAuthAuthService } from "./auth";
+import { createClerkAuthService } from "./auth";
 
 let _products: ProductsRepository | null = null;
 let _orders: OrdersRepository | null = null;
@@ -27,7 +27,7 @@ function getOrdersRepository(): OrdersRepository {
 
 function getAuthService(): AuthService {
   if (!_auth) {
-    _auth = createNextAuthAuthService();
+    _auth = createClerkAuthService();
   }
   return _auth;
 }
@@ -46,7 +46,7 @@ export function getResolvedSources(): {
 } {
   return {
     products: "prisma",
-    auth: "nextauth",
+    auth: "clerk",
     orders: "prisma",
   };
 }
@@ -62,4 +62,4 @@ export function getServices(): Services {
 export type { ProductsRepository, OrdersRepository, AuthService, CreateOrderInput } from "./types";
 export { createProviderProductsRepository } from "./products";
 export { createLocalOrdersRepository } from "./orders";
-export { createNextAuthAuthService } from "./auth";
+export { createClerkAuthService } from "./auth";

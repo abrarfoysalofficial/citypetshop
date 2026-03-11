@@ -20,8 +20,8 @@
 | Variable | Where to Paste | Current (Dev) | Production Action |
 |----------|----------------|---------------|-------------------|
 | `DATABASE_URL` | Root `.env` | `postgresql://user:password@localhost:5432/...` | Use production DB URL |
-| `NEXTAUTH_SECRET` | Root `.env` | `your-secret-min-32-chars` | Generate: `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Root `.env` | `http://localhost:3000` | `https://citypetshop.bd` |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Root `.env` | `pk_test_...` | Use Clerk production publishable key |
+| `CLERK_SECRET_KEY` | Root `.env` | `sk_test_...` | Use Clerk production secret key |
 | `NEXT_PUBLIC_SITE_URL` | Root `.env` | `http://localhost:3000` | `https://citypetshop.bd` |
 | `ADMIN_EMAIL` | Root `.env` (optional) | `admin@citypetshop.bd` | Change for production |
 | `ADMIN_PASSWORD` | Root `.env` (optional) | `Admin@12345!` | **MUST set 12+ chars in production** |

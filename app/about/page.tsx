@@ -192,7 +192,7 @@ export default async function AboutPage() {
             <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:text-left">
               <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
                 <Image
-                  src={founderData.imageUrl || "/brand/logo.png"}
+                  src={founderData.imageUrl || "/ui/blog-cover.svg"}
                   alt="City Plus Pet Shop"
                   width={112}
                   height={112}
@@ -320,7 +320,7 @@ export default async function AboutPage() {
                   src={founderData.imageUrl || "/team/founder.jpg"}
                   alt={founderData.name}
                   fill
-                  fallbackSrc="/brand/logo.png"
+                  fallbackSrc="/ui/blog-cover.svg"
                   showShimmer={false}
                 />
               </div>
@@ -368,7 +368,7 @@ export default async function AboutPage() {
                       src={member.imageUrl || "/team/developer.jpg"}
                       alt={member.name}
                       fill
-                      fallbackSrc="/brand/logo.png"
+                      fallbackSrc="/ui/blog-cover.svg"
                       showShimmer={false}
                     />
                   </div>
@@ -439,7 +439,7 @@ export default async function AboutPage() {
                   width={80}
                   height={40}
                   className="h-10 w-auto object-contain"
-                  fallbackSrc="/brand/logo.png"
+                  fallbackSrc="/ui/blog-cover.svg"
                 />
                 <div className="space-y-1">
                   <p className="font-semibold text-slate-900">Abrar Foysal</p>

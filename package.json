@@ -32,6 +32,7 @@
     "admin:reset": "tsx scripts/admin-reset.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.0.4",
     "@hookform/resolvers": "^3.9.0",
     "@portabletext/react": "^3.0.0",
     "@prisma/client": "^5.22.0",

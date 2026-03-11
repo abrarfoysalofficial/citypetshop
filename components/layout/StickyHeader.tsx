@@ -49,7 +49,7 @@ export default function StickyHeader() {
 
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <Image
-            src="/brand/logo.png"
+            src="/ui/blog-cover.svg"
             alt="City Plus Pet Shop"
             width={44}
             height={44}

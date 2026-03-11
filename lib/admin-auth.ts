@@ -1,5 +1,5 @@
 /**
- * Admin API authorization – NextAuth with Prisma.
+ * Admin API authorization – Clerk identity with Prisma RBAC.
  * Uses RBAC for granular permissions.
  */
 import { auth } from "@/lib/auth";

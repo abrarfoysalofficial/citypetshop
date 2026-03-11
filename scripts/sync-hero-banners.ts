@@ -8,9 +8,9 @@
 import { PrismaClient } from "@prisma/client";
 
 const slides = [
-  { imageUrl: "/banners/hero-slide-1.jpeg", titleEn: "Premium Pet Travel Gear", link: "/shop", sortOrder: 1 },
-  { imageUrl: "/banners/hero-slide-2.jpeg", titleEn: "Premium Pet Care Starts Here", link: "/shop", sortOrder: 2 },
-  { imageUrl: "/banners/hero-slide-3.jpeg", titleEn: "Luxury and Exclusive Fashion", link: "/shop", sortOrder: 3 },
+  { imageUrl: "/banners/hero-banner.png", titleEn: "Premium Pet Travel Gear", link: "/shop", sortOrder: 1 },
+  { imageUrl: "/banners/hero-banner.png", titleEn: "Premium Pet Care Starts Here", link: "/shop", sortOrder: 2 },
+  { imageUrl: "/banners/hero-banner.png", titleEn: "Luxury and Exclusive Fashion", link: "/shop", sortOrder: 3 },
 ];
 
 async function main() {

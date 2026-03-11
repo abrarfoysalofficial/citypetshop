@@ -66,6 +66,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (pathname === "/admin/login") return;
+
     fetch("/api/admin/menu")
       .then((r) => r.json())
       .then((d) => {
@@ -74,7 +76,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => setMenuItems(null));
-  }, []);
+  }, [pathname]);
 
   const navItems: MenuItem[] = menuItems ?? adminSidebarConfig.map((c) => ({
     name: c.name,
@@ -211,7 +213,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
           <Link
-            href="/admin/logout"
+            href="/logout"
             className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
           >
             <LogOut className="h-4 w-4" />

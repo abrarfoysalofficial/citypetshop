@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Menu,
@@ -15,6 +14,7 @@ import { useCart } from "@/store/CartContext";
 import { useCategories } from "@/store/CategoriesContext";
 import { useSiteSettings } from "@/store/SiteSettingsContext";
 import { useState, useRef, useEffect } from "react";
+import SafeImage from "@/components/media/SafeImage";
 
 const MAIN_NAV = [
   { href: "/", label: "Home" },
@@ -71,11 +71,13 @@ export default function Navbar() {
           href="/"
           className="flex shrink-0 items-center gap-2"
         >
-          <Image
-            src={settings?.logo_url || "/brand/logo.png"}
+          <SafeImage
+            src={settings?.logo_url || "/ui/blog-cover.svg"}
             alt={settings?.site_name_en || "City Plus Pet Shop"}
             width={40}
             height={40}
+            fallbackSrc="/ui/blog-cover.svg"
+            showShimmer={false}
             className="h-9 w-9 object-contain sm:h-10 sm:w-10"
           />
           <span className="text-base font-bold text-white sm:text-lg">{settings?.site_name_en || "City Plus Pet Shop"}</span>

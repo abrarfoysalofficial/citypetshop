@@ -18,7 +18,10 @@ export async function GET() {
   } else {
     checks.database = "skipped";
   }
-  checks.auth = process.env.NEXTAUTH_SECRET ? "configured" : "not configured";
+  checks.auth =
+    process.env.CLERK_SECRET_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+      ? "configured"
+      : "not configured";
   checks.upload = process.env.UPLOAD_DIR ? "configured" : "default";
   return NextResponse.json({
     status: "self-hosted",

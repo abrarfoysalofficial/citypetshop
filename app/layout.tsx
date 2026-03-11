@@ -10,10 +10,10 @@ import { OffersProvider } from "@/store/OffersContext";
 import { VouchersProvider } from "@/store/VouchersContext";
 import { BlogProvider } from "@/store/BlogContext";
 import StoreLayout from "@/components/StoreLayout";
-import SessionProvider from "@/components/providers/SessionProvider";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
 import { PreloadLinks, PreloadCriticalRoutes } from "@/components/PreloadLinks";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://citypetshop.bd";
 
@@ -56,28 +56,28 @@ export default function RootLayout({
         <OrganizationSchema />
         <PreloadLinks />
         <PreloadCriticalRoutes />
-        <SiteSettingsProvider>
-          <AnalyticsScripts />
-          <ProductsProvider>
-            <CategoriesProvider>
-              <OffersProvider>
-                <VouchersProvider>
-                  <BlogProvider>
-                    <CartProvider>
-                      <CompareProvider>
-                        <WishlistProvider>
-                          <SessionProvider>
+        <ClerkProvider>
+          <SiteSettingsProvider>
+            <AnalyticsScripts />
+            <ProductsProvider>
+              <CategoriesProvider>
+                <OffersProvider>
+                  <VouchersProvider>
+                    <BlogProvider>
+                      <CartProvider>
+                        <CompareProvider>
+                          <WishlistProvider>
                             <StoreLayout>{children}</StoreLayout>
-                          </SessionProvider>
-                        </WishlistProvider>
-                      </CompareProvider>
-                    </CartProvider>
-                  </BlogProvider>
-                </VouchersProvider>
-              </OffersProvider>
-            </CategoriesProvider>
-          </ProductsProvider>
-        </SiteSettingsProvider>
+                          </WishlistProvider>
+                        </CompareProvider>
+                      </CartProvider>
+                    </BlogProvider>
+                  </VouchersProvider>
+                </OffersProvider>
+              </CategoriesProvider>
+            </ProductsProvider>
+          </SiteSettingsProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

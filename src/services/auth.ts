@@ -1,55 +1,44 @@
 /**
- * Auth service: NextAuth (Prisma/PostgreSQL) only.
+ * Auth service: Clerk-backed identity with local Prisma session facade.
  */
 import type { AuthService, AuthSession } from "./types";
 
-/** NextAuth-backed auth service. Uses credentials provider. */
-export function createNextAuthAuthService(): AuthService {
+export function createClerkAuthService(): AuthService {
   return {
-    async signIn(email, password) {
-      const csrfRes = await fetch("/api/auth/csrf");
-      const { csrfToken } = (await csrfRes.json()) as { csrfToken?: string };
-      const res = await fetch("/api/auth/callback/credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          csrfToken: csrfToken ?? "",
-          email: email.trim().toLowerCase(),
-          password,
-          redirect: false,
-          json: true,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
-      if (!res.ok || data?.error) {
-        return { error: data?.error ?? "Login failed" };
+    async signIn() {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+        return {};
       }
-      return {};
+      return { error: "Use /login route for Clerk sign-in." };
     },
     async signOut() {
       if (typeof window !== "undefined") {
-        window.location.href = "/api/auth/signout?callbackUrl=/";
+        window.location.href = "/logout";
       } else {
-        await fetch("/api/auth/signout", { method: "GET" });
+        await fetch("/logout", { method: "GET" });
       }
     },
-    async signUp() {
-      return { error: "Sign up is not available. Use the registration flow." };
+    async signUp(_email, _password) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/sign-up";
+        return {};
+      }
+      return { error: "Use /sign-up route for Clerk registration." };
     },
     async otpSignIn() {
       return { error: "OTP login is not available." };
     },
     async getSession(): Promise<AuthSession | null> {
       const res = await fetch("/api/auth/session");
-      const data = (await res.json().catch(() => ({}))) as { user?: { id?: string; email?: string }; expires?: string };
-      const user = data?.user;
+      const data = (await res.json().catch(() => ({}))) as { session?: { id?: string; email?: string; role?: string } };
+      const user = data?.session;
       if (!user) return null;
-      const role = (user as { role?: string }).role;
       return {
         user: {
           id: user.id ?? "",
           email: user.email,
-          role: role === "admin" || role === "adm" || role === "super_admin" ? "admin" : undefined,
+          role: user.role,
         },
       };
     },

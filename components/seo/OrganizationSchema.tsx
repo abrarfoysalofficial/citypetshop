@@ -5,7 +5,7 @@ const organizationSchema = {
   "@type": "Organization",
   name: "City Pet Shop BD",
   url: BASE,
-  logo: `${BASE}/brand/logo.png`,
+  logo: `${BASE}/ui/blog-cover.svg`,
   description: "Buy authentic dog food, cat food, and pet accessories in Bangladesh. Fast delivery, COD available, trusted brands at the best price.",
   address: {
     "@type": "PostalAddress",

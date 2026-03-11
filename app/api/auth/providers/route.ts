@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-/** Returns enabled auth providers. Prisma/NextAuth: credentials only (no OAuth). */
+/** Returns enabled auth providers. Clerk controls provider availability. */
 export async function GET() {
-  return NextResponse.json({ google: false, facebook: false, phone: false });
+  return NextResponse.json({ provider: "clerk" });
 }

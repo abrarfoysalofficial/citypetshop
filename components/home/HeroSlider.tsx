@@ -17,9 +17,9 @@ export interface HeroSlide {
 }
 
 const DEFAULT_SLIDES: HeroSlide[] = [
-  { id: "1", title: "Premium Pet Travel Gear", subheadline: "", image: "/banners/hero-slide-1.jpeg", href: "/shop", cta: "Shop Now" },
-  { id: "2", title: "Premium Pet Care Starts Here", subheadline: "", image: "/banners/hero-slide-2.jpeg", href: "/shop", cta: "Shop Now" },
-  { id: "3", title: "Luxury and Exclusive Fashion", subheadline: "", image: "/banners/hero-slide-3.jpeg", href: "/shop", cta: "Shop Now" },
+  { id: "1", title: "Premium Pet Travel Gear", subheadline: "", image: "/banners/hero-banner.png", href: "/shop", cta: "Shop Now" },
+  { id: "2", title: "Premium Pet Care Starts Here", subheadline: "", image: "/banners/hero-banner.png", href: "/shop", cta: "Shop Now" },
+  { id: "3", title: "Luxury and Exclusive Fashion", subheadline: "", image: "/banners/hero-banner.png", href: "/shop", cta: "Shop Now" },
 ];
 
 const AUTO_PLAY_MS = 5500;
@@ -54,7 +54,7 @@ export default function HeroSlider({ slides = DEFAULT_SLIDES }: HeroSliderProps)
               src={slide.image}
               alt={slide.title}
               fill
-              fallbackSrc="/banners/hero-slide-1.jpeg"
+              fallbackSrc="/banners/hero-banner.png"
               priority={i === 0}
               sizes="100vw"
               className="object-cover"

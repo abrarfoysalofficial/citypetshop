@@ -1,24 +1,12 @@
 import { Suspense } from "react";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import LoginForm from "./LoginForm";
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: { callbackUrl?: string; next?: string };
-}) {
-  // If NextAuth redirected here for admin access, send user to admin login
-  const raw = searchParams?.callbackUrl ?? searchParams?.next;
-  const callback = Array.isArray(raw) ? raw[0] : raw;
-  if (typeof callback === "string") {
-    try {
-      const path = callback.startsWith("/") ? callback : new URL(callback).pathname;
-      if (path === "/admin" || path.startsWith("/admin/")) {
-        redirect(`/admin/login?callbackUrl=${encodeURIComponent(callback)}`);
-      }
-    } catch {
-      // ignore invalid URLs
-    }
+export default async function LoginPage() {
+  const { userId } = await auth();
+  if (userId) {
+    redirect("/account");
   }
 
   return (

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { signOut } from "next-auth/react";
+import { useClerk } from "@clerk/nextjs";
 
 export default function LogoutPage() {
+  const { signOut } = useClerk();
+
   useEffect(() => {
-    signOut({ callbackUrl: "/" });
-  }, []);
+    void signOut({ redirectUrl: "/" });
+  }, [signOut]);
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <p className="text-slate-600">Signing out…</p>

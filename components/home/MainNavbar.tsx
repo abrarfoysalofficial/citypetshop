@@ -51,7 +51,7 @@ export default function MainNavbar() {
             href="/"
             className="hidden items-center gap-2 md:flex"
           >
-            <Image src="/brand/logo.png" alt="City Plus Pet Shop" width={44} height={44} className="h-10 w-10 shrink-0 object-contain" />
+            <Image src="/ui/blog-cover.svg" alt="City Plus Pet Shop" width={44} height={44} className="h-10 w-10 shrink-0 object-contain" />
             <span className="text-lg font-bold text-slate-900">City Plus</span>
           </Link>
         </div>
@@ -59,7 +59,7 @@ export default function MainNavbar() {
         {/* Center: Logo (mobile) | Nav (desktop) */}
         <div className="flex justify-center">
           <Link href="/" className="flex items-center gap-2 md:hidden">
-            <Image src="/brand/logo.png" alt="City Plus Pet Shop" width={44} height={44} className="h-9 w-9 shrink-0 object-contain" />
+            <Image src="/ui/blog-cover.svg" alt="City Plus Pet Shop" width={44} height={44} className="h-9 w-9 shrink-0 object-contain" />
             <span className="text-base font-bold text-slate-900">City Plus</span>
           </Link>
           <nav className="hidden gap-1 lg:flex" aria-label="Main navigation">

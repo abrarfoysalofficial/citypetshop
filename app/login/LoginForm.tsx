@@ -1,96 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { SignIn } from "@clerk/nextjs";
+import { sanitizeCustomerCallbackUrl } from "@/lib/callback-url";
 
 export default function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const err = searchParams.get("error");
-    if (err) setError(decodeURIComponent(err));
-  }, [searchParams]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res = await signIn("credentials", {
-        email: email.trim().toLowerCase(),
-        password,
-        redirect: false,
-      });
-      if (res?.error) {
-        setError("Invalid email or password");
-        setLoading(false);
-        return;
-      }
-      const raw = searchParams.get("callbackUrl") ?? searchParams.get("next");
-      let target = "/account";
-      if (typeof raw === "string" && raw.trim()) {
-        const path = raw.startsWith("/") ? raw : (() => { try { return new URL(raw).pathname; } catch { return ""; } })();
-        if (path && path.startsWith("/") && !path.startsWith("/admin")) target = path;
-      }
-      router.push(target);
-      router.refresh();
-    } catch {
-      setError("Login failed. Try again.");
-    }
-    setLoading(false);
-  };
+  const callbackUrl = sanitizeCustomerCallbackUrl(
+    searchParams.get("callbackUrl") ?? searchParams.get("next"),
+    typeof window !== "undefined" ? window.location.origin : undefined
+  );
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <h1 className="text-2xl font-bold text-slate-900">Login</h1>
-      <p className="mt-2 text-slate-600">
-        Sign in to your account to view orders and manage your profile.
-      </p>
-
-      {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
-
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-primary py-2.5 font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
-
-      <Link href="/" className="mt-6 inline-block font-medium text-primary hover:underline">
-        ← Back to Home
-      </Link>
+      <SignIn
+        path="/login"
+        routing="path"
+        fallbackRedirectUrl={callbackUrl}
+        forceRedirectUrl={callbackUrl}
+      />
     </div>
   );
 }
